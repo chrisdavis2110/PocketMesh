@@ -1,0 +1,237 @@
+import SwiftUI
+import PocketMeshServices
+
+/// Channel conversation view with broadcast messaging
+struct ChannelChatView: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
+
+    let channel: ChannelDTO
+    let parentViewModel: ChatViewModel?
+
+    @State private var viewModel = ChatViewModel()
+    @State private var showingChannelInfo = false
+    @State private var scrollPosition = ScrollPosition(edge: .bottom)
+    @FocusState private var isInputFocused: Bool
+
+    init(channel: ChannelDTO, parentViewModel: ChatViewModel? = nil) {
+        self.channel = channel
+        self.parentViewModel = parentViewModel
+    }
+
+    var body: some View {
+        messagesView
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                inputBar
+            }
+            .keyboardAwareScrollEdgeEffect(isFocused: isInputFocused)
+            .navigationTitle(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                headerView
+            }
+
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showingChannelInfo = true
+                } label: {
+                    Image(systemName: "info.circle")
+                }
+            }
+        }
+        .sheet(isPresented: $showingChannelInfo) {
+            ChannelInfoSheet(channel: channel) {
+                // Dismiss the chat view when channel is deleted
+                dismiss()
+            }
+        }
+        .task {
+            viewModel.configure(appState: appState)
+            await viewModel.loadChannelMessages(for: channel)
+        }
+        .onDisappear {
+            // Clear active channel for notification suppression
+            appState.services?.notificationService.activeChannelIndex = nil
+            appState.services?.notificationService.activeChannelDeviceID = nil
+
+            // Refresh parent conversation list when leaving
+            if let parent = parentViewModel {
+                Task {
+                    if let deviceID = appState.connectedDevice?.id {
+                        await parent.loadConversations(deviceID: deviceID)
+                        await parent.loadChannels(deviceID: deviceID)
+                        await parent.loadLastMessagePreviews()
+                    }
+                }
+            }
+        }
+        .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
+            switch appState.messageEventBroadcaster.latestEvent {
+            case .channelMessageReceived(let message, let channelIndex)
+                where channelIndex == channel.index && message.deviceID == channel.deviceID:
+                Task {
+                    await viewModel.loadChannelMessages(for: channel)
+                }
+            case .messageStatusUpdated:
+                // Reload to pick up status changes (Sent -> Delivered, etc.)
+                Task {
+                    await viewModel.loadChannelMessages(for: channel)
+                }
+            case .messageFailed(let messageID):
+                // Only reload if this message belongs to the current channel
+                // This prevents multiple reloads when several messages fail at once
+                if viewModel.messages.contains(where: { $0.id == messageID }) {
+                    Task {
+                        await viewModel.loadChannelMessages(for: channel)
+                    }
+                }
+            default:
+                break
+            }
+        }
+        .alert("Unable to Send", isPresented: $viewModel.showRetryError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please ensure your device is connected and try again.")
+        }
+    }
+
+    // MARK: - Header
+
+    private var headerView: some View {
+        VStack(spacing: 0) {
+            Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+                .font(.headline)
+
+            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? "Public Channel" : "Private Channel")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Messages View
+
+    private var messagesView: some View {
+        ScrollView {
+            LazyVStack(spacing: 8) {
+                if viewModel.isLoading && viewModel.messages.isEmpty {
+                    ProgressView()
+                        .padding()
+                } else if viewModel.messages.isEmpty {
+                    emptyMessagesView
+                } else {
+                    messagesContent
+                }
+            }
+            .padding(.vertical)
+        }
+        .defaultScrollAnchor(.bottom, for: .initialOffset)
+        .defaultScrollAnchor(.bottom, for: .alignment)
+        .scrollPosition($scrollPosition)
+        .scrollDismissesKeyboard(.interactively)
+        .onChange(of: viewModel.messages.count) { _, _ in
+            // Scroll to bottom when new messages arrive
+            scrollPosition.scrollTo(edge: .bottom)
+        }
+        .onChange(of: isInputFocused) { _, isFocused in
+            // Scroll to bottom when keyboard appears
+            if isFocused {
+                scrollPosition.scrollTo(edge: .bottom)
+            }
+        }
+    }
+
+    private var emptyMessagesView: some View {
+        VStack(spacing: 16) {
+            ChannelAvatar(channel: channel, size: 80)
+
+            Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+                .font(.title2)
+                .bold()
+
+            Text("No messages yet")
+                .foregroundStyle(.secondary)
+
+            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? "This is a public broadcast channel" : "This is a private channel")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+
+    private var messagesContent: some View {
+        ForEach(viewModel.messages.enumeratedElements(), id: \.element.id) { index, message in
+            UnifiedMessageBubble(
+                message: message,
+                contactName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
+                contactNodeName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
+                deviceName: appState.connectedDevice?.nodeName ?? "Me",
+                configuration: .channel(
+                    isPublic: channel.isPublicChannel || channel.name.hasPrefix("#"),
+                    contacts: viewModel.conversations
+                ),
+                showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
+                onRetry: message.hasFailed ? { retryMessage(message) } : nil,
+                onReply: { replyText in
+                    setReplyText(replyText)
+                },
+                onDelete: {
+                    deleteMessage(message)
+                }
+            )
+        }
+    }
+
+    private func setReplyText(_ text: String) {
+        viewModel.composingText = text
+        isInputFocused = true
+    }
+
+    private func deleteMessage(_ message: MessageDTO) {
+        Task {
+            await viewModel.deleteMessage(message)
+        }
+    }
+
+    private func retryMessage(_ message: MessageDTO) {
+        Task {
+            await viewModel.retryChannelMessage(message)
+        }
+    }
+
+    // MARK: - Input Bar
+
+    /// Calculate max channel message length based on device's advertised name
+    private var maxChannelMessageLength: Int {
+        let nodeNameLength = appState.connectedDevice?.nodeName.count ?? 0
+        return ProtocolLimits.maxChannelMessageLength(nodeNameLength: nodeNameLength)
+    }
+
+    private var inputBar: some View {
+        ChatInputBar(
+            text: $viewModel.composingText,
+            isFocused: $isInputFocused,
+            placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? "Public Channel" : "Private Channel",
+            accentColor: channel.isPublicChannel || channel.name.hasPrefix("#") ? .green : .blue,
+            isSending: viewModel.isSending,
+            maxCharacters: maxChannelMessageLength
+        ) {
+            Task {
+                await viewModel.sendChannelMessage()
+            }
+        }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        ChannelChatView(channel: ChannelDTO(from: Channel(
+            deviceID: UUID(),
+            index: 1,
+            name: "General"
+        )))
+    }
+    .environment(AppState())
+}
