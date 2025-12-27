@@ -329,12 +329,26 @@ final class RepeaterSettingsViewModel {
             case "clock": return message.text.contains("UTC") || (message.text.contains(":") && message.text.contains("/"))
             case "get radio": return message.text.contains(",") && message.text.split(separator: ",").count >= 4
             case "get repeat": return trimmedText.lowercased() == "on" || trimmedText.lowercased() == "off"
-            // Numeric patterns - must check BEFORE "get name" since name pattern is too broad
-            case "get lat": return pendingQueries.contains("get lat") && Double(trimmedText) != nil && !message.text.contains(",")
-            case "get lon": return pendingQueries.contains("get lon") && Double(trimmedText) != nil && !message.text.contains(",")
-            case "get tx": return Int(trimmedText) != nil && !message.text.contains(",")
-            case "get advert.interval", "get flood.advert.interval", "get flood.max":
-                return Int(trimmedText) != nil && !message.text.contains(",")
+            // Numeric patterns - use FIFO matching since all return integers/doubles
+            // The first pending query expecting a numeric response gets matched
+            case "get lat":
+                return pendingQueries.first == "get lat"
+                    && Double(trimmedText) != nil && !message.text.contains(",")
+            case "get lon":
+                return pendingQueries.first == "get lon"
+                    && Double(trimmedText) != nil && !message.text.contains(",")
+            case "get tx":
+                return pendingQueries.first == "get tx"
+                    && Int(trimmedText) != nil && !message.text.contains(",")
+            case "get advert.interval":
+                return pendingQueries.first == "get advert.interval"
+                    && Int(trimmedText) != nil && !message.text.contains(",")
+            case "get flood.advert.interval":
+                return pendingQueries.first == "get flood.advert.interval"
+                    && Int(trimmedText) != nil && !message.text.contains(",")
+            case "get flood.max":
+                return pendingQueries.first == "get flood.max"
+                    && Int(trimmedText) != nil && !message.text.contains(",")
             // Catch-all for text responses - checked LAST
             case "get name": return !message.text.contains(",") && !message.text.contains("UTC") && !message.text.contains("(") && Double(trimmedText) == nil
             default: return false
