@@ -1,0 +1,101 @@
+name: Build Unsigned IPA
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label (defaults to commit SHA)'
+        required: false
+        type: string
+
+jobs:
+  build:
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"  # Strip leading 'v'
+          elif [[ -n "${{ inputs.version }}" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${{ github.sha }}"
+            VERSION="${VERSION:0:7}"  # Short SHA
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build Debug
+        run: |
+          xcodebuild build \
+            -scheme PocketMesh \
+            -configuration Debug \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath ./DerivedData \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Build Release
+        run: |
+          xcodebuild build \
+            -scheme PocketMesh \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath ./DerivedData \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package Debug IPA
+        run: |
+          mkdir -p Payload
+          cp -r DerivedData/Build/Products/Debug-iphoneos/PocketMesh.app Payload/
+          zip -r "PocketMesh-Debug-${{ steps.version.outputs.version }}.ipa" Payload
+          rm -rf Payload
+
+      - name: Package Release IPA
+        run: |
+          mkdir -p Payload
+          cp -r DerivedData/Build/Products/Release-iphoneos/PocketMesh.app Payload/
+          zip -r "PocketMesh-Release-${{ steps.version.outputs.version }}.ipa" Payload
+          rm -rf Payload
+
+      - name: Upload Debug IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: PocketMesh-Debug-${{ steps.version.outputs.version }}
+          path: PocketMesh-Debug-${{ steps.version.outputs.version }}.ipa
+
+      - name: Upload Release IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: PocketMesh-Release-${{ steps.version.outputs.version }}
+          path: PocketMesh-Release-${{ steps.version.outputs.version }}.ipa
+
+      - name: Create Draft Release
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: PocketMesh ${{ steps.version.outputs.version }}
+          files: |
+            PocketMesh-Debug-${{ steps.version.outputs.version }}.ipa
+            PocketMesh-Release-${{ steps.version.outputs.version }}.ipa
