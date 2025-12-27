@@ -180,10 +180,6 @@ public final class AccessorySetupKitService {
         case .migrationComplete:
             logger.info("Migration complete")
 
-        case .accessoryDiscovered:
-            // Used for custom filtering with filterDiscoveryResults option
-            logger.debug("Accessory discovered (custom filtering not enabled)")
-
         case .unknown:
             // Explicit handling per Apple sample code
             logger.debug("Received unknown event type")
