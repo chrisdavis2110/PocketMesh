@@ -1,53 +1,36 @@
 # ``MeshCore``
 
-A Swift library for communicating with MeshCore mesh networking devices.
+A Swift library for communicating with MeshCore mesh networking devices over Bluetooth Low Energy.
 
 ## Overview
 
-MeshCore provides a modern Swift API for interacting with MeshCore devices over Bluetooth Low Energy. It handles protocol encoding/decoding, session management, contact discovery, and event streaming.
+MeshCore provides a modern Swift API for controlling MeshCore devices from iOS and macOS applications. The library handles protocol encoding/decoding, session management, contact discovery, and event streaming.
 
-MeshCore devices form a peer-to-peer mesh network using LoRa radio, enabling off-grid communication. This library provides the BLE interface for controlling these devices from iOS and macOS applications.
+**What you can do with MeshCore:**
 
-### Features
-
-- **Modern Swift Concurrency**: Built with async/await and actors for safe, ergonomic code
-- **Event Streaming**: Subscribe to device events using AsyncStream
-- **Contact Management**: Discover, store, and message contacts in the mesh
-- **Telemetry**: Request sensor data using Cayenne LPP format
-- **Full Protocol Support**: Access to all MeshCore device commands
-
-### Quick Start
-
-```swift
-import MeshCore
-
-// Create a transport and session
-let transport = BLETransport(peripheral: peripheral)
-let session = MeshCoreSession(transport: transport)
-
-// Connect and start
-try await session.start()
-
-// Get contacts and send a message
-let contacts = try await session.getContacts()
-if let contact = contacts.first {
-    try await session.sendMessage(to: contact.publicKey, text: "Hello!")
-}
-
-// Subscribe to events
-Task {
-    for await event in await session.events() {
-        switch event {
-        case .contactMessageReceived(let message):
-            print("Message: \(message.text)")
-        default:
-            break
-        }
-    }
-}
-```
+- Connect to MeshCore devices via BLE
+- Send and receive messages through the mesh network
+- Discover and manage contacts
+- Subscribe to real-time events (messages, advertisements, acknowledgements)
+- Configure device settings (radio, coordinates, channels)
+- Request telemetry and sensor data
+- Execute binary protocol commands for advanced operations
 
 ## Topics
+
+### Guides
+
+- <doc:GettingStarted>
+- <doc:SessionLifecycle>
+- <doc:SendingMessages>
+- <doc:ReceivingMessages>
+- <doc:ManagingContacts>
+- <doc:EventHandling>
+- <doc:Telemetry>
+- <doc:DeviceConfiguration>
+- <doc:BinaryProtocol>
+- <doc:CustomTransports>
+- <doc:ProtocolInternals>
 
 ### Essentials
 
@@ -55,39 +38,46 @@ Task {
 - ``MeshTransport``
 - ``SessionConfiguration``
 
-### Events
-
-- ``MeshEvent``
-- ``EventDispatcher``
-- ``ConnectionState``
-
-### Models
-
-- ``MeshContact``
-- ``SelfInfo``
-- ``DeviceCapabilities``
-
-### Messages
+### Communication
 
 - ``ContactMessage``
 - ``ChannelMessage``
 - ``MessageSentInfo``
 - ``MessageResult``
+- ``Destination``
 
-### Protocol
+### Contacts
 
-- ``PacketBuilder``
-- ``PacketParser``
-- ``ResponseCode``
-- ``CommandCode``
+- ``MeshContact``
+
+### Events
+
+- ``MeshEvent``
+- ``EventDispatcher``
+- ``EventFilter``
+- ``ConnectionState``
+
+### Device Information
+
+- ``SelfInfo``
+- ``DeviceCapabilities``
+- ``BatteryInfo``
 
 ### Telemetry
 
 - ``LPPDecoder``
+- ``LPPEncoder``
 - ``LPPSensorType``
 - ``LPPDataPoint``
 - ``LPPValue``
 - ``TelemetryResponse``
+
+### Network
+
+- ``TraceInfo``
+- ``PathInfo``
+- ``NeighboursResponse``
+- ``Neighbour``
 
 ### Statistics
 
@@ -96,13 +86,32 @@ Task {
 - ``RadioStats``
 - ``PacketStats``
 
-### Network
+### Binary Protocol
 
-- ``TraceInfo``
-- ``PathInfo``
-- ``NeighboursResponse``
+- ``MMAResponse``
+- ``ACLResponse``
+- ``BinaryRequestType``
+
+### Channels
+
+- ``ChannelInfo``
+- ``ChannelSecret``
+- ``FloodScope``
+
+### Protocol Internals
+
+- ``PacketBuilder``
+- ``PacketParser``
+- ``CommandCode``
+- ``ResponseCode``
 
 ### Errors
 
 - ``MeshCoreError``
 - ``MeshTransportError``
+- ``DestinationError``
+
+### Transport Implementations
+
+- ``BLETransport``
+- ``MockTransport``
