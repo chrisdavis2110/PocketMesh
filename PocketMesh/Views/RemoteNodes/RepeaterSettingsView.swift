@@ -70,7 +70,7 @@ struct RepeaterSettingsView: View {
                     longitude: viewModel.longitude
                 )
             ) { coordinate in
-                try await viewModel.applyLocation(
+                viewModel.setLocationFromPicker(
                     latitude: coordinate.latitude,
                     longitude: coordinate.longitude
                 )
@@ -232,7 +232,7 @@ struct RepeaterSettingsView: View {
         }
     }
 
-    // MARK: - Identity Section (immediate apply on change)
+    // MARK: - Identity Section
 
     private var identitySection: some View {
         ExpandableSettingsSection(
@@ -246,8 +246,8 @@ struct RepeaterSettingsView: View {
         ) {
             TextField("Name", text: $viewModel.name)
                 .textContentType(.name)
-                .onSubmit {
-                    viewModel.applyNameImmediately()
+                .onChange(of: viewModel.name) { _, _ in
+                    viewModel.identitySettingsModified = true
                 }
 
             HStack {
@@ -257,8 +257,8 @@ struct RepeaterSettingsView: View {
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 120)
-                    .onSubmit {
-                        viewModel.applyLatitudeImmediately()
+                    .onChange(of: viewModel.latitude) { _, _ in
+                        viewModel.identitySettingsModified = true
                     }
             }
 
@@ -269,24 +269,35 @@ struct RepeaterSettingsView: View {
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 120)
-                    .onSubmit {
-                        viewModel.applyLongitudeImmediately()
+                    .onChange(of: viewModel.longitude) { _, _ in
+                        viewModel.identitySettingsModified = true
                     }
             }
 
             Button {
                 showingLocationPicker = true
             } label: {
-                Label("Set Location", systemImage: "mappin.and.ellipse")
+                Label("Pick on Map", systemImage: "mappin.and.ellipse")
             }
 
-            Text("Text fields apply on keyboard dismiss. Map picker applies immediately.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Button {
+                Task { await viewModel.applyIdentitySettings() }
+            } label: {
+                HStack {
+                    Spacer()
+                    if viewModel.isApplying {
+                        ProgressView()
+                    } else {
+                        Text("Apply Identity Settings")
+                    }
+                    Spacer()
+                }
+            }
+            .disabled(viewModel.isApplying || !viewModel.identitySettingsModified)
         }
     }
 
-    // MARK: - Behavior Section (immediate apply on change)
+    // MARK: - Behavior Section
 
     private var behaviorSection: some View {
         ExpandableSettingsSection(
@@ -300,27 +311,38 @@ struct RepeaterSettingsView: View {
         ) {
             Toggle("Repeater Mode", isOn: $viewModel.repeaterEnabled)
                 .onChange(of: viewModel.repeaterEnabled) { _, _ in
-                    viewModel.applyRepeaterModeImmediately()
+                    viewModel.behaviorSettingsModified = true
                 }
 
-            Stepper("Advert Interval (0-hop): \(viewModel.advertIntervalMinutes) min", value: $viewModel.advertIntervalMinutes, in: 1...120)
+            Stepper("Advert Interval (0-hop): \(viewModel.advertIntervalMinutes) min", value: $viewModel.advertIntervalMinutes, in: 60...240)
                 .onChange(of: viewModel.advertIntervalMinutes) { _, _ in
-                    viewModel.applyAdvertIntervalImmediately()
+                    viewModel.behaviorSettingsModified = true
                 }
 
-            Stepper("Advert Interval (flood): \(viewModel.floodAdvertIntervalHours) hours", value: $viewModel.floodAdvertIntervalHours, in: 1...168)
+            Stepper("Advert Interval (flood): \(viewModel.floodAdvertIntervalHours) hours", value: $viewModel.floodAdvertIntervalHours, in: 3...48)
                 .onChange(of: viewModel.floodAdvertIntervalHours) { _, _ in
-                    viewModel.applyFloodAdvertIntervalImmediately()
+                    viewModel.behaviorSettingsModified = true
                 }
 
             Stepper("Max Flood Hops: \(viewModel.floodMaxHops)", value: $viewModel.floodMaxHops, in: 0...10)
                 .onChange(of: viewModel.floodMaxHops) { _, _ in
-                    viewModel.applyFloodMaxImmediately()
+                    viewModel.behaviorSettingsModified = true
                 }
 
-            Text("Changes apply immediately")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Button {
+                Task { await viewModel.applyBehaviorSettings() }
+            } label: {
+                HStack {
+                    Spacer()
+                    if viewModel.isApplying {
+                        ProgressView()
+                    } else {
+                        Text("Apply Behavior Settings")
+                    }
+                    Spacer()
+                }
+            }
+            .disabled(viewModel.isApplying || !viewModel.behaviorSettingsModified)
         }
     }
 

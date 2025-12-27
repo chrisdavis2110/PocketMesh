@@ -40,8 +40,8 @@ final class RepeaterSettingsViewModel {
     var radioLoaded: Bool { hasReceivedRadioData }
 
     // Behavior settings (from get repeat, get advert.interval, get flood.max)
-    var advertIntervalMinutes: Int = 15
-    var floodAdvertIntervalHours: Int = 1
+    var advertIntervalMinutes: Int = 60  // Firmware valid range: 60-240
+    var floodAdvertIntervalHours: Int = 3  // Firmware valid range: 3-48
     var floodMaxHops: Int = 3
     var repeaterEnabled: Bool = true
     var isLoadingBehavior = false
@@ -70,6 +70,12 @@ final class RepeaterSettingsViewModel {
 
     /// Track if radio settings have been modified (requires restart)
     var radioSettingsModified = false
+
+    /// Track if identity settings have been modified
+    var identitySettingsModified = false
+
+    /// Track if behavior settings have been modified
+    var behaviorSettingsModified = false
 
     // MARK: - Dependencies
 
@@ -117,23 +123,6 @@ final class RepeaterSettingsViewModel {
         }
         timeoutTasks.removeAll()
         pendingQueries.removeAll()
-        applyTasks.values.forEach { $0.cancel() }
-        applyTasks.removeAll()
-    }
-
-    // MARK: - Debouncing for Immediate Apply
-
-    /// Debounce tasks for immediate apply methods
-    private var applyTasks: [String: Task<Void, Never>] = [:]
-
-    /// Debounced apply - cancels previous task if called again within delay
-    private func debouncedApply(key: String, delay: Duration = .milliseconds(300), action: @escaping @MainActor () async -> Void) {
-        applyTasks[key]?.cancel()
-        applyTasks[key] = Task { @MainActor in
-            try? await Task.sleep(for: delay)
-            guard !Task.isCancelled else { return }
-            await action()
-        }
     }
 
     // MARK: - Configuration
@@ -182,6 +171,7 @@ final class RepeaterSettingsViewModel {
         guard let session, let service = repeaterAdminService else { return }
 
         isLoadingIdentity = true
+        identitySettingsModified = false  // Reset on fresh load
         pendingQueries.append("get name")
         pendingQueries.append("get lat")
         pendingQueries.append("get lon")
@@ -226,6 +216,7 @@ final class RepeaterSettingsViewModel {
         guard let session, let service = repeaterAdminService else { return }
 
         isLoadingBehavior = true
+        behaviorSettingsModified = false  // Reset on fresh load
         pendingQueries.append("get repeat")
         pendingQueries.append("get advert.interval")
         pendingQueries.append("get flood.advert.interval")
@@ -587,130 +578,58 @@ final class RepeaterSettingsViewModel {
         isApplying = false
     }
 
-    // MARK: - Immediate Apply Methods (debounced, non-restart settings)
+    /// Apply all identity settings (name, latitude, longitude)
+    func applyIdentitySettings() async {
+        guard let session, let service = repeaterAdminService else { return }
 
-    /// Apply name with debouncing to prevent rapid-fire commands
-    func applyNameImmediately() {
-        guard !name.isEmpty else { return }
-        debouncedApply(key: "name") { [weak self] in
-            guard let self, let session = self.session, let service = self.repeaterAdminService else { return }
-            do {
-                let command = "set name \(self.name)"
-                _ = try await service.sendCommand(sessionID: session.id, command: command)
-                self.logger.debug("Name applied: \(self.name)")
-            } catch {
-                self.logger.error("Failed to apply name: \(error)")
-            }
+        isApplying = true
+        errorMessage = nil
+
+        do {
+            _ = try await service.sendCommand(sessionID: session.id, command: "set name \(name)")
+            _ = try await service.sendCommand(sessionID: session.id, command: "set lat \(latitude)")
+            _ = try await service.sendCommand(sessionID: session.id, command: "set lon \(longitude)")
+
+            identitySettingsModified = false
+            successMessage = "Identity settings applied"
+            showSuccessAlert = true
+        } catch {
+            errorMessage = error.localizedDescription
         }
+
+        isApplying = false
     }
 
-    /// Apply latitude with debouncing
-    func applyLatitudeImmediately() {
-        debouncedApply(key: "lat") { [weak self] in
-            guard let self, let session = self.session, let service = self.repeaterAdminService else { return }
-            do {
-                let command = "set lat \(self.latitude)"
-                _ = try await service.sendCommand(sessionID: session.id, command: command)
-                self.logger.debug("Latitude applied: \(self.latitude)")
-            } catch {
-                self.logger.error("Failed to apply latitude: \(error)")
-            }
+    /// Apply all behavior settings (repeat mode, intervals, flood max)
+    func applyBehaviorSettings() async {
+        guard let session, let service = repeaterAdminService else { return }
+
+        isApplying = true
+        errorMessage = nil
+
+        do {
+            _ = try await service.sendCommand(sessionID: session.id, command: "set repeat \(repeaterEnabled ? "on" : "off")")
+            _ = try await service.sendCommand(sessionID: session.id, command: "set advert.interval \(advertIntervalMinutes)")
+            _ = try await service.sendCommand(sessionID: session.id, command: "set flood.advert.interval \(floodAdvertIntervalHours)")
+            _ = try await service.sendCommand(sessionID: session.id, command: "set flood.max \(floodMaxHops)")
+
+            behaviorSettingsModified = false
+            successMessage = "Behavior settings applied"
+            showSuccessAlert = true
+        } catch {
+            errorMessage = error.localizedDescription
         }
+
+        isApplying = false
     }
 
-    /// Apply longitude with debouncing
-    func applyLongitudeImmediately() {
-        debouncedApply(key: "lon") { [weak self] in
-            guard let self, let session = self.session, let service = self.repeaterAdminService else { return }
-            do {
-                let command = "set lon \(self.longitude)"
-                _ = try await service.sendCommand(sessionID: session.id, command: command)
-                self.logger.debug("Longitude applied: \(self.longitude)")
-            } catch {
-                self.logger.error("Failed to apply longitude: \(error)")
-            }
-        }
-    }
+    // MARK: - Location Picker Support
 
-    /// Apply latitude and longitude together (from map picker)
-    /// Throws if either command fails
-    func applyLocation(latitude: Double, longitude: Double) async throws {
-        guard let session, let service = repeaterAdminService else {
-            throw RepeaterSettingsError.notConnected
-        }
-
-        // Format with 6 decimal places for CLI consistency
-        let formatter = NumberFormatter()
-        formatter.minimumFractionDigits = 6
-        formatter.maximumFractionDigits = 6
-        let latStr = formatter.string(from: NSNumber(value: latitude)) ?? "\(latitude)"
-        let lonStr = formatter.string(from: NSNumber(value: longitude)) ?? "\(longitude)"
-
-        // Send both commands
-        _ = try await service.sendCommand(sessionID: session.id, command: "set lat \(latStr)")
-        _ = try await service.sendCommand(sessionID: session.id, command: "set lon \(lonStr)")
-
-        // Update local state (already on @MainActor)
+    /// Update location from map picker (sets modified flag, does not apply)
+    func setLocationFromPicker(latitude: Double, longitude: Double) {
         self.latitude = latitude
         self.longitude = longitude
-
-        logger.debug("Location applied: \(latitude), \(longitude)")
-    }
-
-    /// Apply repeater enabled state with debouncing
-    func applyRepeaterModeImmediately() {
-        debouncedApply(key: "repeat") { [weak self] in
-            guard let self, let session = self.session, let service = self.repeaterAdminService else { return }
-            do {
-                let command = "set repeat \(self.repeaterEnabled ? "on" : "off")"
-                _ = try await service.sendCommand(sessionID: session.id, command: command)
-                self.logger.debug("Repeater mode applied: \(self.repeaterEnabled)")
-            } catch {
-                self.logger.error("Failed to apply repeater mode: \(error)")
-            }
-        }
-    }
-
-    /// Apply advert interval with debouncing
-    func applyAdvertIntervalImmediately() {
-        debouncedApply(key: "advert.interval") { [weak self] in
-            guard let self, let session = self.session, let service = self.repeaterAdminService else { return }
-            do {
-                let command = "set advert.interval \(self.advertIntervalMinutes)"
-                _ = try await service.sendCommand(sessionID: session.id, command: command)
-                self.logger.debug("Advert interval applied: \(self.advertIntervalMinutes)")
-            } catch {
-                self.logger.error("Failed to apply advert interval: \(error)")
-            }
-        }
-    }
-
-    /// Apply flood advert interval with debouncing
-    func applyFloodAdvertIntervalImmediately() {
-        debouncedApply(key: "flood.advert.interval") { [weak self] in
-            guard let self, let session = self.session, let service = self.repeaterAdminService else { return }
-            do {
-                let command = "set flood.advert.interval \(self.floodAdvertIntervalHours)"
-                _ = try await service.sendCommand(sessionID: session.id, command: command)
-                self.logger.debug("Flood advert interval applied: \(self.floodAdvertIntervalHours)")
-            } catch {
-                self.logger.error("Failed to apply flood advert interval: \(error)")
-            }
-        }
-    }
-
-    /// Apply flood max hops with debouncing
-    func applyFloodMaxImmediately() {
-        debouncedApply(key: "flood.max") { [weak self] in
-            guard let self, let session = self.session, let service = self.repeaterAdminService else { return }
-            do {
-                let command = "set flood.max \(self.floodMaxHops)"
-                _ = try await service.sendCommand(sessionID: session.id, command: command)
-                self.logger.debug("Flood max applied: \(self.floodMaxHops)")
-            } catch {
-                self.logger.error("Failed to apply flood max: \(error)")
-            }
-        }
+        identitySettingsModified = true
     }
 
     /// Change admin password (requires explicit action due to security)
