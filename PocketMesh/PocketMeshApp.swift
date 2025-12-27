@@ -14,6 +14,13 @@ struct PocketMeshApp: App {
     private let modelContainer: ModelContainer
     #endif
 
+    #if DEBUG
+    /// Whether running in screenshot mode for App Store screenshots
+    private var isScreenshotMode: Bool {
+        ProcessInfo.processInfo.arguments.contains("-screenshotMode")
+    }
+    #endif
+
     init() {
         let container = try! PersistenceStore.createContainer()
         _appState = State(initialValue: AppState(modelContainer: container))
@@ -30,9 +37,16 @@ struct PocketMeshApp: App {
                     try? Tips.configure([
                         .displayFrequency(.immediate)
                     ])
-                    await appState.initialize()
+
                     #if DEBUG
-                    ConnectionService.shared.startAdvertising(container: modelContainer)
+                    if isScreenshotMode {
+                        await setupScreenshotMode()
+                    } else {
+                        await appState.initialize()
+                        ConnectionService.shared.startAdvertising(container: modelContainer)
+                    }
+                    #else
+                    await appState.initialize()
                     #endif
                 }
                 .onChange(of: scenePhase) { oldPhase, newPhase in
@@ -40,6 +54,31 @@ struct PocketMeshApp: App {
                 }
         }
     }
+
+    #if DEBUG && targetEnvironment(simulator)
+    /// Sets up the app for App Store screenshot capture.
+    /// Bypasses onboarding and auto-connects to simulator with mock data.
+    @MainActor
+    private func setupScreenshotMode() async {
+        // Bypass onboarding
+        appState.hasCompletedOnboarding = true
+
+        // Persist simulator device ID for auto-reconnect
+        UserDefaults.standard.set(
+            MockDataProvider.simulatorDeviceID.uuidString,
+            forKey: "com.pocketmesh.lastConnectedDeviceID"
+        )
+
+        // Initialize app (will auto-connect to simulator device)
+        await appState.initialize()
+    }
+    #elseif DEBUG
+    @MainActor
+    private func setupScreenshotMode() async {
+        // Screenshot mode only works in simulator
+        await appState.initialize()
+    }
+    #endif
 
     private func handleScenePhaseChange(from oldPhase: ScenePhase, to newPhase: ScenePhase) {
         switch newPhase {
