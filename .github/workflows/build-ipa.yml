@@ -2,13 +2,14 @@ name: Build Unsigned IPA
 
 on:
   push:
-    tags:
-      - 'v*'
-      - '[0-9]*'
+    branches:
+      - main
+    paths:
+      - 'PocketMesh/Info.plist'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version label (defaults to commit SHA)'
+        description: 'Version label (defaults to Info.plist version)'
         required: false
         type: string
 
@@ -24,29 +25,51 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 2
+
+      - name: Check version change
+        id: version_check
+        run: |
+          # Get current version from Info.plist
+          CURRENT_VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" PocketMesh/Info.plist)
+          CURRENT_BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" PocketMesh/Info.plist)
+          FULL_VERSION="${CURRENT_VERSION}.${CURRENT_BUILD}"
+
+          echo "Current version: $FULL_VERSION"
+
+          # Check if tag already exists
+          if git ls-remote --tags origin | grep -q "refs/tags/v${FULL_VERSION}$"; then
+            echo "Tag v${FULL_VERSION} already exists, skipping"
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "New version detected: $FULL_VERSION"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "version=$FULL_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Determine version
         id: version
+        if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
-            VERSION="${{ github.ref_name }}"
-            VERSION="${VERSION#v}"  # Strip leading 'v'
-          elif [[ -n "${{ inputs.version }}" ]]; then
+          if [[ -n "${{ inputs.version }}" ]]; then
             VERSION="${{ inputs.version }}"
           else
-            VERSION="${{ github.sha }}"
-            VERSION="${VERSION:0:7}"  # Short SHA
+            VERSION="${{ steps.version_check.outputs.version }}"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
 
       - name: Install XcodeGen
+        if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: brew install xcodegen
 
       - name: Generate Xcode project
+        if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: xcodegen generate
 
       - name: Build Debug
+        if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           xcodebuild build \
             -scheme PocketMesh \
@@ -58,6 +81,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: Build Release
+        if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           xcodebuild build \
             -scheme PocketMesh \
@@ -69,6 +93,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: Package Debug IPA
+        if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           mkdir -p Payload
           cp -r DerivedData/Build/Products/Debug-iphoneos/PocketMesh.app Payload/
@@ -76,6 +101,7 @@ jobs:
           rm -rf Payload
 
       - name: Package Release IPA
+        if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           mkdir -p Payload
           cp -r DerivedData/Build/Products/Release-iphoneos/PocketMesh.app Payload/
@@ -83,21 +109,32 @@ jobs:
           rm -rf Payload
 
       - name: Upload Debug IPA
+        if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: PocketMesh-Debug-${{ steps.version.outputs.version }}
           path: PocketMesh-Debug-${{ steps.version.outputs.version }}.ipa
 
       - name: Upload Release IPA
+        if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: PocketMesh-Release-${{ steps.version.outputs.version }}
           path: PocketMesh-Release-${{ steps.version.outputs.version }}.ipa
 
+      - name: Create tag
+        if: steps.version_check.outputs.should_build == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
+
       - name: Create Draft Release
-        if: github.event_name == 'push' && github.ref_type == 'tag'
+        if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.version.outputs.version }}
           draft: true
           name: PocketMesh ${{ steps.version.outputs.version }}
           files: |
