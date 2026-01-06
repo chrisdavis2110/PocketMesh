@@ -26,16 +26,25 @@ struct DeviceScanView: View {
                     .font(.largeTitle)
                     .bold()
 
-                Text("Make sure your MeshCore device is powered on and nearby")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                if !hasConnectedDevice {
+                    Text("Make sure your MeshCore device is powered on and nearby")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
             }
 
             Spacer()
 
-            if !hasConnectedDevice {
+            if hasConnectedDevice {
+                VStack(spacing: 12) {
+                    Text("Your device is already paired 🎉")
+                        .font(.title2)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+            } else {
                 // Instructions
                 VStack(alignment: .leading, spacing: 16) {
                     instructionRow(number: 1, text: "Power on your MeshCore device")
