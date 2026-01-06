@@ -52,7 +52,7 @@ struct WelcomeView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
             }
-            .buttonStyle(.borderedProminent)
+            .liquidGlassProminentButtonStyle()
             .padding(.horizontal)
             .padding(.bottom)
         }
