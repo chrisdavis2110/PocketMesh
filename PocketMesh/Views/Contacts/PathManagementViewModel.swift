@@ -31,7 +31,7 @@ enum PathDiscoveryResult: Equatable {
             let source = fromCache ? ". Using cached info from advertisement. Node may have telemetry disabled." : ""
             return "\(pathType)\(source)"
         case .noPathFound:
-            return "Remote node did not respond"
+            return "Remote node did not respond. Nodes must have telemetry requests enabled to respond to path discovery."
         case .failed(let message):
             return "Failed: \(message)"
         }
@@ -56,12 +56,9 @@ final class PathManagementViewModel {
     var availableRepeaters: [ContactDTO] = []  // Known repeaters to add
     var allContacts: [ContactDTO] = []  // All contacts for name resolution
 
-    /// Repeaters available to add (excludes those already in path)
+    /// Repeaters available to add (allows duplicates for paths like A → B → A)
     var filteredAvailableRepeaters: [ContactDTO] {
-        let pathHashBytes = Set(editablePath.map { $0.hashByte })
-        return availableRepeaters.filter { repeater in
-            !pathHashBytes.contains(repeater.publicKey[0])
-        }
+        availableRepeaters
     }
 
     // Discovery cancellation
