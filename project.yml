@@ -32,7 +32,6 @@ targets:
       - package: PocketMeshServices
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.app
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: 0.1.0
         CURRENT_PROJECT_VERSION: 2
@@ -51,8 +50,10 @@ targets:
       configs:
         Debug:
           INFOPLIST_FILE: PocketMesh/Info-Debug.plist
+          PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.app.debug
         Release:
           INFOPLIST_FILE: PocketMesh/Info.plist
+          PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.app
 
   PocketMeshTests:
     type: bundle.unit-test
