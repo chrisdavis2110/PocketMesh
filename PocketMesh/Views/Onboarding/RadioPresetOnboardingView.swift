@@ -201,7 +201,6 @@ private struct PresetCard: View {
     let frequency: Double
     let region: RadioRegion?
     let isSelected: Bool
-    let isApplied: Bool
     let isDisabled: Bool
 
     var body: some View {
@@ -243,14 +242,6 @@ private struct PresetCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isSelected ? Color.accentColor : .clear, lineWidth: 2.5)
         }
-        .overlay(alignment: .topLeading) {
-            if isApplied {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(.white, Color.accentColor)
-                    .padding(8)
-            }
-        }
         .opacity(isDisabled ? 0.5 : 1.0)
     }
 }
@@ -280,7 +271,6 @@ private struct PresetCardScrollView: View {
                             frequency: freqMHz,
                             region: nil,
                             isSelected: selectedPresetID == nil,
-                            isApplied: appliedPresetID == nil,
                             isDisabled: isDisabled
                         )
                     }
@@ -297,7 +287,6 @@ private struct PresetCardScrollView: View {
                             frequency: preset.frequencyMHz,
                             region: preset.region,
                             isSelected: selectedPresetID == preset.id,
-                            isApplied: appliedPresetID == preset.id,
                             isDisabled: isDisabled
                         )
                     }
