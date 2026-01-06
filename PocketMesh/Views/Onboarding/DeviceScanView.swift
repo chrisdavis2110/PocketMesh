@@ -8,6 +8,10 @@ struct DeviceScanView: View {
     @State private var showTroubleshooting = false
     @State private var errorMessage: String?
     @State private var pairingSuccessTrigger = false
+    @State private var demoModeUnlockTrigger = false
+    @State private var tapTimes: [Date] = []
+    @State private var showDemoModeAlert = false
+    private var demoModeManager = DemoModeManager.shared
 
     private var hasConnectedDevice: Bool {
         appState.connectionState == .ready
@@ -25,6 +29,9 @@ struct DeviceScanView: View {
                 Text("Pair Your Device")
                     .font(.largeTitle)
                     .bold()
+                    .onTapGesture {
+                        handleTitleTap()
+                    }
 
                 if !hasConnectedDevice {
                     Text("Make sure your MeshCore device is powered on and nearby")
@@ -150,8 +157,14 @@ struct DeviceScanView: View {
             .padding(.bottom)
         }
         .sensoryFeedback(.success, trigger: pairingSuccessTrigger)
+        .sensoryFeedback(.success, trigger: demoModeUnlockTrigger)
         .sheet(isPresented: $showTroubleshooting) {
             TroubleshootingSheet()
+        }
+        .alert("Demo Mode Unlocked", isPresented: $showDemoModeAlert) {
+            Button("OK") { }
+        } message: {
+            Text("You can now continue without a device. Toggle demo mode in Settings anytime.")
         }
     }
 
@@ -218,6 +231,22 @@ struct DeviceScanView: View {
         }
     }
     #endif
+
+    private func handleTitleTap() {
+        let now = Date()
+        tapTimes.append(now)
+
+        // Keep only taps within last 1 second
+        tapTimes = tapTimes.filter { now.timeIntervalSince($0) <= 1.0 }
+
+        // Check if we have 3 taps within 1 second
+        if tapTimes.count >= 3 {
+            tapTimes.removeAll()
+            demoModeManager.unlock()
+            demoModeUnlockTrigger.toggle()
+            showDemoModeAlert = true
+        }
+    }
 }
 
 /// Troubleshooting sheet for when devices don't appear in the ASK picker
