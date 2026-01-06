@@ -6,13 +6,8 @@ import Foundation
 @MainActor
 struct DemoModeManagerTests {
 
-    // Clean up UserDefaults before and after tests
+    // Clean up UserDefaults before tests
     init() {
-        UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
-        UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
-    }
-
-    deinit {
         UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
         UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
     }
