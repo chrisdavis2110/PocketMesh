@@ -1,7 +1,6 @@
-#if targetEnvironment(simulator)
 import Foundation
 
-/// Mock data provider for iOS Simulator testing
+/// Mock data provider for iOS Simulator and demo mode testing
 public enum MockDataProvider {
     // MARK: - Deterministic IDs
 
@@ -648,4 +647,3 @@ public enum MockDataProvider {
         }
     }
 }
-#endif

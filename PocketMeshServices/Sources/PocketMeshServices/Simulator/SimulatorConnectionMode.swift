@@ -1,8 +1,9 @@
-#if targetEnvironment(simulator)
 import Foundation
 import SwiftData
 import OSLog
 
+/// Connection mode for simulator and demo mode on device.
+/// Provides mock data and simulated connections without requiring real hardware.
 @MainActor
 public final class SimulatorConnectionMode {
 
@@ -53,4 +54,3 @@ public final class SimulatorConnectionMode {
         logger.info("Simulator: seeded \(MockDataProvider.contacts.count) contacts with messages")
     }
 }
-#endif

@@ -94,14 +94,13 @@ public final class ConnectionManager {
 
     // MARK: - Simulator Support
 
-    #if targetEnvironment(simulator)
-    /// Simulator connection mode (only available on simulator)
+    /// Simulator connection mode (used for demo mode on device)
     private let simulatorMode = SimulatorConnectionMode()
 
     /// Whether running in simulator mode
+    #if targetEnvironment(simulator)
     public var isSimulatorMode: Bool { true }
     #else
-    /// Whether running in simulator mode
     public var isSimulatorMode: Bool { false }
     #endif
 
@@ -338,9 +337,8 @@ public final class ConnectionManager {
         logger.info("Disconnected")
     }
 
-    #if targetEnvironment(simulator)
     /// Connects to the simulator device with mock data.
-    /// Only available on simulator builds.
+    /// Used for simulator builds and demo mode on device.
     public func simulatorConnect() async throws {
         logger.info("Starting simulator connection")
 
@@ -391,10 +389,6 @@ public final class ConnectionManager {
     public var wasSimulatorConnection: Bool {
         lastConnectedDeviceID == MockDataProvider.simulatorDeviceID
     }
-    #else
-    /// Whether the last connection was a simulator connection (always false on device)
-    public var wasSimulatorConnection: Bool { false }
-    #endif
 
     /// Switches to a different device.
     ///
