@@ -257,8 +257,8 @@ public actor AdvertisementService {
 
     /// Handle path updated event - Contact path changed
     private func handlePathUpdatedEvent(publicKey: Data, deviceID: UUID) async {
-        let pubKeyHex = publicKey.prefix(3).map { String(format: "%02X", $0) }.joined()
-        logger.debug("Path updated event for \(pubKeyHex)...")
+        let pubKeyHex = publicKey.map { String(format: "%02X", $0) }.joined()
+        logger.debug("Path updated event for \(pubKeyHex)")
 
         do {
             // Look up contact by full public key to get old routing status
@@ -269,9 +269,9 @@ public actor AdvertisementService {
                 // Notify AppState to fetch updated contact from device
                 await pathRefreshHandler?(deviceID, publicKey, contact.id, wasFlood)
 
-                pathUpdateHandler?(publicKey.prefix(6), contact.outPathLength)
+                pathUpdateHandler?(publicKey, contact.outPathLength)
             } else {
-                logger.warning("Contact not found for public key \(pubKeyHex)...")
+                logger.warning("Contact not found for public key \(pubKeyHex)")
             }
         } catch {
             logger.error("Error handling path updated event: \(error.localizedDescription)")
