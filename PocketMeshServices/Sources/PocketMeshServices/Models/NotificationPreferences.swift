@@ -14,7 +14,7 @@ public struct NotificationPreferences: Sendable {
         self.contactMessagesEnabled = defaults.object(forKey: "notifyContactMessages") as? Bool ?? true
         self.channelMessagesEnabled = defaults.object(forKey: "notifyChannelMessages") as? Bool ?? true
         self.roomMessagesEnabled = defaults.object(forKey: "notifyRoomMessages") as? Bool ?? true
-        self.newContactDiscoveredEnabled = defaults.object(forKey: "notifyNewContacts") as? Bool ?? false
+        self.newContactDiscoveredEnabled = defaults.object(forKey: "notifyNewContacts") as? Bool ?? true
         self.soundEnabled = defaults.object(forKey: "notificationSoundEnabled") as? Bool ?? true
         self.badgeEnabled = defaults.object(forKey: "notificationBadgeEnabled") as? Bool ?? true
     }
@@ -48,7 +48,7 @@ public final class NotificationPreferencesStore {
 
     /// Enable notifications when new contacts are discovered
     public var newContactDiscoveredEnabled: Bool {
-        get { defaults.object(forKey: "notifyNewContacts") as? Bool ?? false }
+        get { defaults.object(forKey: "notifyNewContacts") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "notifyNewContacts") }
     }
 

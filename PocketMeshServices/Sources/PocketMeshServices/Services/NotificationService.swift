@@ -371,7 +371,7 @@ public final class NotificationService: NSObject {
 
         let content = UNMutableNotificationContent()
         content.title = "New Contact Discovered"
-        content.body = "\(contactName) is now available on the mesh"
+        content.body = contactName
         content.sound = preferences.soundEnabled ? .default : nil
         content.userInfo = [
             "contactID": contactID.uuidString,

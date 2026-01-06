@@ -458,17 +458,11 @@ public actor SyncCoordinator {
         }
 
         // Contact sync request handler (auto-add mode)
-        // When auto-add is enabled, device sends sync requests after discovering new contacts
-        // We debounce these by syncing contacts and notifying UI
+        // AdvertisementService fetches and saves the new contact directly,
+        // this handler just triggers UI refresh
         await services.advertisementService.setContactSyncRequestHandler { [weak self] _ in
             guard let self else { return }
-
-            do {
-                _ = try await services.contactService.syncContacts(deviceID: deviceID)
-                await self.notifyContactsChanged()
-            } catch {
-                self.logger.warning("Auto-sync after discovery failed: \(error.localizedDescription)")
-            }
+            await self.notifyContactsChanged()
         }
 
         logger.info("Discovery handlers wired successfully")

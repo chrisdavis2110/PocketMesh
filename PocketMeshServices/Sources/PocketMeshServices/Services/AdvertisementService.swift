@@ -224,8 +224,18 @@ public actor AdvertisementService {
                 await contactUpdatedHandler?()
             } else {
                 // Unknown contact - device has it but we don't (auto-add mode)
-                // Request a sync to get the new contact
-                logger.info("ADVERT received for unknown contact - requesting sync")
+                // Fetch just this contact from device and notify
+                logger.info("ADVERT received for unknown contact - fetching from device")
+                do {
+                    if let meshContact = try await session.getContact(publicKey: publicKey) {
+                        let frame = meshContact.toContactFrame()
+                        let contactID = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+                        let contactName = meshContact.advertisedName ?? "Unknown Contact"
+                        await newContactDiscoveredHandler?(contactName, contactID)
+                    }
+                } catch {
+                    logger.error("Failed to fetch new contact: \(error.localizedDescription)")
+                }
                 await contactSyncRequestHandler?(deviceID)
             }
         } catch {

@@ -5,6 +5,7 @@ import PocketMeshServices
 struct ContactsListView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = ContactsViewModel()
+    @State private var navigationPath = NavigationPath()
     @State private var searchText = ""
     @State private var showFavoritesOnly = false
     @State private var showDiscovery = false
@@ -17,7 +18,7 @@ struct ContactsListView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             Group {
                 if viewModel.isLoading && viewModel.contacts.isEmpty {
                     ProgressView()
@@ -110,6 +111,15 @@ struct ContactsListView: View {
             .navigationDestination(isPresented: $showDiscovery) {
                 DiscoveryView()
             }
+            .navigationDestination(for: ContactDTO.self) { contact in
+                ContactDetailView(contact: contact)
+            }
+            .onChange(of: appState.pendingContactDetail) { _, contact in
+                guard let contact else { return }
+                navigationPath.removeLast(navigationPath.count)
+                navigationPath.append(contact)
+                appState.clearPendingContactDetailNavigation()
+            }
             .sheet(isPresented: $showShareMyContact) {
                 if let device = appState.connectedDevice {
                     ContactQRShareSheet(
@@ -145,9 +155,7 @@ struct ContactsListView: View {
     }
 
     private func contactRow(_ contact: ContactDTO) -> some View {
-        NavigationLink {
-            ContactDetailView(contact: contact)
-        } label: {
+        NavigationLink(value: contact) {
             ContactRowView(contact: contact)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {

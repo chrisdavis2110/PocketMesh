@@ -89,6 +89,9 @@ public final class AppState {
     /// Whether to navigate to Discovery
     var pendingDiscoveryNavigation = false
 
+    /// Contact to navigate to (for detail view on Contacts tab)
+    var pendingContactDetail: ContactDTO?
+
     // MARK: - UI Coordination
 
     /// Message event broadcaster for UI updates
@@ -374,6 +377,11 @@ public final class AppState {
         selectedTab = 1
     }
 
+    func navigateToContactDetail(_ contact: ContactDTO) {
+        pendingContactDetail = contact
+        selectedTab = 1
+    }
+
     func clearPendingNavigation() {
         pendingChatContact = nil
     }
@@ -384,6 +392,10 @@ public final class AppState {
 
     func clearPendingDiscoveryNavigation() {
         pendingDiscoveryNavigation = false
+    }
+
+    func clearPendingContactDetailNavigation() {
+        pendingContactDetail = nil
     }
 
     // MARK: - Onboarding
@@ -427,13 +439,18 @@ public final class AppState {
         }
 
         // New contact notification tap
-        services.notificationService.onNewContactNotificationTapped = { [weak self] _ in
+        services.notificationService.onNewContactNotificationTapped = { [weak self] contactID in
             guard let self else { return }
 
             if self.connectedDevice?.manualAddContacts == true {
                 self.navigateToDiscovery()
             } else {
-                self.navigateToContacts()
+                // Navigate to contact detail, with contacts list as base
+                guard let contact = try? await services.dataStore.fetchContact(id: contactID) else {
+                    self.navigateToContacts()
+                    return
+                }
+                self.navigateToContactDetail(contact)
             }
         }
 
