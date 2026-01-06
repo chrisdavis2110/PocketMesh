@@ -5,11 +5,11 @@ on:
     branches:
       - main
     paths:
-      - 'PocketMesh/Info.plist'
+      - 'project.yml'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version label (defaults to Info.plist version)'
+        description: 'Version label (defaults to project.yml MARKETING_VERSION)'
         required: false
         type: string
 
@@ -30,8 +30,8 @@ jobs:
       - name: Check version change
         id: version_check
         run: |
-          # Get version from Info.plist
-          VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" PocketMesh/Info.plist)
+          # Get version from project.yml
+          VERSION=$(grep 'MARKETING_VERSION:' project.yml | head -1 | awk '{print $2}')
 
           echo "Current version: $VERSION"
 
