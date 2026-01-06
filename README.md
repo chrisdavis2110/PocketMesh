@@ -33,7 +33,7 @@ This app is not published on the App Store, sideloading is required. Unsigned IP
 ### Contacts
 - Auto-discovery on the mesh
 - QR code sharing
-- Favorites and blocking
+- Favorites
 
 ### Map
 - See contact positions
@@ -55,6 +55,11 @@ This app is not published on the App Store, sideloading is required. Unsigned IP
 ### General
 - Offline mesh networking (no internet required)
 - Push notifications with quick reply
+
+### Future Features
+- Blocking
+- Repeater administration (CLI, stats, etc.)
+- Import/Export config and/or data
 
 
 ## Requirements
