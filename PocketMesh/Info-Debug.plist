@@ -32,6 +32,8 @@
 	<array>
 		<string>Bluetooth</string>
 	</array>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>PocketMesh uses Bluetooth to maintain connections with MeshCore radios, even in the background, so you can send and receive messages without opening the app.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>PocketMesh uses Bluetooth to connect to MeshCore radio devices for mesh messaging.</string>
 	<key>NSCameraUsageDescription</key>

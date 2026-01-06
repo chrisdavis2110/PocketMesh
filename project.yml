@@ -39,6 +39,7 @@ targets:
         VERSIONING_SYSTEM: apple-generic
         UIBackgroundModes:
           - bluetooth-central
+        NSBluetoothAlwaysUsageDescription: "PocketMesh uses Bluetooth to maintain connections with MeshCore radios, even in the background, so you can send and receive messages without opening the app."
         NSBluetoothPeripheralUsageDescription: "PocketMesh uses Bluetooth to connect to MeshCore radios."
         NSLocationWhenInUseUsageDescription: "PocketMesh can share your location with contacts on the mesh network."
         NSAccessorySetupKitSupports:
