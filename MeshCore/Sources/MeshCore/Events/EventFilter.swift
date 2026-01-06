@@ -57,7 +57,7 @@ public struct EventFilter: Sendable {
     /// - Returns: A filter that matches only `.acknowledgement` events with the specified code.
     public static func acknowledgement(code: Data) -> EventFilter {
         EventFilter { event in
-            if case .acknowledgement(let ackCode) = event {
+            if case .acknowledgement(let ackCode, _) = event {
                 return ackCode == code
             }
             return false

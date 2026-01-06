@@ -662,15 +662,17 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///   - destination: The destination public key (6+ bytes, uses first 6 as prefix).
     ///   - text: The message text to send.
     ///   - timestamp: Message timestamp. Defaults to current time.
+    ///   - attempt: Retry attempt counter (0 for first attempt). Included in ACK hash.
     /// - Returns: Information about the sent message, including the expected ACK code.
     /// - Throws: ``MeshCoreError/timeout`` if no response.
     ///           ``MeshCoreError/deviceError(code:)`` on error.
     public func sendMessage(
         to destination: Data,
         text: String,
-        timestamp: Date = Date()
+        timestamp: Date = Date(),
+        attempt: UInt8 = 0
     ) async throws -> MessageSentInfo {
-        let data = PacketBuilder.sendMessage(to: destination, text: text, timestamp: timestamp)
+        let data = PacketBuilder.sendMessage(to: destination, text: text, timestamp: timestamp, attempt: attempt)
         return try await sendAndWaitWithError(data) { event in
             if case .messageSent(let info) = event { return info }
             return nil
@@ -683,15 +685,17 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///   - destination: The destination (contact or public key).
     ///   - text: The message text to send.
     ///   - timestamp: Message timestamp. Defaults to current time.
+    ///   - attempt: Retry attempt counter (0 for first attempt). Included in ACK hash.
     /// - Returns: Information about the sent message, including the expected ACK code.
     /// - Throws: ``MeshCoreError`` on failure.
     public func sendMessage(
         to destination: Destination,
         text: String,
-        timestamp: Date = Date()
+        timestamp: Date = Date(),
+        attempt: UInt8 = 0
     ) async throws -> MessageSentInfo {
         let publicKey = try destination.publicKey(prefixLength: 6)
-        return try await sendMessage(to: publicKey, text: text, timestamp: timestamp)
+        return try await sendMessage(to: publicKey, text: text, timestamp: timestamp, attempt: attempt)
     }
 
     /// Sends a message with automatic retry logic and optional path reset.
@@ -747,11 +751,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                 logger.info("Retry sending message: attempt \(attempts + 1)/\(maxAttempts)")
             }
 
-            let sentInfo = try await sendMessage(to: destination.prefix(6), text: text, timestamp: timestamp)
+            let sentInfo = try await sendMessage(to: destination.prefix(6), text: text, timestamp: timestamp, attempt: UInt8(attempts))
 
             let ackTimeout = timeout ?? (Double(sentInfo.suggestedTimeoutMs) / 1000.0 * 1.2)
             let ackEvent = await waitForEvent(matching: { event in
-                if case .acknowledgement(let code) = event {
+                if case .acknowledgement(let code, _) = event {
                     return code == sentInfo.expectedAck
                 }
                 return false
@@ -2135,7 +2139,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                 type: .neighbours,
                 with: event
             )
-        case .acknowledgement(let code):
+        case .acknowledgement(let code, _):
             await pendingRequests.complete(tag: code, with: event)
         default:
             break

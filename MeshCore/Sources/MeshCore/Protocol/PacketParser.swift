@@ -253,14 +253,18 @@ extension PacketParser {
     private static func parsePushNotification(_ code: ResponseCode, _ payload: Data) -> MeshEvent {
         switch code {
         case .ack:
-            // Inline - simple
             guard payload.count >= PacketSize.ackMinimum else {
                 return .parseFailure(
                     data: payload,
                     reason: "Ack response too short: \(payload.count) < \(PacketSize.ackMinimum)"
                 )
             }
-            return .acknowledgement(code: Data(payload.prefix(PacketSize.ackMinimum)))
+            let code = Data(payload.prefix(PacketSize.ackMinimum))
+            // Room server keep-alive ACKs include unsyncedCount as 5th byte
+            let unsyncedCount: UInt8? = payload.count > PacketSize.ackMinimum
+                ? payload[PacketSize.ackMinimum]
+                : nil
+            return .acknowledgement(code: code, unsyncedCount: unsyncedCount)
 
         case .messagesWaiting:
             return .messagesWaiting

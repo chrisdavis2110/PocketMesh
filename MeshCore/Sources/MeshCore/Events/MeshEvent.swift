@@ -186,9 +186,11 @@ public enum MeshEvent: Sendable {
     ///
     /// Emitted when the device receives confirmation that a sent message was delivered.
     /// Match against ``MessageSentInfo/expectedAck`` to correlate with sent messages.
-    /// 
-    /// - Parameter code: The acknowledgement code to match against the expected value.
-    case acknowledgement(code: Data)
+    ///
+    /// - Parameters:
+    ///   - code: The acknowledgement code to match against the expected value.
+    ///   - unsyncedCount: For room server keep-alive ACKs, the number of unsynced messages.
+    case acknowledgement(code: Data, unsyncedCount: UInt8? = nil)
 
     /// Indicates that trace route data was received.
     ///
@@ -1143,8 +1145,10 @@ extension MeshEvent {
                 "channelIndex": msg.channelIndex,
                 "textType": msg.textType
             ]
-        case .acknowledgement(let code):
-            return ["code": code]
+        case .acknowledgement(let code, let unsyncedCount):
+            var result: [String: AnyHashable] = ["code": code]
+            if let unsyncedCount { result["unsyncedCount"] = unsyncedCount }
+            return result
         case .messageSent(let info):
             return [
                 "type": info.type,

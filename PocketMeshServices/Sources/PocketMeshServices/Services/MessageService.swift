@@ -223,7 +223,7 @@ public actor MessageService {
                 guard !Task.isCancelled else { break }
 
                 switch event {
-                case .acknowledgement(let code):
+                case .acknowledgement(let code, _):
                     await handleAcknowledgement(code: code)
                 default:
                     break

@@ -32,12 +32,14 @@ public protocol MeshCoreSessionProtocol: Actor {
     ///   - destination: The recipient's public key (6-byte prefix).
     ///   - text: The message text to send.
     ///   - timestamp: The timestamp of the message.
+    ///   - attempt: Retry attempt counter (0 for first attempt). Included in ACK hash.
     /// - Returns: A `MessageSentInfo` object containing information about the sent message, including the ACK code.
     /// - Throws: `MeshCoreError` if the message fails to send or the device returns an error.
     func sendMessage(
         to destination: Data,
         text: String,
-        timestamp: Date
+        timestamp: Date,
+        attempt: UInt8
     ) async throws -> MessageSentInfo
 
     /// Sends a message to a channel.
@@ -113,4 +115,17 @@ public protocol MeshCoreSessionProtocol: Actor {
     ///   - secret: The 16-byte channel secret.
     /// - Throws: `MeshCoreError` if the channel configuration fails.
     func setChannel(index: UInt8, name: String, secret: Data) async throws
+}
+
+// MARK: - Default Implementations
+
+public extension MeshCoreSessionProtocol {
+    /// Sends a direct message with default attempt counter of 0.
+    func sendMessage(
+        to destination: Data,
+        text: String,
+        timestamp: Date
+    ) async throws -> MessageSentInfo {
+        try await sendMessage(to: destination, text: text, timestamp: timestamp, attempt: 0)
+    }
 }

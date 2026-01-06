@@ -181,7 +181,7 @@ public actor MessagePollingService {
         case .channelMessageReceived(let message):
             await handleChannelMessage(message)
 
-        case .acknowledgement(let code):
+        case .acknowledgement(let code, _):
             await acknowledgementHandler?(code)
 
         default:
