@@ -11,10 +11,8 @@ platform :ios do
     # Ensure we have the latest certificates
     sync_certs
 
-    # Increment build number using current timestamp for uniqueness
-    increment_build_number(
-      build_number: Time.now.strftime("%Y%m%d%H%M")
-    )
+    # Increment build number automatically
+    increment_build_number
 
     # Generate the Xcode project from XcodeGen
     sh("cd .. && xcodegen generate")
@@ -38,9 +36,8 @@ platform :ios do
   lane :release do
     sync_certs
 
-    increment_build_number(
-      build_number: Time.now.strftime("%Y%m%d%H%M")
-    )
+    # Increment build number automatically
+    increment_build_number
 
     sh("cd .. && xcodegen generate")
 
