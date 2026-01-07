@@ -30,14 +30,6 @@ public enum TextType: UInt8, Sendable, Codable {
     case signedPlain = 0x02
 }
 
-// MARK: - Location Policy
-
-/// Advertisement location sharing policy
-public enum AdvertLocationPolicy: UInt8, Sendable, Codable {
-    case none = 0
-    case share = 1
-}
-
 // MARK: - Remote Node Types
 
 /// Discriminates between remote node types for role-specific handling
@@ -148,19 +140,6 @@ public enum ProtocolLimits {
     /// Formula: 160 - nodeNameLength - 2
     public static func maxChannelMessageLength(nodeNameLength: Int) -> Int {
         max(0, 160 - nodeNameLength - 2)
-    }
-}
-
-// MARK: - Confirmations
-
-/// Confirmation that a message was acknowledged
-public struct SendConfirmation: Sendable, Equatable {
-    public let ackCode: UInt32
-    public let roundTripTime: UInt32
-
-    public init(ackCode: UInt32, roundTripTime: UInt32) {
-        self.ackCode = ackCode
-        self.roundTripTime = roundTripTime
     }
 }
 

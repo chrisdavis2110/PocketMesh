@@ -102,26 +102,6 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Appearance Settings (Preserved for separate access)
-
-struct AppearanceSettingsView: View {
-    @AppStorage("colorScheme") private var colorScheme = 0
-
-    var body: some View {
-        Form {
-            Section {
-                Picker("Appearance", selection: $colorScheme) {
-                    Text("System").tag(0)
-                    Text("Light").tag(1)
-                    Text("Dark").tag(2)
-                }
-                .pickerStyle(.inline)
-            }
-        }
-        .navigationTitle("Appearance")
-    }
-}
-
 // MARK: - About View
 
 struct AboutView: View {

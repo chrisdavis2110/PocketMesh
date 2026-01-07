@@ -127,35 +127,6 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - Placeholder Views
-
-struct ChatsPlaceholderView: View {
-    var body: some View {
-        NavigationStack {
-            ContentUnavailableView(
-                "No Conversations",
-                systemImage: "message",
-                description: Text("Start a conversation with a contact")
-            )
-            .navigationTitle("Chats")
-        }
-    }
-}
-
-struct ContactsPlaceholderView: View {
-    var body: some View {
-        NavigationStack {
-            ContentUnavailableView(
-                "No Contacts",
-                systemImage: "person.2",
-                description: Text("Contacts will appear when discovered on the mesh network")
-            )
-            .navigationTitle("Contacts")
-        }
-    }
-}
-
-
 #Preview("Content View - Onboarding") {
     ContentView()
         .environment(AppState())
