@@ -8,6 +8,7 @@ struct RepeaterStatusView: View {
 
     let session: RemoteNodeSessionDTO
     @State private var viewModel = RepeaterStatusViewModel()
+    @State private var contacts: [ContactDTO] = []
 
     var body: some View {
         NavigationStack {
@@ -55,9 +56,12 @@ struct RepeaterStatusView: View {
                 await viewModel.requestStatus(for: session)
                 // Note: Telemetry and Neighbors are NOT auto-loaded - user must expand the section
 
-                // Pre-load OCV settings for battery percentage calculation
+                // Pre-load OCV settings and contacts for neighbor matching
                 if let deviceID = appState.connectedDevice?.id {
                     await viewModel.loadOCVSettings(publicKey: session.publicKey, deviceID: deviceID)
+                    if let dataStore = appState.services?.dataStore {
+                        contacts = (try? await dataStore.fetchContacts(deviceID: deviceID)) ?? []
+                    }
                 }
             }
             .refreshable {
@@ -144,7 +148,10 @@ struct RepeaterStatusView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(viewModel.neighbors, id: \.publicKeyPrefix) { neighbor in
-                        NeighborRow(neighbor: neighbor)
+                        NeighborRow(
+                            neighbor: neighbor,
+                            contact: contacts.first { $0.publicKeyPrefix.starts(with: neighbor.publicKeyPrefix) }
+                        )
                     }
                 }
             } label: {
@@ -268,28 +275,43 @@ struct RepeaterStatusView: View {
 
 private struct NeighborRow: View {
     let neighbor: NeighbourInfo
+    let contact: ContactDTO?
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(publicKeyHex)
-                    .font(.system(.footnote, design: .monospaced))
+                Text(displayName)
 
-                Text(lastSeenText)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Text(firstKeyByte)
+                        .font(.system(.caption2, design: .monospaced))
+                    Text("·")
+                    Text(lastSeenText)
+                        .font(.caption2)
+                }
+                .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            Text("\(neighbor.snr.formatted(.number.precision(.fractionLength(1)))) dB")
-                .font(.caption)
-                .foregroundStyle(snrColor)
+            VStack(alignment: .trailing, spacing: 2) {
+                Image(systemName: "cellularbars", variableValue: snrLevel)
+                    .foregroundStyle(snrColor)
+
+                Text("SNR \(neighbor.snr.formatted(.number.precision(.fractionLength(1))))dB")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
-    private var publicKeyHex: String {
-        neighbor.publicKeyPrefix.map { String(format: "%02X", $0) }.joined()
+    private var displayName: String {
+        contact?.displayName ?? "Unknown"
+    }
+
+    private var firstKeyByte: String {
+        guard let firstByte = neighbor.publicKeyPrefix.first else { return "" }
+        return String(format: "%02X", firstByte)
     }
 
     private var lastSeenText: String {
@@ -301,6 +323,15 @@ private struct NeighborRow: View {
         } else {
             return "\(seconds / 3600)h ago"
         }
+    }
+
+    private var snrLevel: Double {
+        let snr = neighbor.snr
+        if snr > 10 { return 1.0 }
+        if snr > 5 { return 0.75 }
+        if snr > 0 { return 0.5 }
+        if snr > -10 { return 0.25 }
+        return 0.1
     }
 
     private var snrColor: Color {

@@ -184,9 +184,8 @@ final class RepeaterStatusViewModel {
         }
 
         do {
-            _ = try await repeaterAdminService.requestNeighbors(sessionID: session.id)
-            // Neighbors response arrives via push notification
-            // The handler will set isLoadingNeighbors = false when response arrives
+            let response = try await repeaterAdminService.requestNeighbors(sessionID: session.id)
+            handleNeighboursResponse(response)
         } catch {
             errorMessage = error.localizedDescription
             isLoadingNeighbors = false  // Only clear on error
