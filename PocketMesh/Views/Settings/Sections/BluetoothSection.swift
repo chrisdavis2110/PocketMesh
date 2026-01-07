@@ -4,7 +4,7 @@ import PocketMeshServices
 /// Bluetooth PIN configuration
 struct BluetoothSection: View {
     @Environment(AppState.self) private var appState
-    @State private var pinType: BluetoothPinType = .random
+    @State private var pinType: BluetoothPinType = .default
     @State private var customPin: String = ""
     @State private var showingPinEntry = false
     @State private var showingChangePinEntry = false
@@ -19,16 +19,13 @@ struct BluetoothSection: View {
     @State private var isRenaming = false
 
     enum BluetoothPinType: String, CaseIterable {
-        case `default` = "Default (123456)"
-        case random = "Random (Screen Required)"
+        case `default` = "Default"
         case custom = "Custom PIN"
     }
 
     private var currentPinType: BluetoothPinType {
-        guard let device = appState.connectedDevice else { return .random }
-        if device.blePin == 0 {
-            return .random
-        } else if device.blePin == 123456 {
+        guard let device = appState.connectedDevice else { return .default }
+        if device.blePin == 0 || device.blePin == 123456 {
             return .default
         } else {
             return .custom
@@ -86,7 +83,7 @@ struct BluetoothSection: View {
                     renameDevice()
                 } label: {
                     HStack {
-                        Text("Rename Device")
+                        Text("Change Display Name")
                         Spacer()
                         if isRenaming {
                             ProgressView()
@@ -99,10 +96,8 @@ struct BluetoothSection: View {
         } header: {
             Text("Bluetooth")
         } footer: {
-            if appState.connectionState == .ready,
-               let deviceID = appState.connectedDevice?.id,
-               appState.connectionManager.hasAccessory(for: deviceID) {
-                Text("Renaming only changes how iOS displays this device.")
+            if pinType == .default {
+                Text("Default PIN is 123456. Devices with screens show their own PIN.")
             }
         }
         .onAppear {
@@ -127,7 +122,7 @@ struct BluetoothSection: View {
                 setCustomPin()
             }
         } message: {
-            Text("Enter a 6-digit PIN. You will need to remove and re-pair the device after this change.")
+            Text("Enter a 6-digit PIN. The device will reboot to apply the change.")
         }
         .alert("Change Custom PIN", isPresented: $showingChangePinEntry) {
             TextField("6-digit PIN", text: $customPin)
@@ -137,7 +132,7 @@ struct BluetoothSection: View {
                 setCustomPin()
             }
         } message: {
-            Text("Enter a new 6-digit PIN. You will need to remove and re-pair the device after this change.")
+            Text("Enter a new 6-digit PIN. The device will reboot to apply the change.")
         }
         .alert("Change PIN Type?", isPresented: $showingRemoveConfirmation) {
             Button("Cancel", role: .cancel) {
@@ -148,11 +143,11 @@ struct BluetoothSection: View {
                     hasInitialized = true
                 }
             }
-            Button("Change", role: .destructive) {
+            Button("Change") {
                 applyPendingPinType()
             }
         } message: {
-            Text("You'll need to remove and re-pair the device after this change.")
+            Text("The device will reboot to apply the change.")
         }
         .errorAlert($showError)
     }
@@ -167,18 +162,10 @@ struct BluetoothSection: View {
             return
         }
 
-        // If changing FROM custom to something else, show confirmation
-        if oldValue == .custom && newValue != .custom {
+        // If changing FROM custom to default, show confirmation
+        if oldValue == .custom && newValue == .default {
             pendingPinType = newValue
             showingRemoveConfirmation = true
-            return
-        }
-
-        // If changing between random and default, show confirmation
-        if (oldValue == .random && newValue == .default) || (oldValue == .default && newValue == .random) {
-            pendingPinType = newValue
-            showingRemoveConfirmation = true
-            return
         }
     }
 
@@ -198,14 +185,13 @@ struct BluetoothSection: View {
                 // Send PIN change command (written to RAM until reboot)
                 try await settingsService.setBlePin(pinValue)
 
-                // Reboot device to apply PIN change
-                try await settingsService.reboot()
-
-                // Wait for device to start rebooting
-                try await Task.sleep(for: .milliseconds(500))
-
-                // Trigger re-pairing flow
-                await triggerRepairingFlow()
+                // Reboot device to apply PIN change - iOS auto-reconnects
+                // Timeout is expected since device disconnects before write callback
+                do {
+                    try await settingsService.reboot()
+                } catch BLEError.operationTimeout {
+                    // Expected - device reboots before BLE write callback arrives
+                }
             } catch {
                 showError = error.localizedDescription
                 // Revert
@@ -242,14 +228,13 @@ struct BluetoothSection: View {
                 // Send PIN change command (written to RAM until reboot)
                 try await settingsService.setBlePin(pin)
 
-                // Reboot device to apply PIN change
-                try await settingsService.reboot()
-
-                // Wait for device to start rebooting
-                try await Task.sleep(for: .milliseconds(500))
-
-                // Trigger re-pairing flow
-                await triggerRepairingFlow()
+                // Reboot device to apply PIN change - iOS auto-reconnects
+                // Timeout is expected since device disconnects before write callback
+                do {
+                    try await settingsService.reboot()
+                } catch BLEError.operationTimeout {
+                    // Expected - device reboots before BLE write callback arrives
+                }
             } catch {
                 showError = error.localizedDescription
                 // Revert
@@ -261,21 +246,6 @@ struct BluetoothSection: View {
             }
             isChangingPin = false
             customPin = ""
-        }
-    }
-
-    private func triggerRepairingFlow() async {
-        do {
-            try await appState.connectionManager.forgetDevice()
-            try await Task.sleep(for: .milliseconds(500))
-            try await appState.connectionManager.pairNewDevice()
-        } catch let pairingError as PairingError {
-            // Wrong PIN during re-pairing - use AppState's recovery flow
-            appState.failedPairingDeviceID = pairingError.deviceID
-            appState.connectionFailedMessage = "Authentication failed. The device was added but couldn't connect — this usually means the wrong PIN was entered."
-            appState.showingConnectionFailedAlert = true
-        } catch {
-            showError = "Re-pairing failed: \(error.localizedDescription)"
         }
     }
 
