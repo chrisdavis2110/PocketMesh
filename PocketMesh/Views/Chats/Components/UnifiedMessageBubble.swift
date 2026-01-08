@@ -1,6 +1,11 @@
 import SwiftUI
 import PocketMeshServices
 
+/// Layout constants for message bubbles
+private enum MessageLayout {
+    static let maxBubbleWidth: CGFloat = 280
+}
+
 /// Configuration for message bubble appearance and behavior
 struct MessageBubbleConfiguration: Sendable {
     let accentColor: Color
@@ -63,6 +68,18 @@ struct UnifiedMessageBubble: View {
     let onReply: ((String) -> Void)?
     let onDelete: (() -> Void)?
     let onShowRepeatDetails: ((MessageDTO) -> Void)?
+    let onManualPreviewFetch: (() -> Void)?
+    let isLoadingPreview: Bool
+
+    @AppStorage("linkPreviewsEnabled") private var previewsEnabled = false
+    @AppStorage("linkPreviewsAutoResolveDM") private var autoResolveDM = true
+    @AppStorage("linkPreviewsAutoResolveChannels") private var autoResolveChannels = true
+    @Environment(\.openURL) private var openURL
+
+    private func shouldAutoResolve(isChannelMessage: Bool) -> Bool {
+        guard previewsEnabled else { return false }
+        return isChannelMessage ? autoResolveChannels : autoResolveDM
+    }
 
     init(
         message: MessageDTO,
@@ -75,7 +92,9 @@ struct UnifiedMessageBubble: View {
         onRetry: (() -> Void)? = nil,
         onReply: ((String) -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
-        onShowRepeatDetails: ((MessageDTO) -> Void)? = nil
+        onShowRepeatDetails: ((MessageDTO) -> Void)? = nil,
+        onManualPreviewFetch: (() -> Void)? = nil,
+        isLoadingPreview: Bool = false
     ) {
         self.message = message
         self.contactName = contactName
@@ -88,6 +107,8 @@ struct UnifiedMessageBubble: View {
         self.onReply = onReply
         self.onDelete = onDelete
         self.onShowRepeatDetails = onShowRepeatDetails
+        self.onManualPreviewFetch = onManualPreviewFetch
+        self.isLoadingPreview = isLoadingPreview
     }
 
     var body: some View {
@@ -112,14 +133,51 @@ struct UnifiedMessageBubble: View {
                     }
 
                     // Message text with context menu
-                    MentionText(message.text, baseColor: textColor)
+                    MessageText(message.text, baseColor: textColor)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(bubbleColor)
                         .clipShape(.rect(cornerRadius: 16))
+                        .frame(maxWidth: MessageLayout.maxBubbleWidth, alignment: message.isOutgoing ? .trailing : .leading)
                         .contextMenu {
                             contextMenuContent
                         }
+
+                    // Link preview (if applicable)
+                    if previewsEnabled {
+                        if let urlString = message.linkPreviewURL,
+                           let url = URL(string: urlString) {
+                            // Fetched preview - show with metadata
+                            LinkPreviewCard(
+                                url: url,
+                                title: message.linkPreviewTitle,
+                                imageData: message.linkPreviewImageData,
+                                iconData: message.linkPreviewIconData,
+                                onTap: { openURL(url) }
+                            )
+                            .frame(maxWidth: MessageLayout.maxBubbleWidth)
+                        } else if let url = detectedURL {
+                            // URL detected - show minimal preview immediately
+                            if shouldAutoResolve(isChannelMessage: message.isChannelMessage) {
+                                LinkPreviewCard(
+                                    url: url,
+                                    title: nil,
+                                    imageData: nil,
+                                    iconData: nil,
+                                    onTap: { openURL(url) }
+                                )
+                                .frame(maxWidth: MessageLayout.maxBubbleWidth)
+                            } else {
+                                TapToLoadPreview(url: url, isLoading: isLoadingPreview) {
+                                    onManualPreviewFetch?()
+                                }
+                                .frame(
+                                    maxWidth: MessageLayout.maxBubbleWidth,
+                                    alignment: message.isOutgoing ? .trailing : .leading
+                                )
+                            }
+                        }
+                    }
 
                     // Status row for outgoing messages
                     if message.isOutgoing {
@@ -141,6 +199,10 @@ struct UnifiedMessageBubble: View {
 
     private var senderName: String {
         configuration.senderNameResolver?(message) ?? "Unknown"
+    }
+
+    private var detectedURL: URL? {
+        LinkPreviewService.extractFirstURL(from: message.text)
     }
 
     private var bubbleColor: Color {

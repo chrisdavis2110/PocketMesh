@@ -46,6 +46,8 @@ struct SettingsView: View {
 
                 NotificationSettingsSection()
 
+                LinkPreviewSettingsSection()
+
                 Section {
                     if shouldUseSplitView {
                         NavigationLink {
