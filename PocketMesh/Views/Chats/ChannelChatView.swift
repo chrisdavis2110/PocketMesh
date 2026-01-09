@@ -61,10 +61,10 @@ struct ChannelChatView: View {
                 .presentationDragIndicator(.visible)
         }
         .task {
-            logger.debug(".task: starting for channel \(channel.index), services=\(appState.services != nil)")
+            logger.info(".task: starting for channel \(channel.index), services=\(appState.services != nil)")
             viewModel.configure(appState: appState)
             await viewModel.loadChannelMessages(for: channel)
-            logger.debug(".task: completed, messages.count=\(viewModel.messages.count)")
+            logger.info(".task: completed, messages.count=\(viewModel.messages.count)")
         }
         .onDisappear {
             // Clear active channel for notification suppression
@@ -246,7 +246,7 @@ struct ChannelChatView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
         .onAppear {
-            logger.debug("emptyMessagesView: appeared for channel \(channel.index), isLoading=\(viewModel.isLoading)")
+            logger.info("emptyMessagesView: appeared for channel \(channel.index), isLoading=\(viewModel.isLoading)")
         }
     }
 

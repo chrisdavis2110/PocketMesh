@@ -248,10 +248,10 @@ final class ChatViewModel {
 
     /// Load messages for a channel
     func loadChannelMessages(for channel: ChannelDTO) async {
-        logger.debug("loadChannelMessages: start channel=\(channel.index) deviceID=\(channel.deviceID)")
+        logger.info("loadChannelMessages: start channel=\(channel.index) deviceID=\(channel.deviceID)")
 
         guard let dataStore else {
-            logger.debug("loadChannelMessages: dataStore is nil, returning early")
+            logger.info("loadChannelMessages: dataStore is nil, returning early")
             return
         }
 
@@ -263,13 +263,13 @@ final class ChatViewModel {
         notificationService?.activeChannelIndex = channel.index
         notificationService?.activeChannelDeviceID = channel.deviceID
 
-        logger.debug("loadChannelMessages: setting isLoading=true, current messages.count=\(self.messages.count)")
+        logger.info("loadChannelMessages: setting isLoading=true, current messages.count=\(self.messages.count)")
         isLoading = true
         errorMessage = nil
 
         do {
             let fetchedMessages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
-            logger.debug("loadChannelMessages: fetched \(fetchedMessages.count) messages")
+            logger.info("loadChannelMessages: fetched \(fetchedMessages.count) messages")
             messages = fetchedMessages
 
             // Clear unread count
@@ -278,11 +278,11 @@ final class ChatViewModel {
             // Update app badge
             await notificationService?.updateBadgeCount()
         } catch {
-            logger.debug("loadChannelMessages: error - \(error.localizedDescription)")
+            logger.info("loadChannelMessages: error - \(error.localizedDescription)")
             errorMessage = error.localizedDescription
         }
 
-        logger.debug("loadChannelMessages: done, isLoading=false, messages.count=\(self.messages.count)")
+        logger.info("loadChannelMessages: done, isLoading=false, messages.count=\(self.messages.count)")
         isLoading = false
     }
 
