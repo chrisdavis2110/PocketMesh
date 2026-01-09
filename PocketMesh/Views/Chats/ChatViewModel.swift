@@ -248,7 +248,12 @@ final class ChatViewModel {
 
     /// Load messages for a channel
     func loadChannelMessages(for channel: ChannelDTO) async {
-        guard let dataStore else { return }
+        logger.debug("loadChannelMessages: start channel=\(channel.index) deviceID=\(channel.deviceID)")
+
+        guard let dataStore else {
+            logger.debug("loadChannelMessages: dataStore is nil, returning early")
+            return
+        }
 
         currentChannel = channel
         currentContact = nil
@@ -258,11 +263,14 @@ final class ChatViewModel {
         notificationService?.activeChannelIndex = channel.index
         notificationService?.activeChannelDeviceID = channel.deviceID
 
+        logger.debug("loadChannelMessages: setting isLoading=true, current messages.count=\(self.messages.count)")
         isLoading = true
         errorMessage = nil
 
         do {
-            messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
+            let fetchedMessages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
+            logger.debug("loadChannelMessages: fetched \(fetchedMessages.count) messages")
+            messages = fetchedMessages
 
             // Clear unread count
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
@@ -270,9 +278,11 @@ final class ChatViewModel {
             // Update app badge
             await notificationService?.updateBadgeCount()
         } catch {
+            logger.debug("loadChannelMessages: error - \(error.localizedDescription)")
             errorMessage = error.localizedDescription
         }
 
+        logger.debug("loadChannelMessages: done, isLoading=false, messages.count=\(self.messages.count)")
         isLoading = false
     }
 
