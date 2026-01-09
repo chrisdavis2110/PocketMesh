@@ -49,6 +49,9 @@ public actor BLEStateMachine {
     /// Queue of tasks waiting to write (serializes concurrent sends)
     private var writeWaiters: [CheckedContinuation<Void, Never>] = []
 
+    /// Tracks the current write timeout task so it can be cancelled when write completes
+    private var writeTimeoutTask: Task<Void, Never>?
+
     // MARK: - Callbacks
 
     private var onDisconnection: (@Sendable (UUID, Error?) -> Void)?
@@ -245,13 +248,15 @@ public actor BLEStateMachine {
             pendingWriteContinuation = continuation
             peripheral.writeValue(data, for: tx, type: .withResponse)
 
-            // Timeout for write
-            Task {
+            // Cancel any previous timeout task and create a new one
+            writeTimeoutTask?.cancel()
+            writeTimeoutTask = Task {
                 try? await Task.sleep(for: .seconds(writeTimeout))
+                guard !Task.isCancelled else { return }
                 if let pending = self.pendingWriteContinuation {
                     self.pendingWriteContinuation = nil
                     pending.resume(throwing: BLEError.operationTimeout)
-                    // Resume next waiter
+                    self.writeTimeoutTask = nil
                     resumeNextWriteWaiter()
                 }
             }
@@ -269,6 +274,10 @@ public actor BLEStateMachine {
     /// Disconnects from the current device.
     public func disconnect() async {
         logger.info("Disconnect requested")
+
+        // Cancel write timeout task
+        writeTimeoutTask?.cancel()
+        writeTimeoutTask = nil
 
         // Cancel pending write
         if let pending = pendingWriteContinuation {
@@ -778,6 +787,10 @@ extension BLEStateMachine {
 
     func handleDidWriteValue(_ peripheral: CBPeripheral, characteristic: CBCharacteristic, error: Error?) {
         logger.info("Did write value for \(peripheral.identifier)")
+
+        // Cancel the timeout task since write completed
+        writeTimeoutTask?.cancel()
+        writeTimeoutTask = nil
 
         guard let continuation = pendingWriteContinuation else {
             return  // No pending write
