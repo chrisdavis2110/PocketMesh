@@ -163,7 +163,8 @@ public enum CLIResponse: Sendable, Equatable {
             trimmed = String(trimmed.dropFirst(2))
         }
 
-        if trimmed == "OK" {
+        // Success responses: "OK" or "OK - clock set: ..." etc.
+        if trimmed == "OK" || trimmed.hasPrefix("OK - ") {
             return .ok
         }
 
