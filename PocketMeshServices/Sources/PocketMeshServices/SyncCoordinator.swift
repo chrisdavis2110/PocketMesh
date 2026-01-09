@@ -93,6 +93,10 @@ public actor SyncCoordinator {
     /// Callback when non-message sync activity ends
     private var onSyncActivityEnded: (@Sendable () async -> Void)?
 
+    /// Callback when sync phase changes (for SwiftUI observation)
+    /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
+    nonisolated(unsafe) private var onPhaseChanged: (@Sendable @MainActor (_ phase: SyncPhase?) -> Void)?
+
     /// Callback when contacts data changes (for SwiftUI observation)
     /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
     nonisolated(unsafe) private var onContactsChanged: (@Sendable @MainActor () -> Void)?
@@ -116,6 +120,11 @@ public actor SyncCoordinator {
     @MainActor
     private func setState(_ newState: SyncState) {
         state = newState
+        if case .syncing(let progress) = newState {
+            onPhaseChanged?(progress.phase)
+        } else {
+            onPhaseChanged?(nil)
+        }
     }
 
     @MainActor
@@ -127,10 +136,12 @@ public actor SyncCoordinator {
     /// Only called for contacts and channels phases, NOT for messages.
     public func setSyncActivityCallbacks(
         onStarted: @escaping @Sendable () async -> Void,
-        onEnded: @escaping @Sendable () async -> Void
+        onEnded: @escaping @Sendable () async -> Void,
+        onPhaseChanged: @escaping @Sendable @MainActor (_ phase: SyncPhase?) -> Void
     ) {
         onSyncActivityStarted = onStarted
         onSyncActivityEnded = onEnded
+        self.onPhaseChanged = onPhaseChanged
     }
 
     /// Sets callbacks for data change notifications (used by AppState for SwiftUI observation)
@@ -200,7 +211,7 @@ public actor SyncCoordinator {
             let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: nil)
             logger.info("Synced \(contactResult.contactsReceived) contacts")
 
-            // Phase 2: Channels (progress shown as phase-level "Syncing channels", not per-channel)
+            // Phase 2: Channels
             await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
             let device = try await dataStore.fetchDevice(id: deviceID)
             let maxChannels = device?.maxChannels ?? 0

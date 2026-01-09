@@ -8,11 +8,11 @@ struct SyncingPillView: View {
     private var displayText: String {
         switch phase {
         case .contacts:
-            return "Syncing contacts..."
+            return "Syncing contacts"
         case .channels:
-            return "Syncing channels..."
+            return "Syncing channels"
         default:
-            return "Syncing..."
+            return "Syncing"
         }
     }
 

@@ -129,7 +129,8 @@ struct SyncCoordinatorTests {
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { await tracker.markStarted() },
-            onEnded: { await tracker.markEnded() }
+            onEnded: { await tracker.markEnded() },
+            onPhaseChanged: { _ in }
         )
 
         try await coordinator.performFullSync(
@@ -160,7 +161,8 @@ struct SyncCoordinatorTests {
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { },
-            onEnded: { await tracker.incrementEndedCount() }
+            onEnded: { await tracker.incrementEndedCount() },
+            onPhaseChanged: { _ in }
         )
 
         // Configure mock to throw error during contacts sync
@@ -198,7 +200,8 @@ struct SyncCoordinatorTests {
             onEnded: {
                 // Record when activity ended
                 await orderTracker.recordActivityEnded()
-            }
+            },
+            onPhaseChanged: { _ in }
         )
 
         try await coordinator.performFullSync(

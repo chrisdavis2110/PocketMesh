@@ -122,13 +122,8 @@ public final class AppState {
     }
 
     /// Current sync phase for display in the pill (contacts, channels, etc.)
-    var currentSyncPhase: SyncPhase? {
-        guard let syncCoordinator else { return nil }
-        if case .syncing(let progress) = syncCoordinator.state {
-            return progress.phase
-        }
-        return nil
-    }
+    /// Stored directly for SwiftUI observation (actors aren't observable)
+    var currentSyncPhase: SyncPhase?
 
     // MARK: - Derived State
 
@@ -207,6 +202,9 @@ public final class AppState {
             },
             onEnded: { @MainActor [weak self] in
                 self?.syncActivityCount -= 1
+            },
+            onPhaseChanged: { @MainActor [weak self] phase in
+                self?.currentSyncPhase = phase
             }
         )
 
