@@ -57,14 +57,6 @@ struct RepeaterSettingsView: View {
         } message: {
             Text(viewModel.successMessage ?? "Settings applied")
         }
-        .confirmationDialog("Reboot Repeater?", isPresented: $showRebootConfirmation) {
-            Button("Reboot", role: .destructive) {
-                Task { await viewModel.reboot() }
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("The repeater will restart and be temporarily unavailable.")
-        }
         .sheet(isPresented: $showingLocationPicker) {
             LocationPickerView(
                 initialCoordinate: CLLocationCoordinate2D(
@@ -502,6 +494,14 @@ struct RepeaterSettingsView: View {
                 showRebootConfirmation = true
             }
             .disabled(viewModel.isRebooting)
+            .confirmationDialog("Reboot Repeater?", isPresented: $showRebootConfirmation) {
+                Button("Reboot", role: .destructive) {
+                    Task { await viewModel.reboot() }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("The repeater will restart and be temporarily unavailable.")
+            }
 
             if let error = viewModel.errorMessage {
                 Text(error)
