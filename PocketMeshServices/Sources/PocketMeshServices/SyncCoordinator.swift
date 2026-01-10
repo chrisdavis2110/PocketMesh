@@ -215,6 +215,7 @@ public actor SyncCoordinator {
             // Phase 1: Contacts
             let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: nil)
             logger.info("Synced \(contactResult.contactsReceived) contacts")
+            await notifyContactsChanged()
 
             // Phase 2: Channels
             await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
@@ -254,14 +255,11 @@ public actor SyncCoordinator {
         await setState(.syncing(progress: SyncProgress(phase: .messages, current: 0, total: 0)))
         let messageCount = try await messagePollingService.pollAllMessages()
         logger.info("Polled \(messageCount) messages")
+        await notifyConversationsChanged()
 
         // Complete
         await setState(.synced)
         await setLastSyncDate(Date())
-
-        // Notify UI
-        await notifyContactsChanged()
-        await notifyConversationsChanged()
 
         logger.info("Full sync complete")
     }
