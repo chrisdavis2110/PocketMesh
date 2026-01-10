@@ -312,6 +312,10 @@ public final class ConnectionManager {
             throw ConnectionError.connectionFailed("No WiFi connection info")
         }
 
+        // Stop any existing session to prevent receive loops racing for transport data
+        await session?.stop()
+        session = nil
+
         // Disconnect old transport cleanly
         await wifiTransport.disconnect()
 
@@ -1107,6 +1111,10 @@ public final class ConnectionManager {
     private func performConnection(deviceID: UUID) async throws {
         connectionState = .connecting
 
+        // Stop any existing session to prevent multiple receive loops racing for transport data
+        await session?.stop()
+        session = nil
+
         // Set device ID and connect
         await transport.setDeviceID(deviceID)
         try await transport.connect()
@@ -1305,6 +1313,10 @@ public final class ConnectionManager {
         connectionState = .connecting
 
         do {
+            // Stop any existing session to prevent multiple receive loops racing for transport data
+            await session?.stop()
+            session = nil
+
             let newSession = MeshCoreSession(transport: transport)
             self.session = newSession
 
