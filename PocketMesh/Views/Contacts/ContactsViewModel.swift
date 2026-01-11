@@ -1,5 +1,20 @@
+import CoreLocation
 import SwiftUI
 import PocketMeshServices
+
+/// Segment for the nodes picker
+enum NodeSegment: String, CaseIterable {
+    case favorites = "Favorites"
+    case contacts = "Contacts"
+    case network = "Network"
+}
+
+/// Sort order for nodes list
+enum NodeSortOrder: String, CaseIterable {
+    case lastHeard = "Last Heard"
+    case name = "Name"
+    case distance = "Distance"
+}
 
 /// ViewModel for contact management
 @Observable
@@ -22,6 +37,9 @@ final class ContactsViewModel {
 
     /// Error message if any
     var errorMessage: String?
+
+    /// User's current location for distance sorting (optional)
+    var userLocation: CLLocation?
 
     // MARK: - Dependencies
 
@@ -168,51 +186,77 @@ final class ContactsViewModel {
 
     // MARK: - Filtering
 
-    /// Returns contacts filtered and sorted
-    func filteredContacts(searchText: String, showFavoritesOnly: Bool) -> [ContactDTO] {
+    /// Returns contacts filtered by segment and sorted
+    func filteredContacts(
+        searchText: String,
+        segment: NodeSegment,
+        sortOrder: NodeSortOrder,
+        userLocation: CLLocation?
+    ) -> [ContactDTO] {
         var result = contacts
 
-        // Filter by search
-        if !searchText.isEmpty {
+        // If searching, show all types (ignore segment)
+        if searchText.isEmpty {
+            // Filter by segment
+            switch segment {
+            case .favorites:
+                result = result.filter(\.isFavorite)
+            case .contacts:
+                result = result.filter { $0.type == .chat }
+            case .network:
+                result = result.filter { $0.type == .repeater || $0.type == .room }
+            }
+        } else {
+            // Filter by search text only
             result = result.filter { contact in
                 contact.displayName.localizedStandardContains(searchText)
             }
         }
 
-        // Filter favorites
-        if showFavoritesOnly {
-            result = result.filter(\.isFavorite)
-        }
+        // Sort
+        result = sorted(result, by: sortOrder, userLocation: userLocation)
 
-        // Sort: favorites first, then alphabetically
-        return result.sorted { lhs, rhs in
-            if lhs.isFavorite != rhs.isFavorite {
-                return lhs.isFavorite
+        return result
+    }
+
+    /// Sort contacts by the given order
+    private func sorted(
+        _ contacts: [ContactDTO],
+        by order: NodeSortOrder,
+        userLocation: CLLocation?
+    ) -> [ContactDTO] {
+        switch order {
+        case .lastHeard:
+            return contacts.sorted { $0.lastAdvertTimestamp > $1.lastAdvertTimestamp }
+        case .name:
+            return contacts.sorted {
+                $0.displayName.localizedCompare($1.displayName) == .orderedAscending
             }
-            return lhs.displayName.localizedCompare(rhs.displayName) == .orderedAscending
+        case .distance:
+            guard let userLocation else {
+                // No user location, fall back to name sort
+                return sorted(contacts, by: .name, userLocation: nil)
+            }
+            return contacts.sorted { lhs, rhs in
+                let lhsHasLocation = lhs.hasLocation
+                let rhsHasLocation = rhs.hasLocation
+
+                // Nodes without location sort to bottom
+                if lhsHasLocation != rhsHasLocation {
+                    return lhsHasLocation
+                }
+
+                guard lhsHasLocation && rhsHasLocation else {
+                    // Both have no location, sort by name
+                    return lhs.displayName.localizedCompare(rhs.displayName) == .orderedAscending
+                }
+
+                let lhsLocation = CLLocation(latitude: lhs.latitude, longitude: lhs.longitude)
+                let rhsLocation = CLLocation(latitude: rhs.latitude, longitude: rhs.longitude)
+
+                return lhsLocation.distance(from: userLocation) < rhsLocation.distance(from: userLocation)
+            }
         }
     }
 
-    /// Group contacts by type
-    func groupedContacts(searchText: String) -> [(type: ContactType, contacts: [ContactDTO])] {
-        let filtered = filteredContacts(searchText: searchText, showFavoritesOnly: false)
-
-        var groups: [(type: ContactType, contacts: [ContactDTO])] = []
-
-        // Favorites section
-        let favorites = filtered.filter(\.isFavorite)
-        if !favorites.isEmpty {
-            groups.append((.chat, favorites)) // Using chat as "favorites" type
-        }
-
-        // Group by actual type
-        for type in [ContactType.chat, .repeater, .room] {
-            let typeContacts = filtered.filter { $0.type == type && !$0.isFavorite }
-            if !typeContacts.isEmpty {
-                groups.append((type, typeContacts))
-            }
-        }
-
-        return groups
-    }
 }

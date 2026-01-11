@@ -1,8 +1,9 @@
 import SwiftUI
 import PocketMeshServices
+import CoreLocation
 import OSLog
 
-private let contactsListLogger = Logger(subsystem: "com.pocketmesh", category: "ContactsListView")
+private let nodesListLogger = Logger(subsystem: "com.pocketmesh", category: "NodesListView")
 
 /// List of all contacts discovered on the mesh network
 struct ContactsListView: View {
@@ -13,14 +14,27 @@ struct ContactsListView: View {
     @State private var navigationPath = NavigationPath()
     @State private var selectedContact: ContactDTO?
     @State private var searchText = ""
-    @State private var showFavoritesOnly = false
+    @State private var selectedSegment: NodeSegment = .contacts
+    @AppStorage("nodesSortOrder") private var sortOrder: NodeSortOrder = .lastHeard
     @State private var showDiscovery = false
     @State private var syncSuccessTrigger = false
     @State private var showShareMyContact = false
     @State private var showAddContact = false
+    @State private var userLocation: CLLocation?
+
+    private let locationManager = CLLocationManager()
 
     private var filteredContacts: [ContactDTO] {
-        viewModel.filteredContacts(searchText: searchText, showFavoritesOnly: showFavoritesOnly)
+        viewModel.filteredContacts(
+            searchText: searchText,
+            segment: selectedSegment,
+            sortOrder: sortOrder,
+            userLocation: userLocation
+        )
+    }
+
+    private var isSearching: Bool {
+        !searchText.isEmpty
     }
 
     private var shouldUseSplitView: Bool {
@@ -42,7 +56,7 @@ struct ContactsListView: View {
                         ContactDetailView(contact: selectedContact)
                             .id(selectedContact.id)
                     } else {
-                        ContentUnavailableView("Select a contact", systemImage: "person.2")
+                        ContentUnavailableView("Select a node", systemImage: "flipphone")
                     }
                 }
             }
@@ -64,8 +78,10 @@ struct ContactsListView: View {
             if viewModel.isLoading && viewModel.contacts.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.contacts.isEmpty {
+            } else if filteredContacts.isEmpty && !isSearching {
                 emptyView
+            } else if filteredContacts.isEmpty && isSearching {
+                searchEmptyView
             } else {
                 if shouldUseSplitView {
                     contactsSplitList
@@ -74,23 +90,33 @@ struct ContactsListView: View {
                 }
             }
         }
-        .navigationTitle("Contacts")
+        .navigationTitle("Nodes")
         .searchable(text: $searchText, prompt: "Search contacts")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 BLEStatusIndicatorView()
             }
+
             ToolbarItem(placement: .automatic) {
                 Menu {
-                    Button {
-                        showFavoritesOnly.toggle()
-                    } label: {
-                        Label(
-                            showFavoritesOnly ? "Show All" : "Show Favorites",
-                            systemImage: showFavoritesOnly ? "star.slash" : "star.fill"
-                        )
+                    ForEach(NodeSortOrder.allCases, id: \.self) { order in
+                        Button {
+                            sortOrder = order
+                        } label: {
+                            if sortOrder == order {
+                                Label(order.rawValue, systemImage: "checkmark")
+                            } else {
+                                Text(order.rawValue)
+                            }
+                        }
                     }
+                } label: {
+                    Label("Sort", systemImage: "arrow.up.arrow.down")
+                }
+            }
 
+            ToolbarItem(placement: .automatic) {
+                Menu {
                     NavigationLink {
                         BlockedContactsView()
                     } label: {
@@ -126,7 +152,7 @@ struct ContactsListView: View {
                             await syncContacts()
                         }
                     } label: {
-                        Label("Sync Contacts", systemImage: "arrow.triangle.2.circlepath")
+                        Label("Sync Nodes", systemImage: "arrow.triangle.2.circlepath")
                     }
                     .disabled(viewModel.isSyncing)
                 } label: {
@@ -139,10 +165,19 @@ struct ContactsListView: View {
         }
         .sensoryFeedback(.success, trigger: syncSuccessTrigger)
         .task {
-            contactsListLogger.info("ContactsListView: task started, services=\(appState.services != nil)")
+            nodesListLogger.info("NodesListView: task started, services=\(appState.services != nil)")
             viewModel.configure(appState: appState)
             await loadContacts()
-            contactsListLogger.info("ContactsListView: loaded, contacts=\(viewModel.contacts.count)")
+            nodesListLogger.info("NodesListView: loaded, contacts=\(viewModel.contacts.count)")
+        }
+        .task(id: sortOrder) {
+            if sortOrder == .distance {
+                if let location = locationManager.location {
+                    userLocation = location
+                } else {
+                    nodesListLogger.debug("Distance sorting requested but device location unavailable")
+                }
+            }
         }
         .onChange(of: appState.servicesVersion) { _, _ in
             // Services changed (device switch, reconnect) - reload contacts
@@ -190,15 +225,60 @@ struct ContactsListView: View {
     // MARK: - Views
 
     private var emptyView: some View {
-        ContentUnavailableView(
-            "No Contacts",
-            systemImage: "person.2",
-            description: Text("Contacts will appear when discovered on the mesh network. Pull to refresh or tap Sync.")
-        )
+        VStack {
+            NodeSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
+
+            Spacer()
+
+            switch selectedSegment {
+            case .favorites:
+                ContentUnavailableView(
+                    "No Favorites Yet",
+                    systemImage: "star",
+                    description: Text("Swipe right on any node to add it to your favorites.")
+                )
+            case .contacts:
+                ContentUnavailableView(
+                    "No Contacts",
+                    systemImage: "person.2",
+                    description: Text("Contacts appear when discovered on the mesh network. If auto-add contacts is off, check Discovery in the top right menu.")
+                )
+            case .network:
+                ContentUnavailableView(
+                    "No Network Nodes",
+                    systemImage: "antenna.radiowaves.left.and.right",
+                    description: Text("Repeaters and room servers will appear when discovered on the mesh.")
+                )
+            }
+
+            Spacer()
+        }
+    }
+
+    private var searchEmptyView: some View {
+        VStack {
+            NodeSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
+
+            Spacer()
+
+            ContentUnavailableView(
+                "No Results",
+                systemImage: "magnifyingglass",
+                description: Text("No nodes match '\(searchText)'")
+            )
+
+            Spacer()
+        }
     }
 
     private var contactsList: some View {
         List {
+            Section {
+                NodeSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
+            }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+
             ForEach(filteredContacts) { contact in
                 contactRow(contact)
             }
@@ -208,6 +288,12 @@ struct ContactsListView: View {
 
     private var contactsSplitList: some View {
         List(selection: $selectedContact) {
+            Section {
+                NodeSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
+            }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+
             ForEach(filteredContacts) { contact in
                 contactSplitRow(contact)
                     .tag(contact)
@@ -218,13 +304,13 @@ struct ContactsListView: View {
 
     private func contactRow(_ contact: ContactDTO) -> some View {
         NavigationLink(value: contact) {
-            ContactRowView(contact: contact)
+            ContactRowView(contact: contact, showTypeLabel: isSearching)
         }
         .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
 
     private func contactSplitRow(_ contact: ContactDTO) -> some View {
-        ContactRowView(contact: contact)
+        ContactRowView(contact: contact, showTypeLabel: isSearching)
             .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
 
@@ -243,10 +329,36 @@ struct ContactsListView: View {
     }
 }
 
+// MARK: - Node Segment Picker
+
+struct NodeSegmentPicker: View {
+    @Binding var selection: NodeSegment
+    let isSearching: Bool
+
+    var body: some View {
+        Picker("Segment", selection: $selection) {
+            ForEach(NodeSegment.allCases, id: \.self) { segment in
+                Text(segment.rawValue).tag(segment)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .opacity(isSearching ? 0.5 : 1.0)
+        .disabled(isSearching)
+    }
+}
+
 // MARK: - Contact Row View
 
 struct ContactRowView: View {
     let contact: ContactDTO
+    let showTypeLabel: Bool
+
+    init(contact: ContactDTO, showTypeLabel: Bool = false) {
+        self.contact = contact
+        self.showTypeLabel = showTypeLabel
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -267,8 +379,19 @@ struct ContactRowView: View {
                 }
 
                 HStack(spacing: 8) {
-                    // Contact type
-                    Text(contactTypeLabel)
+                    // Show type label only in search results
+                    if showTypeLabel {
+                        Text(contactTypeLabel)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text("·")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // Route indicator
+                    Text(routeLabel)
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -287,7 +410,6 @@ struct ContactRowView: View {
 
             Spacer()
 
-            // Route indicator
             VStack(alignment: .trailing, spacing: 2) {
                 if contact.isFavorite {
                     Image(systemName: "star.fill")
@@ -295,9 +417,7 @@ struct ContactRowView: View {
                         .foregroundStyle(.yellow)
                 }
 
-                Text(routeLabel)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
             }
         }
         .padding(.vertical, 4)
@@ -305,7 +425,7 @@ struct ContactRowView: View {
 
     private var contactTypeLabel: String {
         switch contact.type {
-        case .chat: return "Chat"
+        case .chat: return "Contact"
         case .repeater: return "Repeater"
         case .room: return "Room"
         }
