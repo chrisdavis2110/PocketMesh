@@ -73,6 +73,9 @@ public actor SyncCoordinator {
     /// In-memory cache for message deduplication
     private let deduplicationCache = MessageDeduplicationCache()
 
+    /// Cached blocked contact names for O(1) lookup in message handlers
+    private var blockedContactNames: Set<String> = []
+
     // MARK: - Observable State (@MainActor for SwiftUI)
 
     /// Current sync state
@@ -183,6 +186,32 @@ public actor SyncCoordinator {
         logger.info("notifyConversationsChanged: version \(self.conversationsVersion) → \(self.conversationsVersion + 1)")
         conversationsVersion += 1
         onConversationsChanged?()
+    }
+
+    // MARK: - Blocked Contacts Cache
+
+    /// Refresh the blocked contacts cache from the data store
+    public func refreshBlockedContactsCache(deviceID: UUID, dataStore: any PersistenceStoreProtocol) async {
+        do {
+            let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: deviceID)
+            blockedContactNames = Set(blockedContacts.map(\.name))
+            logger.debug("Refreshed blocked contacts cache: \(self.blockedContactNames.count) entries")
+        } catch {
+            logger.error("Failed to refresh blocked contacts cache: \(error)")
+            blockedContactNames = []
+        }
+    }
+
+    /// Invalidate the blocked contacts cache (call when block status changes)
+    public func invalidateBlockedContactsCache() {
+        blockedContactNames = []
+        logger.debug("Invalidated blocked contacts cache")
+    }
+
+    /// Check if a sender name is blocked (O(1) lookup)
+    public func isBlockedSender(_ name: String?) -> Bool {
+        guard let name else { return false }
+        return blockedContactNames.contains(name)
     }
 
     // MARK: - Full Sync
@@ -355,6 +384,9 @@ public actor SyncCoordinator {
     private func wireMessageHandlers(services: ServiceContainer, deviceID: UUID) async {
         logger.info("Wiring message handlers for device \(deviceID)")
 
+        // Populate blocked contacts cache
+        await refreshBlockedContactsCache(deviceID: deviceID, dataStore: services.dataStore)
+
         // Contact message handler (direct messages)
         await services.messagePollingService.setContactMessageHandler { [weak self] message, contact in
             guard let self else { return }
@@ -397,22 +429,22 @@ public actor SyncCoordinator {
             do {
                 try await services.dataStore.saveMessage(messageDTO)
 
-                // Update contact's last message date and unread count
+                // Update contact's last message date
                 if let contactID = contact?.id {
                     try await services.dataStore.updateContactLastMessage(contactID: contactID, date: Date())
-                    try await services.dataStore.incrementUnreadCount(contactID: contactID)
                 }
 
-                // Post notification (only for known contacts)
-                if let contactID = contact?.id {
+                // Only increment unread count, post notification, and update badge for non-blocked contacts
+                if let contactID = contact?.id, contact?.isBlocked != true {
+                    try await services.dataStore.incrementUnreadCount(contactID: contactID)
                     await services.notificationService.postDirectMessageNotification(
                         from: contact?.displayName ?? "Unknown",
                         contactID: contactID,
                         messageText: message.text,
                         messageID: messageDTO.id
                     )
+                    await services.notificationService.updateBadgeCount()
                 }
-                await services.notificationService.updateBadgeCount()
 
                 // Notify UI via SyncCoordinator
                 await self.notifyConversationsChanged()
@@ -472,28 +504,33 @@ public actor SyncCoordinator {
             do {
                 try await services.dataStore.saveMessage(messageDTO)
 
-                // Update channel's last message date and unread count
+                // Update channel's last message date
                 if let channelID = channel?.id {
                     try await services.dataStore.updateChannelLastMessage(channelID: channelID, date: Date())
-                    try await services.dataStore.incrementChannelUnreadCount(channelID: channelID)
                 }
 
-                // Post notification
-                await services.notificationService.postChannelMessageNotification(
-                    channelName: channel?.name ?? "Channel \(message.channelIndex)",
-                    channelIndex: message.channelIndex,
-                    deviceID: deviceID,
-                    senderName: senderNodeName,
-                    messageText: messageText,
-                    messageID: messageDTO.id
-                )
-                await services.notificationService.updateBadgeCount()
+                // Only update unread count, badges, and notify UI for non-blocked senders
+                if await !self.isBlockedSender(senderNodeName) {
+                    if let channelID = channel?.id {
+                        try await services.dataStore.incrementChannelUnreadCount(channelID: channelID)
+                    }
 
-                // Notify UI via SyncCoordinator
+                    await services.notificationService.postChannelMessageNotification(
+                        channelName: channel?.name ?? "Channel \(message.channelIndex)",
+                        channelIndex: message.channelIndex,
+                        deviceID: deviceID,
+                        senderName: senderNodeName,
+                        messageText: messageText,
+                        messageID: messageDTO.id
+                    )
+                    await services.notificationService.updateBadgeCount()
+
+                    // Notify MessageEventBroadcaster for real-time chat updates
+                    await self.onChannelMessageReceived?(messageDTO, message.channelIndex)
+                }
+
+                // Notify conversation list of changes
                 await self.notifyConversationsChanged()
-
-                // Notify MessageEventBroadcaster for real-time chat updates
-                await self.onChannelMessageReceived?(messageDTO, message.channelIndex)
             } catch {
                 self.logger.error("Failed to save channel message: \(error)")
             }

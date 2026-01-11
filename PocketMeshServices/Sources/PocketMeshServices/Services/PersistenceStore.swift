@@ -437,6 +437,20 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         return contacts.map { ContactDTO(from: $0) }
     }
 
+    /// Fetch all blocked contacts for a device
+    public func fetchBlockedContacts(deviceID: UUID) throws -> [ContactDTO] {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<Contact> { contact in
+            contact.deviceID == targetDeviceID && contact.isBlocked == true
+        }
+        let descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\.name)]
+        )
+        let contacts = try modelContext.fetch(descriptor)
+        return contacts.map { ContactDTO(from: $0) }
+    }
+
     /// Mark a discovered contact as confirmed (after adding to device)
     public func confirmContact(id: UUID) throws {
         let targetID = id
@@ -927,8 +941,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
     /// Returns tuple of (contactUnread, channelUnread) for preference-aware calculation
     /// Optimization: Only fetches entities with unread > 0 to minimize memory usage
     public func getTotalUnreadCounts() throws -> (contacts: Int, channels: Int) {
-        // Only fetch contacts with unread messages (reduces memory pressure)
-        let contactPredicate = #Predicate<Contact> { $0.unreadCount > 0 }
+        // Only fetch non-blocked contacts with unread messages (reduces memory pressure)
+        let contactPredicate = #Predicate<Contact> { $0.unreadCount > 0 && !$0.isBlocked }
         let contactDescriptor = FetchDescriptor<Contact>(predicate: contactPredicate)
         let contactsWithUnread = try modelContext.fetch(contactDescriptor)
         let contactTotal = contactsWithUnread.reduce(0) { $0 + $1.unreadCount }

@@ -22,9 +22,9 @@ final class ChatViewModel {
 
     /// Combined conversations (contacts + channels + rooms)
     var allConversations: [Conversation] {
-        // Filter out repeaters from direct conversations - they should not appear in Chats
+        // Filter out repeaters and blocked contacts from direct conversations
         let contactConversations = conversations
-            .filter { $0.type != .repeater }
+            .filter { $0.type != .repeater && !$0.isBlocked }
             .map { Conversation.direct($0) }
         // Show channels that are configured (have a name OR have a non-zero secret)
         let channelConversations = channels.filter { !$0.name.isEmpty || $0.hasSecret }.map { Conversation.channel($0) }
@@ -271,8 +271,26 @@ final class ChatViewModel {
         errorMessage = nil
 
         do {
-            let fetchedMessages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
+            var fetchedMessages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
             logger.info("loadChannelMessages: fetched \(fetchedMessages.count) messages")
+
+            // Filter out messages from blocked contacts (defensive: if fetch fails, show all)
+            let blockedNames: Set<String>
+            do {
+                let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: channel.deviceID)
+                blockedNames = Set(blockedContacts.map(\.name))
+            } catch {
+                logger.error("Failed to fetch blocked contacts for filtering: \(error)")
+                blockedNames = []
+            }
+
+            if !blockedNames.isEmpty {
+                fetchedMessages = fetchedMessages.filter { message in
+                    guard let senderName = message.senderNodeName else { return true }
+                    return !blockedNames.contains(senderName)
+                }
+            }
+
             messages = fetchedMessages
 
             // Clear unread count and notify UI to refresh chat list
@@ -346,15 +364,41 @@ final class ChatViewModel {
             }
         }
 
-        // Load channel message previews
-        for channel in channels {
+        // Load channel message previews (filter out blocked senders)
+        // Group channels by deviceID to minimize blocked contacts fetches
+        let channelsByDevice = Dictionary(grouping: channels, by: \.deviceID)
+        for (deviceID, deviceChannels) in channelsByDevice {
+            // Fetch blocked contacts once per device
+            let blockedNames: Set<String>
             do {
-                let messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index, limit: 1)
-                if let lastMessage = messages.last {
-                    lastMessageCache[channel.id] = lastMessage
-                }
+                let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: deviceID)
+                blockedNames = Set(blockedContacts.map(\.name))
             } catch {
-                // Silently ignore errors for preview loading
+                blockedNames = []
+            }
+
+            for channel in deviceChannels {
+                do {
+                    // Fetch extra messages in case recent ones are from blocked senders
+                    let messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index, limit: 20)
+
+                    // Filter out messages from blocked senders and get the last valid one
+                    let lastMessage: MessageDTO?
+                    if blockedNames.isEmpty {
+                        lastMessage = messages.last
+                    } else {
+                        lastMessage = messages.last { message in
+                            guard let senderName = message.senderNodeName else { return true }
+                            return !blockedNames.contains(senderName)
+                        }
+                    }
+
+                    if let lastMessage {
+                        lastMessageCache[channel.id] = lastMessage
+                    }
+                } catch {
+                    // Silently ignore errors for preview loading
+                }
             }
         }
     }
