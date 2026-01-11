@@ -531,39 +531,41 @@ final class ChatViewModel {
               let dataStore else { return }
 
         isProcessingQueue = true
+        defer { isProcessingQueue = false }
 
         var lastDeviceID: UUID?
 
-        while !sendQueue.isEmpty {
-            let queued = sendQueue.removeFirst()
+        // Process messages with re-check after reload to catch any that arrived during reload
+        repeat {
+            while !sendQueue.isEmpty {
+                let queued = sendQueue.removeFirst()
 
-            // Fetch the target contact by ID - it may differ from currentContact
-            guard let contact = try? await dataStore.fetchContact(id: queued.contactID) else {
-                // Contact was deleted, skip this message
-                logger.info("Skipping queued message - contact \(queued.contactID) was deleted")
-                continue
+                // Fetch the target contact by ID - it may differ from currentContact
+                guard let contact = try? await dataStore.fetchContact(id: queued.contactID) else {
+                    // Contact was deleted, skip this message
+                    logger.info("Skipping queued message - contact \(queued.contactID) was deleted")
+                    continue
+                }
+
+                lastDeviceID = contact.deviceID
+
+                do {
+                    _ = try await messageService.sendExistingMessage(
+                        messageID: queued.messageID,
+                        to: contact
+                    )
+                } catch {
+                    errorMessage = error.localizedDescription
+                }
             }
 
-            lastDeviceID = contact.deviceID
-
-            do {
-                _ = try await messageService.sendExistingMessage(
-                    messageID: queued.messageID,
-                    to: contact
-                )
-            } catch {
-                errorMessage = error.localizedDescription
+            // Reload after queue drains - syncs statuses and conversation list
+            if let contact = currentContact {
+                await loadMessages(for: contact)
             }
-        }
-
-        // Single reload after queue drains - syncs statuses and conversation list
-        if let contact = currentContact {
-            await loadMessages(for: contact)
-        }
-        if let deviceID = lastDeviceID {
-            await loadConversations(deviceID: deviceID)
-        }
-
-        isProcessingQueue = false
+            if let deviceID = lastDeviceID {
+                await loadConversations(deviceID: deviceID)
+            }
+        } while !sendQueue.isEmpty
     }
 }
