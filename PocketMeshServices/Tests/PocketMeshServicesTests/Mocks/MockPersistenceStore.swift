@@ -318,6 +318,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             lastModified: frame.lastModified,
             nickname: nil,
             isBlocked: false,
+            isMuted: false,
             isFavorite: false,
             isDiscovered: false,
             lastMessageDate: nil,
@@ -361,6 +362,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastModified: contact.lastModified,
                 nickname: contact.nickname,
                 isBlocked: contact.isBlocked,
+                isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
                 isDiscovered: contact.isDiscovered,
                 lastMessageDate: date,
@@ -386,6 +388,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastModified: contact.lastModified,
                 nickname: contact.nickname,
                 isBlocked: contact.isBlocked,
+                isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
                 isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
@@ -411,6 +414,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastModified: contact.lastModified,
                 nickname: contact.nickname,
                 isBlocked: contact.isBlocked,
+                isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
                 isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
@@ -455,6 +459,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastModified: contact.lastModified,
                 nickname: contact.nickname,
                 isBlocked: contact.isBlocked,
+                isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
                 isDiscovered: false,
                 lastMessageDate: contact.lastMessageDate,
@@ -502,7 +507,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 secret: info.secret,
                 isEnabled: !info.name.isEmpty,
                 lastMessageDate: existing.lastMessageDate,
-                unreadCount: existing.unreadCount
+                unreadCount: existing.unreadCount,
+                isMuted: existing.isMuted
             )
             return existing.id
         }
@@ -515,7 +521,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             secret: info.secret,
             isEnabled: !info.name.isEmpty,
             lastMessageDate: nil,
-            unreadCount: 0
+            unreadCount: 0,
+            isMuted: false
         )
         channels[id] = dto
         savedChannels.append(dto)
@@ -548,7 +555,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 secret: channel.secret,
                 isEnabled: channel.isEnabled,
                 lastMessageDate: date,
-                unreadCount: channel.unreadCount
+                unreadCount: channel.unreadCount,
+                isMuted: channel.isMuted
             )
         }
     }
@@ -563,7 +571,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 secret: channel.secret,
                 isEnabled: channel.isEnabled,
                 lastMessageDate: channel.lastMessageDate,
-                unreadCount: channel.unreadCount + 1
+                unreadCount: channel.unreadCount + 1,
+                isMuted: channel.isMuted
             )
         }
     }
@@ -578,7 +587,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 secret: channel.secret,
                 isEnabled: channel.isEnabled,
                 lastMessageDate: channel.lastMessageDate,
-                unreadCount: 0
+                unreadCount: 0,
+                isMuted: channel.isMuted
             )
         }
     }

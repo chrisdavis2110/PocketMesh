@@ -229,9 +229,15 @@ struct ChatsListView: View {
                     NavigationLink(value: contact) {
                         ConversationRow(contact: contact, viewModel: viewModel)
                     }
+                    .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
+                        deleteDirectConversation(contact)
+                    }
                 case .channel(let channel):
                     NavigationLink(value: channel) {
                         ChannelConversationRow(channel: channel, viewModel: viewModel)
+                    }
+                    .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
+                        deleteChannelConversation(channel)
                     }
                 case .room(let session):
                     Button {
@@ -244,9 +250,12 @@ struct ChatsListView: View {
                         RoomConversationRow(session: session)
                     }
                     .buttonStyle(.plain)
+                    .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
+                        roomToDelete = session
+                        showRoomDeleteAlert = true
+                    }
                 }
             }
-            .onDelete(perform: deleteConversations)
         }
         .listStyle(.plain)
     }
@@ -270,30 +279,17 @@ struct ChatsListView: View {
         await viewModel.loadAllConversations(deviceID: deviceID)
     }
 
-    private func deleteConversations(at offsets: IndexSet) {
-        let conversationsToDelete = offsets.map { filteredConversations[$0] }
+    private func deleteDirectConversation(_ contact: ContactDTO) {
+        viewModel.removeConversation(.direct(contact))
+        Task {
+            try? await viewModel.deleteConversation(for: contact)
+        }
+    }
 
-        for conversation in conversationsToDelete {
-            switch conversation {
-            case .room(let session):
-                // Room needs confirmation - don't remove yet
-                roomToDelete = session
-                showRoomDeleteAlert = true
-
-            case .direct(let contact):
-                // Optimistic removal, then async cleanup
-                viewModel.removeConversation(conversation)
-                Task {
-                    try? await viewModel.deleteConversation(for: contact)
-                }
-
-            case .channel(let channel):
-                // Optimistic removal, then async cleanup
-                viewModel.removeConversation(conversation)
-                Task {
-                    await deleteChannel(channel)
-                }
-            }
+    private func deleteChannelConversation(_ channel: ChannelDTO) {
+        viewModel.removeConversation(.channel(channel))
+        Task {
+            await deleteChannel(channel)
         }
     }
 
@@ -339,6 +335,51 @@ struct ChatsListView: View {
     }
 }
 
+// MARK: - Swipe Actions
+
+struct ConversationSwipeActionsModifier: ViewModifier {
+    let conversation: Conversation
+    let viewModel: ChatViewModel
+    let onDelete: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+
+                Button {
+                    Task {
+                        await viewModel.toggleMute(conversation)
+                    }
+                } label: {
+                    Label(
+                        conversation.isMuted ? "Unmute" : "Mute",
+                        systemImage: conversation.isMuted ? "bell" : "bell.slash"
+                    )
+                }
+                .tint(.indigo)
+            }
+    }
+}
+
+extension View {
+    func conversationSwipeActions(
+        conversation: Conversation,
+        viewModel: ChatViewModel,
+        onDelete: @escaping () -> Void
+    ) -> some View {
+        modifier(ConversationSwipeActionsModifier(
+            conversation: conversation,
+            viewModel: viewModel,
+            onDelete: onDelete
+        ))
+    }
+}
+
 // MARK: - Conversation Row
 
 struct ConversationRow: View {
@@ -359,8 +400,16 @@ struct ConversationRow: View {
 
                     Spacer()
 
-                    if let date = contact.lastMessageDate {
-                        ConversationTimestamp(date: date)
+                    HStack(spacing: 4) {
+                        if contact.isMuted {
+                            Image(systemName: "bell.slash")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel("Muted")
+                        }
+                        if let date = contact.lastMessageDate {
+                            ConversationTimestamp(date: date)
+                        }
                     }
                 }
 
@@ -381,7 +430,7 @@ struct ConversationRow: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.blue, in: .capsule)
+                            .background(contact.isMuted ? Color.secondary : Color.blue, in: .capsule)
                     }
                 }
             }
@@ -549,8 +598,16 @@ struct ChannelConversationRow: View {
 
                     Spacer()
 
-                    if let date = channel.lastMessageDate {
-                        ConversationTimestamp(date: date)
+                    HStack(spacing: 4) {
+                        if channel.isMuted {
+                            Image(systemName: "bell.slash")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel("Muted")
+                        }
+                        if let date = channel.lastMessageDate {
+                            ConversationTimestamp(date: date)
+                        }
                     }
                 }
 
@@ -571,7 +628,7 @@ struct ChannelConversationRow: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.blue, in: .capsule)
+                            .background(channel.isMuted ? Color.secondary : Color.blue, in: .capsule)
                     }
                 }
             }
@@ -630,8 +687,16 @@ struct RoomConversationRow: View {
 
                     Spacer()
 
-                    if let date = session.lastConnectedDate {
-                        ConversationTimestamp(date: date)
+                    HStack(spacing: 4) {
+                        if session.isMuted {
+                            Image(systemName: "bell.slash")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel("Muted")
+                        }
+                        if let date = session.lastConnectedDate {
+                            ConversationTimestamp(date: date)
+                        }
                     }
                 }
 
@@ -657,7 +722,7 @@ struct RoomConversationRow: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.blue, in: .capsule)
+                            .background(session.isMuted ? Color.secondary : Color.blue, in: .capsule)
                     }
                 }
             }
