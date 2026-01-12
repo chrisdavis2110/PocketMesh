@@ -6,16 +6,30 @@ struct OnlineMapView: View {
 
     @State private var isLoading = true
     @State private var isOnline = true
+    @State private var loadError: Error?
     @State private var networkMonitor: NWPathMonitor?
 
     var body: some View {
         Group {
             if isOnline {
-                ZStack {
-                    OnlineMapWebView(url: Self.mapURL, isLoading: $isLoading)
+                if let error = loadError {
+                    ContentUnavailableView {
+                        Label("Failed to Load Map", systemImage: "exclamationmark.triangle")
+                    } description: {
+                        Text(error.localizedDescription)
+                    } actions: {
+                        Button("Try Again") {
+                            loadError = nil
+                            isLoading = true
+                        }
+                    }
+                } else {
+                    ZStack {
+                        OnlineMapWebView(url: Self.mapURL, isLoading: $isLoading, loadError: $loadError)
 
-                    if isLoading {
-                        ProgressView()
+                        if isLoading {
+                            ProgressView()
+                        }
                     }
                 }
             } else {
@@ -36,6 +50,7 @@ struct OnlineMapView: View {
 
     private func startNetworkMonitoring() {
         let monitor = NWPathMonitor()
+        isOnline = monitor.currentPath.status == .satisfied
         monitor.pathUpdateHandler = { path in
             Task { @MainActor in
                 isOnline = path.status == .satisfied
