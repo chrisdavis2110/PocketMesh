@@ -21,8 +21,17 @@ final class MapViewModel {
     /// Selected contact for detail display
     var selectedContact: ContactDTO?
 
-    /// Camera position for map centering
-    var cameraPosition: MapCameraPosition = .automatic
+    /// Camera region for map centering (MKCoordinateRegion for UIKit MKMapView)
+    var cameraRegion: MKCoordinateRegion?
+
+    /// Current map style selection
+    var mapStyleSelection: MapStyleSelection = .standard
+
+    /// Whether to show contact name labels
+    var showLabels = true
+
+    /// Whether the layers menu is showing
+    var showingLayersMenu = false
 
     // MARK: - Dependencies
 
@@ -75,16 +84,16 @@ final class MapViewModel {
             longitude: contact.longitude
         )
 
-        cameraPosition = .camera(
-            MapCamera(centerCoordinate: coordinate, distance: 5000)
-        )
+        // 5000 meters corresponds to roughly 0.045 degrees latitude span
+        let span = MKCoordinateSpan(latitudeDelta: 0.045, longitudeDelta: 0.045)
+        cameraRegion = MKCoordinateRegion(center: coordinate, span: span)
         selectedContact = contact
     }
 
     /// Center map to show all contacts
     func centerOnAllContacts() {
         guard !contactsWithLocation.isEmpty else {
-            cameraPosition = .automatic
+            cameraRegion = nil
             return
         }
 
@@ -110,14 +119,18 @@ final class MapViewModel {
 
         let center = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
         let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
-        let region = MKCoordinateRegion(center: center, span: span)
 
-        cameraPosition = .region(region)
+        cameraRegion = MKCoordinateRegion(center: center, span: span)
     }
 
     /// Clear selection
     func clearSelection() {
         selectedContact = nil
+    }
+
+    /// Labels should show when toggle is on
+    var shouldShowLabels: Bool {
+        showLabels
     }
 }
 
