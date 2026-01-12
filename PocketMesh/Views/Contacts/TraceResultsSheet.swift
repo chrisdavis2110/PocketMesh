@@ -226,12 +226,10 @@ struct TraceResultHopRow: View {
                         .foregroundStyle(.secondary)
                 }
 
-                // SNR display using sender attribution:
-                // Shows how well the NEXT hop received this node's transmission.
-                // End node has no SNR (no next hop to measure).
-                if hop.isEndNode {
-                    // No SNR for end node - no next hop
-                } else {
+                // SNR display using receiver attribution:
+                // Shows what this node measured when receiving.
+                // Start node has no SNR (it transmitted first).
+                if !hop.isStartNode {
                     Text("SNR: \(hop.snr, format: .number.precision(.fractionLength(2))) dB")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -240,8 +238,8 @@ struct TraceResultHopRow: View {
 
             Spacer()
 
-            // Signal strength indicator (not for end node - no next hop)
-            if !hop.isEndNode {
+            // Signal strength indicator (not for start node - it didn't receive)
+            if !hop.isStartNode {
                 Image(systemName: "cellularbars", variableValue: hop.signalLevel)
                     .foregroundStyle(hop.signalColor)
                     .font(.title2)

@@ -503,25 +503,24 @@ final class TracePathViewModel {
             durationMs = 0
         }
 
-        // Build hops from response using sender attribution model:
-        // Each node's SNR shows how well the NEXT hop received its transmission.
-        // This answers "how good was this node's outgoing signal?"
+        // Build hops from response using receiver attribution model:
+        // Each node's SNR shows what it measured when receiving.
+        // This answers "how well did this node receive the signal?"
         var hops: [TraceHop] = []
         let deviceName = appState?.connectedDevice?.nodeName ?? "My Device"
         let path = traceInfo.path
 
-        // Start node gets SNR from first path node (how first repeater heard our transmission)
-        let startSnr = path.first?.snr ?? 0
+        // Start node has no SNR (it transmitted first, didn't receive anything)
         hops.append(TraceHop(
             hashBytes: nil,
             resolvedName: deviceName,
-            snr: startSnr,
+            snr: 0,
             isStartNode: true,
             isEndNode: false
         ))
 
-        // Intermediate hops - each gets SNR from the NEXT node's measurement
-        for (index, node) in path.enumerated() where node.hashBytes != nil {
+        // Intermediate hops - each shows SNR it measured when receiving
+        for node in path where node.hashBytes != nil {
             let resolvedName: String?
             if let bytes = node.hashBytes, bytes.count == 1 {
                 resolvedName = resolveHashToName(bytes[0])
@@ -529,23 +528,21 @@ final class TracePathViewModel {
                 resolvedName = nil  // Multi-byte: no resolution possible
             }
 
-            // Get SNR from next position in path (sender attribution)
-            let nextSnr = index + 1 < path.count ? path[index + 1].snr : 0
-
             hops.append(TraceHop(
                 hashBytes: node.hashBytes,
                 resolvedName: resolvedName,
-                snr: nextSnr,
+                snr: node.snr,
                 isStartNode: false,
                 isEndNode: false
             ))
         }
 
-        // End node - no SNR (no next hop to measure our transmission)
+        // End node shows SNR it measured when receiving
+        let endSnr = path.last?.snr ?? 0
         hops.append(TraceHop(
             hashBytes: nil,
             resolvedName: deviceName,
-            snr: 0,
+            snr: endSnr,
             isStartNode: false,
             isEndNode: true
         ))
