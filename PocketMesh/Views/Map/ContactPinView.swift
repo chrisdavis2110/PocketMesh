@@ -12,6 +12,8 @@ final class ContactPinView: MKAnnotationView {
     private let iconImageView = UIImageView()
     private let triangleImageView = UIImageView()
     private var nameLabel: UILabel?
+    private var nameLabelContainer: UIView?
+    private var nameLabelShadow: UIView?
     private var hostingController: UIHostingController<ContactCalloutContent>?
 
     // MARK: - Configuration
@@ -182,30 +184,58 @@ final class ContactPinView: MKAnnotationView {
     private func updateNameLabel() {
         if showsNameLabel && !isSelected {
             if nameLabel == nil {
+                // Blur background matching app's material style
+                let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
+                blur.translatesAutoresizingMaskIntoConstraints = false
+                blur.layer.cornerRadius = 8
+                blur.layer.masksToBounds = true
+                addSubview(blur)
+
+                // Shadow container (separate from blur since blur clips)
+                let shadow = UIView()
+                shadow.translatesAutoresizingMaskIntoConstraints = false
+                shadow.backgroundColor = .clear
+                shadow.layer.shadowColor = UIColor.black.cgColor
+                shadow.layer.shadowOpacity = 0.3
+                shadow.layer.shadowRadius = 3
+                shadow.layer.shadowOffset = CGSize(width: 0, height: 1.5)
+                insertSubview(shadow, belowSubview: blur)
+                nameLabelContainer = blur
+                nameLabelShadow = shadow
+
+                // Label with Dynamic Type support
                 let label = UILabel()
-                label.font = .preferredFont(forTextStyle: .caption2)
+                let baseFont = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize, weight: .medium)
+                label.font = UIFontMetrics(forTextStyle: .caption2).scaledFont(for: baseFont)
+                label.adjustsFontForContentSizeCategory = true
                 label.textColor = .label
-                label.backgroundColor = UIColor.secondarySystemBackground.withAlphaComponent(0.9)
-                label.layer.cornerRadius = 4
-                label.layer.masksToBounds = true
                 label.textAlignment = .center
                 label.translatesAutoresizingMaskIntoConstraints = false
-                addSubview(label)
+                blur.contentView.addSubview(label)
+                nameLabel = label
 
                 NSLayoutConstraint.activate([
-                    label.centerXAnchor.constraint(equalTo: centerXAnchor),
-                    label.bottomAnchor.constraint(equalTo: topAnchor, constant: -4)
+                    blur.centerXAnchor.constraint(equalTo: centerXAnchor),
+                    blur.bottomAnchor.constraint(equalTo: topAnchor, constant: -4),
+                    shadow.topAnchor.constraint(equalTo: blur.topAnchor),
+                    shadow.bottomAnchor.constraint(equalTo: blur.bottomAnchor),
+                    shadow.leadingAnchor.constraint(equalTo: blur.leadingAnchor),
+                    shadow.trailingAnchor.constraint(equalTo: blur.trailingAnchor),
+                    label.topAnchor.constraint(equalTo: blur.topAnchor, constant: 4),
+                    label.bottomAnchor.constraint(equalTo: blur.bottomAnchor, constant: -4),
+                    label.leadingAnchor.constraint(equalTo: blur.leadingAnchor, constant: 8),
+                    label.trailingAnchor.constraint(equalTo: blur.trailingAnchor, constant: -8)
                 ])
-
-                nameLabel = label
             }
 
             if let contactAnnotation = annotation as? ContactAnnotation {
-                nameLabel?.text = " \(contactAnnotation.contact.displayName) "
+                nameLabel?.text = contactAnnotation.contact.displayName
             }
-            nameLabel?.isHidden = false
+            nameLabelContainer?.isHidden = false
+            nameLabelShadow?.isHidden = false
         } else {
-            nameLabel?.isHidden = true
+            nameLabelContainer?.isHidden = true
+            nameLabelShadow?.isHidden = true
         }
     }
 
@@ -217,7 +247,8 @@ final class ContactPinView: MKAnnotationView {
         onMessage = nil
         hostingController = nil
         detailCalloutAccessoryView = nil
-        nameLabel?.isHidden = true
+        nameLabelContainer?.isHidden = true
+        nameLabelShadow?.isHidden = true
     }
 
     override func prepareForDisplay() {
