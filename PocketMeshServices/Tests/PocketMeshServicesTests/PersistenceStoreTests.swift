@@ -573,6 +573,7 @@ struct PersistenceStoreTests {
             lastModified: 0,
             nickname: nil,
             isBlocked: true,
+            isMuted: false,
             isFavorite: false,
             isDiscovered: false,
             lastMessageDate: nil,

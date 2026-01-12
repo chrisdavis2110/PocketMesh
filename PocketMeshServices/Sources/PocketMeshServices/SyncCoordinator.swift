@@ -364,10 +364,18 @@ public actor SyncCoordinator {
 
     /// Called when disconnecting from device
     ///
-    /// Note: Don't call onSyncActivityEnded here - performFullSync handles its own cleanup.
-    /// The AppState.wireServicesIfConnected reset of syncActivityCount handles stuck pill.
+    /// If disconnect occurs mid-sync (during contacts or channels phase), we must call
+    /// onSyncActivityEnded to decrement the activity count, otherwise the pill stays stuck.
     public func onDisconnected(services: ServiceContainer) async {
         await deduplicationCache.clear()
+
+        // If we're mid-sync in contacts or channels phase, end the activity to hide the pill
+        let currentState = await state
+        if case .syncing(let progress) = currentState,
+           progress.phase == .contacts || progress.phase == .channels {
+            await onSyncActivityEnded?()
+        }
+
         await setState(.idle)
 
         // Safety net: ensure suppression is cleared on disconnect

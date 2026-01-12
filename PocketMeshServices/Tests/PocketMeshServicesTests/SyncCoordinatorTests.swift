@@ -255,6 +255,57 @@ struct SyncCoordinatorTests {
         // Verify state is idle
         #expect(coordinator.state == .idle)
     }
+
+    @Test("onDisconnected calls onSyncActivityEnded when mid-sync in contacts phase")
+    @MainActor
+    func onDisconnectedCallsActivityEndedDuringContactsSync() async throws {
+        let coordinator = SyncCoordinator()
+        let delayingContactService = DelayingContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
+
+        // Create a test ServiceContainer
+        let mockTransport = SimulatorMockTransport()
+        let session = MeshCoreSession(transport: mockTransport)
+        let services = try ServiceContainer.forTesting(session: session)
+
+        let tracker = CallbackTracker()
+
+        await coordinator.setSyncActivityCallbacks(
+            onStarted: { await tracker.markStarted() },
+            onEnded: { await tracker.markEnded() },
+            onPhaseChanged: { _ in }
+        )
+
+        // Start sync in background task - it will block during contacts phase
+        let syncTask = Task {
+            try await coordinator.performFullSync(
+                deviceID: testDeviceID,
+                dataStore: dataStore,
+                contactService: delayingContactService,
+                channelService: mockChannelService,
+                messagePollingService: mockMessagePollingService
+            )
+        }
+
+        // Wait for sync to start (activity started callback)
+        try await Task.sleep(for: .milliseconds(50))
+        let started = await tracker.started
+        #expect(started, "Sync activity should have started")
+
+        // Call onDisconnected while sync is in contacts phase
+        await coordinator.onDisconnected(services: services)
+
+        // Verify onSyncActivityEnded was called by onDisconnected
+        let ended = await tracker.ended
+        #expect(ended, "onSyncActivityEnded should be called when disconnecting mid-sync")
+
+        // Cleanup: resume the sync so it doesn't hang
+        await delayingContactService.completeSync()
+        syncTask.cancel()
+    }
 }
 
 // MARK: - Test Helpers
@@ -305,5 +356,35 @@ actor OrderTrackingMessagePollingService: MessagePollingServiceProtocol {
 
     func waitForPendingHandlers() async {
         // No-op for tests
+    }
+}
+
+/// Mock contact service that delays and signals when sync has started
+actor DelayingContactService: ContactServiceProtocol {
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    /// Wait to be signaled that contacts sync has started
+    func waitForSyncStart() async {
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+        }
+    }
+
+    /// Allow the sync to complete
+    func completeSync() {
+        continuation?.resume()
+        continuation = nil
+    }
+
+    func syncContacts(deviceID: UUID, since: Date?) async throws -> ContactSyncResult {
+        // Signal that sync has started, then wait to be resumed
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            Task {
+                // Store the continuation so completeSync can resume it
+                self.continuation?.resume()
+                self.continuation = cont
+            }
+        }
+        return ContactSyncResult(contactsReceived: 0, lastSyncTimestamp: 0, isIncremental: false)
     }
 }
