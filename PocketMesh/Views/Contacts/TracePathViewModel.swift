@@ -87,10 +87,6 @@ final class TracePathViewModel {
     var resultID: UUID?  // Set to new UUID only on successful trace
     var errorMessage: String?
     var errorHapticTrigger = 0  // Incremented on each error for haptic feedback
-    private var errorClearTask: Task<Void, Never>?
-
-    /// Duration before error auto-clears. Injectable for testing.
-    var errorAutoClearDelay: Duration = .seconds(4)
 
     /// Buffer between consecutive batch traces to avoid network flooding.
     private static let interTraceBufferMs = 500
@@ -278,19 +274,11 @@ final class TracePathViewModel {
     // MARK: - Error Handling
 
     func setError(_ message: String) {
-        errorClearTask?.cancel()
         errorMessage = message
         errorHapticTrigger += 1
-        errorClearTask = Task { @MainActor in
-            try? await Task.sleep(for: errorAutoClearDelay)
-            if !Task.isCancelled {
-                errorMessage = nil
-            }
-        }
     }
 
     func clearError() {
-        errorClearTask?.cancel()
         errorMessage = nil
     }
 
@@ -556,14 +544,16 @@ final class TracePathViewModel {
         let pathData = Data(fullPathBytes)
 
         // Send trace command
+        var timeoutSeconds = 15.0
         do {
-            _ = try await session.sendTrace(
+            let sentInfo = try await session.sendTrace(
                 tag: tag,
                 authCode: 0,  // Not used for basic trace
                 flags: 0,
                 path: pathData
             )
-            logger.info("Sent trace with tag \(tag), path: \(self.fullPathString)")
+            timeoutSeconds = Double(sentInfo.suggestedTimeoutMs) / 1000.0 * 1.2
+            logger.info("Sent trace with tag \(tag), path: \(self.fullPathString), timeout: \(timeoutSeconds)s")
         } catch {
             logger.error("Failed to send trace: \(error.localizedDescription)")
             setError("Failed to send trace packet")
@@ -600,11 +590,11 @@ final class TracePathViewModel {
         // Wait for response with timeout
         traceTask = Task { @MainActor in
             do {
-                try await Task.sleep(for: .seconds(15))
+                try await Task.sleep(for: .seconds(timeoutSeconds))
 
                 // Timeout - no response received
                 if !Task.isCancelled && pendingTag == tag {
-                    logger.warning("Trace timeout for tag \(tag)")
+                    logger.warning("Trace timeout for tag \(tag) after \(timeoutSeconds)s")
                     setError("No response received")
                     pendingPathHash = nil
 
@@ -702,6 +692,11 @@ final class TracePathViewModel {
 
         isRunning = false
         currentTraceIndex = 0
+
+        // If batch completed but all traces failed, show error
+        if isBatchComplete && successCount == 0 {
+            setError("All \(batchSize) traces failed")
+        }
     }
 
     /// Execute a single trace within a batch, storing result in completedResults
@@ -716,14 +711,16 @@ final class TracePathViewModel {
 
         let pathData = Data(fullPathBytes)
 
+        var timeoutSeconds = 15.0
         do {
-            _ = try await session.sendTrace(
+            let sentInfo = try await session.sendTrace(
                 tag: tag,
                 authCode: 0,
                 flags: 0,
                 path: pathData
             )
-            logger.info("Sent batch trace \(self.currentTraceIndex)/\(self.batchSize) with tag \(tag)")
+            timeoutSeconds = Double(sentInfo.suggestedTimeoutMs) / 1000.0 * 1.2
+            logger.info("Sent batch trace \(self.currentTraceIndex)/\(self.batchSize) with tag \(tag), timeout: \(timeoutSeconds)s")
         } catch {
             logger.error("Failed to send trace: \(error.localizedDescription)")
             let failedResult = TraceResult.sendFailed(
@@ -744,11 +741,11 @@ final class TracePathViewModel {
 
             traceTask = Task { @MainActor in
                 do {
-                    try await Task.sleep(for: .seconds(15))
+                    try await Task.sleep(for: .seconds(timeoutSeconds))
 
                     // Timeout - resume continuation if still waiting
                     if traceContinuation != nil && pendingTag == tag {
-                        logger.warning("Batch trace timeout for tag \(tag)")
+                        logger.warning("Batch trace timeout for tag \(tag) after \(timeoutSeconds)s")
                         let timeoutResult = TraceResult.timeout(attemptedPath: pendingPathHash ?? [])
                         completedResults.append(timeoutResult)
                         recordFailedRun(appState: appState)
