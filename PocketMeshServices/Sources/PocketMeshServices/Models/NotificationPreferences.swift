@@ -8,6 +8,7 @@ public struct NotificationPreferences: Sendable {
     public let newContactDiscoveredEnabled: Bool
     public let soundEnabled: Bool
     public let badgeEnabled: Bool
+    public let lowBatteryEnabled: Bool
 
     public init() {
         let defaults = UserDefaults.standard
@@ -17,6 +18,7 @@ public struct NotificationPreferences: Sendable {
         self.newContactDiscoveredEnabled = defaults.object(forKey: "notifyNewContacts") as? Bool ?? true
         self.soundEnabled = defaults.object(forKey: "notificationSoundEnabled") as? Bool ?? true
         self.badgeEnabled = defaults.object(forKey: "notificationBadgeEnabled") as? Bool ?? true
+        self.lowBatteryEnabled = defaults.object(forKey: "notifyLowBattery") as? Bool ?? true
     }
 }
 
@@ -64,6 +66,14 @@ public final class NotificationPreferencesStore {
     public var badgeEnabled: Bool {
         get { defaults.object(forKey: "notificationBadgeEnabled") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "notificationBadgeEnabled") }
+    }
+
+    // MARK: - Low Battery
+
+    /// Enable low battery warning notifications
+    public var lowBatteryEnabled: Bool {
+        get { defaults.object(forKey: "notifyLowBattery") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "notifyLowBattery") }
     }
 
     public init() {}

@@ -77,6 +77,12 @@ public final class AppState {
     /// Task for periodic battery refresh (cancel on disconnect/background)
     private var batteryRefreshTask: Task<Void, Never>?
 
+    /// Thresholds that have already triggered a notification this session
+    private var notifiedBatteryThresholds: Set<Int> = []
+
+    /// Battery warning threshold levels (percentage)
+    private let batteryWarningThresholds = [20, 10, 5]
+
     // MARK: - Onboarding State
 
     /// Whether onboarding is complete
@@ -179,6 +185,8 @@ public final class AppState {
             syncActivityCount = 0
             // Stop battery refresh loop on disconnect
             stopBatteryRefreshLoop()
+            // Clear battery notification thresholds for next connection
+            notifiedBatteryThresholds = []
             return
         }
 
@@ -313,8 +321,11 @@ public final class AppState {
         // Configure notification interaction handlers
         configureNotificationHandlers()
 
-        // Fetch battery immediately and start periodic refresh loop
-        await fetchDeviceBattery()
+        // Fetch battery and initialize thresholds before starting periodic checks
+        // We fetch directly here (not via fetchDeviceBattery) to avoid calling
+        // checkBatteryThresholds before thresholds are initialized
+        deviceBattery = try? await services.settingsService.getBattery()
+        initializeBatteryThresholds()
         startBatteryRefreshLoop()
     }
 
@@ -399,19 +410,20 @@ public final class AppState {
 
         do {
             deviceBattery = try await settingsService.getBattery()
+            await checkBatteryThresholds()
         } catch {
             // Silently fail - battery info is optional
             deviceBattery = nil
         }
     }
 
-    /// Start periodic battery refresh loop (5-minute interval)
+    /// Start periodic battery refresh loop (2-minute interval)
     private func startBatteryRefreshLoop() {
         batteryRefreshTask?.cancel()
         batteryRefreshTask = Task { [weak self] in
             while true {
                 do {
-                    try await Task.sleep(for: .seconds(300))
+                    try await Task.sleep(for: .seconds(120))
                 } catch {
                     break  // Cancelled, exit cleanly
                 }
@@ -425,6 +437,45 @@ public final class AppState {
     private func stopBatteryRefreshLoop() {
         batteryRefreshTask?.cancel()
         batteryRefreshTask = nil
+    }
+
+    /// Initialize battery thresholds based on current level to prevent false notifications on connect
+    private func initializeBatteryThresholds() {
+        guard let battery = deviceBattery, let device = connectedDevice else {
+            notifiedBatteryThresholds = []
+            return
+        }
+
+        let percentage = battery.percentage(using: device.activeOCVArray)
+
+        // Mark all thresholds at or above current level as "already notified"
+        notifiedBatteryThresholds = Set(
+            batteryWarningThresholds.filter { percentage <= $0 }
+        )
+    }
+
+    /// Check battery level against thresholds and send notifications
+    private func checkBatteryThresholds() async {
+        guard let battery = deviceBattery,
+              let device = connectedDevice,
+              let notificationService = services?.notificationService else { return }
+
+        let percentage = battery.percentage(using: device.activeOCVArray)
+
+        for threshold in batteryWarningThresholds {
+            if percentage <= threshold && !notifiedBatteryThresholds.contains(threshold) {
+                // First time crossing below this threshold
+                notifiedBatteryThresholds.insert(threshold)
+                await notificationService.postLowBatteryNotification(
+                    deviceName: device.nodeName,
+                    batteryPercentage: percentage
+                )
+                break  // Only one notification per check
+            } else if percentage > threshold && notifiedBatteryThresholds.contains(threshold) {
+                // Charged back above threshold — reset it
+                notifiedBatteryThresholds.remove(threshold)
+            }
+        }
     }
 
     // MARK: - App Lifecycle
