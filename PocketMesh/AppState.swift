@@ -502,8 +502,9 @@ public final class AppState {
             try? await services?.messageService.checkExpiredAcks()
         }
 
-        // Check WiFi connection health (may have died while backgrounded)
+        // Check connection health (may have died while backgrounded)
         await connectionManager.checkWiFiConnectionHealth()
+        await connectionManager.checkBLEConnectionHealth()
     }
 
     // MARK: - Accessibility

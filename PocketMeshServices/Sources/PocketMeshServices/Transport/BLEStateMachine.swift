@@ -100,6 +100,11 @@ public actor BLEStateMachine {
     }
 
     private func initializeCentralManager() {
+        // Set stateMachine reference BEFORE creating CBCentralManager.
+        // iOS calls willRestoreState during or immediately after CBCentralManager.init(),
+        // and the delegate handler needs the stateMachine reference to process it.
+        delegateHandler.stateMachine = self
+
         let options: [String: Any] = [
             CBCentralManagerOptionRestoreIdentifierKey: stateRestorationID,
             CBCentralManagerOptionShowPowerAlertKey: true
@@ -109,7 +114,6 @@ public actor BLEStateMachine {
             queue: .main,
             options: options
         )
-        delegateHandler.stateMachine = self
     }
 
     // MARK: - Public API

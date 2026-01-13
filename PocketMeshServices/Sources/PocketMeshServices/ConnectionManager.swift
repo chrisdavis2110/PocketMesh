@@ -429,6 +429,37 @@ public final class ConnectionManager {
         }
     }
 
+    /// Attempts BLE reconnection if user expects to be connected but iOS auto-reconnect gave up.
+    /// Call this when the app returns to foreground.
+    public func checkBLEConnectionHealth() async {
+        // Only check BLE connections
+        guard currentTransportType == nil || currentTransportType == .bluetooth else { return }
+
+        // Check if user expects to be connected but we're disconnected
+        guard shouldBeConnected,
+              connectionState == .disconnected,
+              let deviceID = lastConnectedDeviceID else { return }
+
+        // Don't interfere if iOS auto-reconnect is still in progress
+        if await stateMachine.isAutoReconnecting {
+            logger.info("[BLE] Skipping foreground reconnect: iOS auto-reconnect still in progress")
+            return
+        }
+
+        // Don't reconnect if device is connected to another app
+        if await stateMachine.isDeviceConnectedToSystem(deviceID) {
+            logger.info("[BLE] Skipping foreground reconnect: device connected to another app")
+            return
+        }
+
+        logger.info("[BLE] Attempting foreground reconnection to \(deviceID.uuidString.prefix(8))")
+        do {
+            try await connect(to: deviceID)
+        } catch {
+            logger.warning("[BLE] Foreground reconnection failed: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Initialization
 
     /// Creates a new connection manager.
