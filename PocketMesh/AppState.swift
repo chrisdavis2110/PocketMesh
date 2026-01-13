@@ -34,6 +34,11 @@ public final class AppState {
     public var services: ServiceContainer? { connectionManager.services }
     public var currentTransportType: TransportType? { connectionManager.currentTransportType }
 
+    /// Creates a standalone persistence store for operations that don't require active services
+    public func createStandalonePersistenceStore() -> PersistenceStore {
+        connectionManager.createStandalonePersistenceStore()
+    }
+
     /// The sync coordinator for data synchronization
     public private(set) var syncCoordinator: SyncCoordinator?
 

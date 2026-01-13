@@ -75,11 +75,11 @@ struct SettingsView: View {
 
                 AboutSection()
 
-                DiagnosticsSection()
-
             } else {
                 NoDeviceSection(showingDeviceSelection: $showingDeviceSelection)
             }
+
+            DiagnosticsSection()
 
             if demoModeManager.isUnlocked {
                 Section {

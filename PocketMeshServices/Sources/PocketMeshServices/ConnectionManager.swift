@@ -102,6 +102,11 @@ public final class ConnectionManager {
         accessorySetupKit.pairedAccessories.count
     }
 
+    /// Creates a standalone persistence store for operations that don't require services
+    public func createStandalonePersistenceStore() -> PersistenceStore {
+        PersistenceStore(modelContainer: modelContainer)
+    }
+
     // MARK: - Internal Components
 
     private let modelContainer: ModelContainer
