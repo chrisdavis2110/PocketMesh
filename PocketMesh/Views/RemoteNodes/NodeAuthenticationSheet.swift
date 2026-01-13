@@ -44,7 +44,6 @@ struct NodeAuthenticationSheet: View {
                     nodeDetailsSection
                 }
                 authenticationSection
-                errorSection
                 connectButton
             }
             .navigationTitle(customTitle ?? (role == .roomServer ? "Join Room" : "Admin Access"))
@@ -58,6 +57,7 @@ struct NodeAuthenticationSheet: View {
                     hasSavedPassword = await remoteNodeService.hasPassword(forContact: contact)
                 }
             }
+            .sensoryFeedback(.error, trigger: errorMessage)
         }
     }
 
@@ -83,6 +83,7 @@ struct NodeAuthenticationSheet: View {
                     Spacer()
                     Button("Enter New") {
                         hasSavedPassword = false
+                        errorMessage = nil
                     }
                     .font(.callout)
                 }
@@ -113,22 +114,21 @@ struct NodeAuthenticationSheet: View {
         } header: {
             Text("Authentication")
         } footer: {
-            if password.count > maxPasswordLength {
-                if role == .repeater {
-                    Text("MeshCore repeaters only accept passwords up to \(maxPasswordLength) characters. Extra characters will be ignored.")
-                } else {
-                    Text("MeshCore rooms only accept passwords up to \(maxPasswordLength) characters. Extra characters will be ignored.")
-                }
+            if let errorMessage {
+                Label(errorMessage, systemImage: "exclamationmark.circle.fill")
+                    .foregroundStyle(.red)
+                    .accessibilityLabel("Error: \(errorMessage)")
+            } else if password.count > maxPasswordLength {
+                Text("MeshCore \(role == .repeater ? "repeaters" : "rooms") only accept passwords up to \(maxPasswordLength) characters. Extra characters will be ignored.")
+            } else {
+                // Reserve footer space to prevent layout shift when error appears
+                Text(" ")
+                    .accessibilityHidden(true)
             }
         }
-    }
-
-    @ViewBuilder
-    private var errorSection: some View {
-        if let errorMessage {
-            Section {
-                Text(errorMessage)
-                    .foregroundStyle(.red)
+        .onChange(of: password) {
+            if errorMessage != nil {
+                errorMessage = nil
             }
         }
     }
