@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 /// Represents a channel (group) for broadcast messaging.
-/// Devices support up to 8 channels (slots 0-7), with slot 0 being the public channel.
+/// Max number of channels depends on the device, with slot 0 being the public channel.
 @Model
 public final class Channel {
     /// Unique identifier
@@ -12,7 +12,7 @@ public final class Channel {
     /// The device this channel belongs to
     public var deviceID: UUID
 
-    /// Channel slot index (0-7)
+    /// Channel slot index
     public var index: UInt8
 
     /// Channel name

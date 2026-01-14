@@ -1,5 +1,6 @@
-import SwiftUI
+import MeshCore
 import PocketMeshServices
+import SwiftUI
 
 /// ViewModel for repeater status display
 @Observable
@@ -135,6 +136,17 @@ final class RepeaterStatusViewModel {
     /// Timeout task for telemetry request
     private var telemetryTimeoutTask: Task<Void, Never>?
 
+    /// Check if error is a transient "not ready" error that should be retried.
+    /// Error code 10 occurs when the firmware isn't fully ready after login.
+    private func isTransientError(_ error: Error) -> Bool {
+        guard let remoteError = error as? RemoteNodeError,
+              case .sessionError(let meshError) = remoteError,
+              case .deviceError(let code) = meshError else {
+            return false
+        }
+        return code == 10
+    }
+
     /// Request status from the repeater
     func requestStatus(for session: RemoteNodeSessionDTO) async {
         guard let repeaterAdminService else { return }
@@ -142,6 +154,12 @@ final class RepeaterStatusViewModel {
         self.session = session
         isLoadingStatus = true
         errorMessage = nil
+
+        // Fire-and-forget warmup command to prime the connection
+        // The first command sent often gets lost, so send a harmless `ver` first
+        Task {
+            _ = try? await repeaterAdminService.sendCommand(sessionID: session.id, command: "ver")
+        }
 
         // Start timeout
         statusTimeoutTask?.cancel()
@@ -162,6 +180,18 @@ final class RepeaterStatusViewModel {
             // Also request clock time
             _ = try? await repeaterAdminService.sendCommand(sessionID: session.id, command: "clock")
         } catch {
+            // Retry once on transient "not ready" errors (error code 10)
+            if isTransientError(error) {
+                try? await Task.sleep(for: .milliseconds(500))
+                do {
+                    let response = try await repeaterAdminService.requestStatus(sessionID: session.id)
+                    handleStatusResponse(response)
+                    _ = try? await repeaterAdminService.sendCommand(sessionID: session.id, command: "clock")
+                    return
+                } catch {
+                    // Retry failed, fall through to show error
+                }
+            }
             errorMessage = error.localizedDescription
             isLoadingStatus = false
             statusTimeoutTask?.cancel()
@@ -247,6 +277,17 @@ final class RepeaterStatusViewModel {
             let response = try await repeaterAdminService.requestTelemetry(sessionID: session.id)
             handleTelemetryResponse(response)
         } catch {
+            // Retry once on transient "not ready" errors (error code 10)
+            if isTransientError(error) {
+                try? await Task.sleep(for: .milliseconds(500))
+                do {
+                    let response = try await repeaterAdminService.requestTelemetry(sessionID: session.id)
+                    handleTelemetryResponse(response)
+                    return
+                } catch {
+                    // Retry failed, fall through to show error
+                }
+            }
             errorMessage = error.localizedDescription
             isLoadingTelemetry = false
             telemetryTimeoutTask?.cancel()

@@ -46,12 +46,14 @@ struct RepeaterSettingsView: View {
             }
         }
         .task {
-            viewModel.configure(appState: appState, session: session)
+            await viewModel.configure(appState: appState, session: session)
             await viewModel.registerHandlers(appState: appState)
             // Device Info auto-loads because isDeviceInfoExpanded = true by default
         }
         .onDisappear {
-            viewModel.cleanup()
+            Task {
+                await viewModel.cleanup()
+            }
         }
         .alert("Success", isPresented: $viewModel.showSuccessAlert) {
             Button("OK", role: .cancel) { }
@@ -149,7 +151,7 @@ struct RepeaterSettingsView: View {
                             viewModel.radioSettingsModified = true
                         }
                 } else {
-                    Text("Loading...")
+                    Text(viewModel.isLoadingRadio ? "Loading..." : (viewModel.radioError != nil ? "Failed to load" : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 100, alignment: .trailing)
@@ -177,7 +179,7 @@ struct RepeaterSettingsView: View {
                 HStack {
                     Text("Bandwidth (kHz)")
                     Spacer()
-                    Text("Loading...")
+                    Text(viewModel.isLoadingRadio ? "Loading..." : (viewModel.radioError != nil ? "Failed to load" : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -204,7 +206,7 @@ struct RepeaterSettingsView: View {
                 HStack {
                     Text("Spreading Factor")
                     Spacer()
-                    Text("Loading...")
+                    Text(viewModel.isLoadingRadio ? "Loading..." : (viewModel.radioError != nil ? "Failed to load" : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -231,7 +233,7 @@ struct RepeaterSettingsView: View {
                 HStack {
                     Text("Coding Rate")
                     Spacer()
-                    Text("Loading...")
+                    Text(viewModel.isLoadingRadio ? "Loading..." : (viewModel.radioError != nil ? "Failed to load" : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -253,7 +255,7 @@ struct RepeaterSettingsView: View {
                             viewModel.radioSettingsModified = true
                         }
                 } else {
-                    Text("Loading...")
+                    Text(viewModel.isLoadingRadio ? "Loading..." : (viewModel.radioError != nil ? "Failed to load" : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 60, alignment: .trailing)
@@ -325,7 +327,7 @@ struct RepeaterSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 120)
                 } else {
-                    Text("Loading...")
+                    Text(viewModel.isLoadingIdentity ? "Loading..." : (viewModel.identityError != nil ? "Failed to load" : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 120, alignment: .trailing)
@@ -344,7 +346,7 @@ struct RepeaterSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 120)
                 } else {
-                    Text("Loading...")
+                    Text(viewModel.isLoadingIdentity ? "Loading..." : (viewModel.identityError != nil ? "Failed to load" : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 120, alignment: .trailing)
@@ -420,7 +422,7 @@ struct RepeaterSettingsView: View {
                     Text("min")
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("Loading...")
+                    Text(viewModel.isLoadingBehavior ? "Loading..." : (viewModel.behaviorError != nil ? "Failed to load" : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -447,7 +449,7 @@ struct RepeaterSettingsView: View {
                     Text("hrs")
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("Loading...")
+                    Text(viewModel.isLoadingBehavior ? "Loading..." : (viewModel.behaviorError != nil ? "Failed to load" : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -474,7 +476,7 @@ struct RepeaterSettingsView: View {
                     Text("hops")
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("Loading...")
+                    Text(viewModel.isLoadingBehavior ? "Loading..." : (viewModel.behaviorError != nil ? "Failed to load" : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
