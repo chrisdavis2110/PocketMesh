@@ -4,9 +4,17 @@ import PocketMeshServices
 
 /// Map view displaying contacts with their locations
 struct MapView: View {
+    /// Estimated duration for sheet presentation animation. SwiftUI doesn't provide a completion callback,
+    /// so we use this delay before switching to the snapshot to hide the transition from the user.
+    private static let sheetPresentationDuration: Duration = .milliseconds(500)
+
     @Environment(AppState.self) private var appState
     @State private var viewModel = MapViewModel()
     @State private var selectedContactForDetail: ContactDTO?
+    /// Static snapshot of the map shown while sheets are presented to prevent memory growth from SwiftUI keyboard layout cycles
+    @State private var mapSnapshot: UIImage?
+    /// Controls when snapshot is shown - delayed until after sheet presents to hide the transition
+    @State private var isSnapshotActive = false
 
     var body: some View {
         NavigationStack {
@@ -26,13 +34,12 @@ struct MapView: View {
                     await viewModel.loadContactsWithLocation()
                     viewModel.centerOnAllContacts()
                 }
-                .sheet(item: $selectedContactForDetail) { contact in
+                .sheet(item: $selectedContactForDetail, onDismiss: clearMapSnapshot) { contact in
                     ContactDetailSheet(
                         contact: contact,
                         onMessage: { navigateToChat(with: contact) }
                     )
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
+                    .presentationDetents([.large])
                 }
         }
     }
@@ -83,20 +90,35 @@ struct MapView: View {
         if viewModel.contactsWithLocation.isEmpty && !viewModel.isLoading {
             emptyState
         } else {
-            MKMapViewRepresentable(
-                contacts: viewModel.contactsWithLocation,
-                mapType: viewModel.mapStyleSelection.mkMapType,
-                showLabels: viewModel.shouldShowLabels,
-                showsUserLocation: true,
-                selectedContact: $viewModel.selectedContact,
-                cameraRegion: $viewModel.cameraRegion,
-                onDetailTap: { contact in
-                    showContactDetail(contact)
-                },
-                onMessageTap: { contact in
-                    navigateToChat(with: contact)
+            // Keep MKMapView always in tree to prevent Metal deallocation crashes
+            // Hide it with opacity when showing snapshot instead of removing from hierarchy
+            let showingSnapshot = isSnapshotActive && mapSnapshot != nil
+
+            ZStack {
+                MKMapViewRepresentable(
+                    contacts: viewModel.contactsWithLocation,
+                    mapType: viewModel.mapStyleSelection.mkMapType,
+                    showLabels: viewModel.shouldShowLabels,
+                    showsUserLocation: true,
+                    selectedContact: $viewModel.selectedContact,
+                    cameraRegion: $viewModel.cameraRegion,
+                    onDetailTap: { contact in
+                        showContactDetail(contact)
+                    },
+                    onMessageTap: { contact in
+                        navigateToChat(with: contact)
+                    }
+                )
+                .opacity(showingSnapshot ? 0 : 1)
+
+                if showingSnapshot, let snapshot = mapSnapshot {
+                    // Show static snapshot while sheet is presented to prevent memory growth
+                    // MKMapView clustering causes unbounded memory growth during keyboard layout cycles
+                    Image(uiImage: snapshot)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
                 }
-            )
+            }
             .overlay {
                 if viewModel.isLoading {
                     loadingOverlay
@@ -249,7 +271,42 @@ struct MapView: View {
     }
 
     private func showContactDetail(_ contact: ContactDTO) {
+        // Clear selection to prevent MKSmallCalloutView constraint corruption
+        viewModel.selectedContact = nil
+        // Present sheet immediately so user sees it animating in
         selectedContactForDetail = contact
+
+        // Capture snapshot after sheet animation completes to hide the transition
+        Task {
+            try? await Task.sleep(for: Self.sheetPresentationDuration)
+            await captureMapSnapshot()
+            isSnapshotActive = true
+        }
+    }
+
+    /// Captures a static snapshot of the current map region to display while sheets are presented
+    private func captureMapSnapshot() async {
+        guard let region = viewModel.cameraRegion else { return }
+
+        let options = MKMapSnapshotter.Options()
+        options.region = region
+        options.mapType = viewModel.mapStyleSelection.mkMapType
+        options.size = UIScreen.main.bounds.size
+        options.showsBuildings = true
+
+        let snapshotter = MKMapSnapshotter(options: options)
+        do {
+            let snapshot = try await snapshotter.start()
+            mapSnapshot = snapshot.image
+        } catch {
+            // If snapshot fails, clear it so we fall back to live map
+            mapSnapshot = nil
+        }
+    }
+
+    private func clearMapSnapshot() {
+        isSnapshotActive = false
+        mapSnapshot = nil
     }
 
     private func centerOnUserLocation() {

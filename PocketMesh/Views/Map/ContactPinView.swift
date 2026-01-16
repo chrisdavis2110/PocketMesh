@@ -115,11 +115,9 @@ final class ContactPinView: MKAnnotationView {
 
         let hosting = UIHostingController(rootView: calloutContent)
         hosting.view.backgroundColor = .clear
-        hosting.view.translatesAutoresizingMaskIntoConstraints = false
 
-        // Size the hosting view
-        hosting.view.layoutIfNeeded()
-        let size = hosting.view.intrinsicContentSize
+        // Size the hosting view - MKMapView uses intrinsic content size for callout layout
+        let size = hosting.sizeThatFits(in: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
         hosting.view.frame = CGRect(origin: .zero, size: size)
 
         detailCalloutAccessoryView = hosting.view

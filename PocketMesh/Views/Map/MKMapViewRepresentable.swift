@@ -18,6 +18,7 @@ struct MKMapViewRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> MKMapView {
         let mapView = context.coordinator.mapView
+
         mapView.delegate = context.coordinator
         mapView.showsUserLocation = showsUserLocation
 
@@ -127,19 +128,20 @@ struct MKMapViewRepresentable: UIViewRepresentable {
         let currentlySelectedAnnotation = mapView.selectedAnnotations.first as? ContactAnnotation
 
         if let selectedContact {
-            // Find and select the annotation for this contact
+            // Find the annotation for this contact
+            guard let annotation = mapView.annotations
+                .compactMap({ $0 as? ContactAnnotation })
+                .first(where: { $0.contact.id == selectedContact.id }) else {
+                return
+            }
+
+            // Only select if not already selected
             if currentlySelectedAnnotation?.contact.id != selectedContact.id {
-                if let annotation = mapView.annotations
-                    .compactMap({ $0 as? ContactAnnotation })
-                    .first(where: { $0.contact.id == selectedContact.id }) {
-                    mapView.selectAnnotation(annotation, animated: true)
-                }
+                mapView.selectAnnotation(annotation, animated: true)
             }
-        } else {
+        } else if let current = currentlySelectedAnnotation {
             // Deselect all
-            if let current = currentlySelectedAnnotation {
-                mapView.deselectAnnotation(current, animated: true)
-            }
+            mapView.deselectAnnotation(current, animated: true)
         }
     }
 
@@ -182,7 +184,9 @@ struct MKMapViewRepresentable: UIViewRepresentable {
 
         @objc func clusterTapped(_ gesture: UITapGestureRecognizer) {
             guard let clusterView = gesture.view as? MKAnnotationView,
-                  let cluster = clusterView.annotation as? MKClusterAnnotation else { return }
+                  let cluster = clusterView.annotation as? MKClusterAnnotation else {
+                return
+            }
             mapView.showAnnotations(cluster.memberAnnotations, animated: true)
         }
 
@@ -249,11 +253,22 @@ struct MKMapViewRepresentable: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, didSelect annotation: any MKAnnotation) {
-            // Cluster taps are handled by gesture recognizer for immediate response
-            guard !isUpdatingFromSwiftUI,
-                  let contactAnnotation = annotation as? ContactAnnotation else {
+            guard !isUpdatingFromSwiftUI else { return }
+
+            // Ignore user location selection
+            if annotation is MKUserLocation {
                 return
             }
+
+            // Handle cluster selection - zoom to show members
+            // This serves as fallback when gesture recognizer doesn't fire
+            if let cluster = annotation as? MKClusterAnnotation {
+                mapView.deselectAnnotation(cluster, animated: false)
+                mapView.showAnnotations(cluster.memberAnnotations, animated: true)
+                return
+            }
+
+            guard let contactAnnotation = annotation as? ContactAnnotation else { return }
 
             // Update name label visibility
             if let view = mapView.view(for: annotation) as? ContactPinView {
