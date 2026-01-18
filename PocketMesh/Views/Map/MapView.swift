@@ -47,6 +47,7 @@ struct MapView: View {
                     .presentationDetents([.large])
                 }
         }
+        .liquidGlassToolbarBackground()
     }
 
     // MARK: - Map Canvas
