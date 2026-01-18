@@ -359,6 +359,7 @@ final class ChatViewModel {
             showDirectionGap: Self.isDirectionChange(at: index, in: messages),
             detectedURL: nil,  // URL detection deferred to avoid main thread blocking
             isOutgoing: message.isOutgoing,
+            status: message.status,
             containsSelfMention: message.containsSelfMention,
             mentionSeen: message.mentionSeen,
             heardRepeats: message.heardRepeats,
@@ -392,6 +393,7 @@ final class ChatViewModel {
             showDirectionGap: item.showDirectionGap,
             detectedURL: detectedURL,
             isOutgoing: item.isOutgoing,
+            status: item.status,
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
             heardRepeats: item.heardRepeats,
@@ -428,7 +430,7 @@ final class ChatViewModel {
         do {
             // Create message immediately and show it
             let message = try await messageService.createPendingMessage(text: text, to: contact)
-            messages.append(message)
+            appendMessageIfNew(message)
 
             // Queue for sending
             sendQueue.append(QueuedMessage(messageID: message.id, contactID: contact.id))
@@ -789,6 +791,7 @@ final class ChatViewModel {
                 showDirectionGap: Self.isDirectionChange(at: index, in: messages),
                 detectedURL: urls[index],
                 isOutgoing: message.isOutgoing,
+                status: message.status,
                 containsSelfMention: message.containsSelfMention,
                 mentionSeen: message.mentionSeen,
                 heardRepeats: message.heardRepeats,
@@ -919,6 +922,7 @@ final class ChatViewModel {
             showDirectionGap: item.showDirectionGap,
             detectedURL: item.detectedURL,
             isOutgoing: item.isOutgoing,
+            status: item.status,
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
             heardRepeats: item.heardRepeats,
