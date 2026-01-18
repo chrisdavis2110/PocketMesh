@@ -3,7 +3,7 @@ import PocketMeshServices
 
 /// Manual radio parameter configuration
 struct AdvancedRadioSection: View {
-    @Environment(AppState.self) private var appState
+    @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var frequency: Double?  // MHz
     @State private var bandwidth: UInt32?  // Hz

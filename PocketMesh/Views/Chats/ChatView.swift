@@ -6,7 +6,7 @@ private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatView")
 
 /// Individual chat conversation view with iMessage-style UI
 struct ChatView: View {
-    @Environment(AppState.self) private var appState
+    @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
     @Environment(\.linkPreviewCache) private var linkPreviewCache
 
@@ -413,5 +413,5 @@ struct ChatView: View {
             name: "Alice"
         )))
     }
-    .environment(AppState())
+    .environment(\.appState, AppState())
 }

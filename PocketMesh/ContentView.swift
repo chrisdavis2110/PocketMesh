@@ -2,7 +2,7 @@ import SwiftUI
 import PocketMeshServices
 
 struct ContentView: View {
-    @Environment(AppState.self) private var appState
+    @Environment(\.appState) private var appState
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -66,7 +66,7 @@ struct ContentView: View {
 // MARK: - Onboarding View
 
 struct OnboardingView: View {
-    @Environment(AppState.self) private var appState
+    @Environment(\.appState) private var appState
 
     var body: some View {
         @Bindable var appState = appState
@@ -92,7 +92,7 @@ struct OnboardingView: View {
 // MARK: - Main Tab View
 
 struct MainTabView: View {
-    @Environment(AppState.self) private var appState
+    @Environment(\.appState) private var appState
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingDeviceSelection = false
     @State private var showDisconnectedPill = false
@@ -213,12 +213,12 @@ struct MainTabView: View {
 
 #Preview("Content View - Onboarding") {
     ContentView()
-        .environment(AppState())
+        .environment(\.appState, AppState())
 }
 
 #Preview("Content View - Main App") {
     let appState = AppState()
     appState.hasCompletedOnboarding = true
     return ContentView()
-        .environment(appState)
+        .environment(\.appState, appState)
 }

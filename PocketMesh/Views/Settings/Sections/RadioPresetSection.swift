@@ -3,7 +3,7 @@ import PocketMeshServices
 
 /// Radio preset selector with region-based filtering
 struct RadioPresetSection: View {
-    @Environment(AppState.self) private var appState
+    @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var selectedPresetID: String?
     @State private var isApplying = false

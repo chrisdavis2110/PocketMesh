@@ -6,7 +6,7 @@ private let logger = Logger(subsystem: "com.pocketmesh", category: "ChannelChatV
 
 /// Channel conversation view with broadcast messaging
 struct ChannelChatView: View {
-    @Environment(AppState.self) private var appState
+    @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
     @Environment(\.linkPreviewCache) private var linkPreviewCache
 
@@ -419,5 +419,5 @@ struct ChannelChatView: View {
             name: "General"
         )))
     }
-    .environment(AppState())
+    .environment(\.appState, AppState())
 }

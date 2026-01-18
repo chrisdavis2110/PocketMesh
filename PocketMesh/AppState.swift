@@ -818,3 +818,26 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     case deviceScan
     case radioPreset
 }
+
+// MARK: - Environment Key
+
+/// Environment key for AppState with safe default for background snapshot scenarios.
+/// MainActor.assumeIsolated asserts we're on the main actor, which is always true
+/// for SwiftUI environment access in views.
+private struct AppStateKey: EnvironmentKey {
+    static var defaultValue: AppState {
+        MainActor.assumeIsolated {
+            AppState()
+        }
+    }
+}
+
+extension EnvironmentValues {
+    /// AppState environment value with safe default for background snapshot scenarios.
+    /// Having a default value ensures a value is always available, preventing crashes when
+    /// iOS takes app switcher snapshots or launches the app in background.
+    var appState: AppState {
+        get { self[AppStateKey.self] }
+        set { self[AppStateKey.self] = newValue }
+    }
+}
