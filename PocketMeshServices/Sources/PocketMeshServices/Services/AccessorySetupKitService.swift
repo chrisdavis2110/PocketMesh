@@ -482,7 +482,7 @@ public final class AccessorySetupKitService: NSObject, @MainActor CBCentralManag
 
         // Ensure Bluetooth is powered on
         if centralState == .unknown || centralState == .resetting {
-            try await Task.sleep(nanoseconds: 200_000_000)
+            try await Task.sleep(for: .milliseconds(200))
         }
         guard centralState == .poweredOn else { throw AccessorySetupKitError.pickerRestricted }
 
@@ -502,7 +502,7 @@ public final class AccessorySetupKitService: NSObject, @MainActor CBCentralManag
         guard let central, !isScanning else { return }
         let serviceUUID = CBUUID(string: BLEServiceUUID.nordicUART)
         isScanning = true
-        central.scanForPeripherals(withServices: [serviceUUID], options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
+        central.scanForPeripherals(withServices: [serviceUUID])
     }
 
     // Stop scanning if in progress
@@ -670,7 +670,7 @@ struct BluetoothDevicePickerView: View {
                     ContentUnavailableView(
                         "No Devices",
                         systemImage: "antenna.radiowaves.left.and.right",
-                        description: Text("Make sure your device is powered on and nearby. Tap Refresh to scan again.")
+                        description: Text("Make sure your device is powered on and nearby. Click the refresh button to scan again.")
                     )
                 } else {
                     List(service.discoveredDevices) { device in
