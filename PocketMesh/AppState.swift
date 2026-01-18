@@ -8,7 +8,7 @@ import TipKit
 import UIKit
 
 /// Represents the current state of the status pill UI component
-enum StatusPillState: Equatable {
+enum StatusPillState: Hashable {
     case hidden
     case connecting
     case syncing
@@ -272,6 +272,11 @@ public final class AppState {
 
         // Wire connection ready callback - automatically updates UI when connection completes
         connectionManager.onConnectionReady = { [weak self] in
+            await self?.wireServicesIfConnected()
+        }
+
+        // Wire connection lost callback - updates UI when connection is lost
+        connectionManager.onConnectionLost = { [weak self] in
             await self?.wireServicesIfConnected()
         }
 

@@ -24,7 +24,9 @@ struct SyncingPillView: View {
                 .font(.subheadline)
                 .fontWeight(isFailure ? .bold : .medium)
                 .foregroundStyle(textColor)
+                .contentTransition(.identity)
         }
+        .geometryGroup()
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background {
@@ -39,22 +41,26 @@ struct SyncingPillView: View {
 
     @ViewBuilder
     private var icon: some View {
-        switch state {
-        case .failed:
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.red)
-        case .disconnected:
-            Image(systemName: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
-        case .ready:
-            Image(systemName: "checkmark.circle")
-                .foregroundStyle(.green)
-        case .connecting, .syncing:
-            ProgressView()
-                .controlSize(.small)
-        case .hidden:
-            EmptyView()
+        Group {
+            switch state {
+            case .failed:
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+            case .disconnected:
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+            case .ready:
+                Image(systemName: "checkmark.circle")
+                    .foregroundStyle(.green)
+            case .connecting, .syncing:
+                Image(systemName: "arrow.trianglehead.2.clockwise")
+                    .symbolEffect(.rotate, isActive: true)
+            case .hidden:
+                EmptyView()
+            }
         }
+        .font(.subheadline)
+        .frame(width: 16, height: 16)
     }
 
     private var displayText: String {
@@ -64,7 +70,7 @@ struct SyncingPillView: View {
         case .syncing:
             "Syncing"
         case .connecting:
-            "Connecting..."
+            "Connecting"
         case .ready:
             "Ready"
         case .disconnected:
