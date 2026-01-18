@@ -83,16 +83,16 @@ public final class Message {
     public var roundTripTime: UInt32?
 
     /// Count of mesh repeats heard for this message (outgoing only)
-    public var heardRepeats: Int
+    public var heardRepeats: Int = 0
 
     /// Number of times this message has been sent (1 = original, 2+ = sent again)
-    public var sendCount: Int
+    public var sendCount: Int = 1
 
     /// Current retry attempt (0 = first attempt, 1 = first retry, etc.)
-    public var retryAttempt: Int
+    public var retryAttempt: Int = 0
 
     /// Maximum retry attempts configured for this message
-    public var maxRetryAttempts: Int
+    public var maxRetryAttempts: Int = 0
 
     /// Deduplication key for preventing duplicate incoming messages
     public var deduplicationKey: String?
