@@ -43,7 +43,7 @@ struct AdvancedRadioSection: View {
 
             Picker("Bandwidth (kHz)", selection: $bandwidth) {
                 ForEach(RadioOptions.bandwidthsHz, id: \.self) { bwHz in
-                    Text("\(RadioOptions.formatBandwidth(bwHz)) kHz")
+                    Text(RadioOptions.formatBandwidth(bwHz))
                         .tag(bwHz as UInt32?)
                         .accessibilityLabel("\(RadioOptions.formatBandwidth(bwHz)) kilohertz")
                 }
@@ -54,7 +54,7 @@ struct AdvancedRadioSection: View {
 
             Picker("Spreading Factor", selection: $spreadingFactor) {
                 ForEach(RadioOptions.spreadingFactors, id: \.self) { spreadFactorOption in
-                    Text("SF\(spreadFactorOption)")
+                    Text(spreadFactorOption, format: .number)
                         .tag(spreadFactorOption as Int?)
                         .accessibilityLabel("Spreading factor \(spreadFactorOption)")
                 }
