@@ -85,6 +85,9 @@ public final class Message {
     /// Count of mesh repeats heard for this message (outgoing only)
     public var heardRepeats: Int
 
+    /// Number of times this message has been sent (1 = original, 2+ = sent again)
+    public var sendCount: Int
+
     /// Current retry attempt (0 = first attempt, 1 = first retry, etc.)
     public var retryAttempt: Int
 
@@ -139,6 +142,7 @@ public final class Message {
         replyToID: UUID? = nil,
         roundTripTime: UInt32? = nil,
         heardRepeats: Int = 0,
+        sendCount: Int = 1,
         retryAttempt: Int = 0,
         maxRetryAttempts: Int = 0,
         deduplicationKey: String? = nil,
@@ -169,6 +173,7 @@ public final class Message {
         self.replyToID = replyToID
         self.roundTripTime = roundTripTime
         self.heardRepeats = heardRepeats
+        self.sendCount = sendCount
         self.retryAttempt = retryAttempt
         self.maxRetryAttempts = maxRetryAttempts
         self.deduplicationKey = deduplicationKey
@@ -250,6 +255,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
     public let replyToID: UUID?
     public let roundTripTime: UInt32?
     public let heardRepeats: Int
+    public let sendCount: Int
     public let retryAttempt: Int
     public let maxRetryAttempts: Int
     public let deduplicationKey: String?
@@ -281,6 +287,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.replyToID = message.replyToID
         self.roundTripTime = message.roundTripTime
         self.heardRepeats = message.heardRepeats
+        self.sendCount = message.sendCount
         self.retryAttempt = message.retryAttempt
         self.maxRetryAttempts = message.maxRetryAttempts
         self.deduplicationKey = message.deduplicationKey
@@ -314,6 +321,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         replyToID: UUID?,
         roundTripTime: UInt32?,
         heardRepeats: Int,
+        sendCount: Int = 1,
         retryAttempt: Int,
         maxRetryAttempts: Int,
         deduplicationKey: String? = nil,
@@ -344,6 +352,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.replyToID = replyToID
         self.roundTripTime = roundTripTime
         self.heardRepeats = heardRepeats
+        self.sendCount = sendCount
         self.retryAttempt = retryAttempt
         self.maxRetryAttempts = maxRetryAttempts
         self.deduplicationKey = deduplicationKey

@@ -810,6 +810,21 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    /// Update message timestamp (for resending)
+    public func updateMessageTimestamp(id: UUID, timestamp: UInt32) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.timestamp = timestamp
+            try modelContext.save()
+        }
+    }
+
     /// Update message ACK info
     public func updateMessageAck(id: UUID, ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32? = nil) throws {
         let targetID = id
@@ -1821,6 +1836,22 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         message.heardRepeats += 1
         try modelContext.save()
         return message.heardRepeats
+    }
+
+    /// Increments the sendCount for a message and returns the new count.
+    public func incrementMessageSendCount(id: UUID) throws -> Int {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in message.id == targetID }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return 0
+        }
+
+        message.sendCount += 1
+        try modelContext.save()
+        return message.sendCount
     }
 
     // MARK: - Debug Log Entries

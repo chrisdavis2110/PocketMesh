@@ -390,12 +390,17 @@ struct UnifiedMessageBubble: View {
         case .sending:
             return "Sending..."
         case .sent:
-            // Channel messages stay at .sent (no ACK), so show repeat count if available
+            // Build status parts: repeats, send count, sent
+            var parts: [String] = []
             if message.heardRepeats > 0 {
-                let repeatText = message.heardRepeats == 1 ? "1 repeat" : "\(message.heardRepeats) repeats"
-                return "\(repeatText) • Sent"
+                parts.append(message.heardRepeats == 1 ? "1 repeat" : "\(message.heardRepeats) repeats")
             }
-            return "Sent"
+            if message.sendCount > 1 {
+                parts.append("Sent \(message.sendCount) times")
+            } else {
+                parts.append("Sent")
+            }
+            return parts.joined(separator: " • ")
         case .delivered:
             if message.heardRepeats > 0 {
                 let repeatText = message.heardRepeats == 1 ? "1 repeat" : "\(message.heardRepeats) repeats"

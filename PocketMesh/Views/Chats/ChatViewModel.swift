@@ -688,13 +688,24 @@ final class ChatViewModel {
         }
     }
 
-    /// Send the same message text again as a new message.
+    /// Resend a channel message in place, or copy text for direct messages.
     /// Used for "Send Again" context menu action.
     func sendAgain(_ message: MessageDTO) async {
-        composingText = message.text
-        if currentChannel != nil {
-            await sendChannelMessage()
+        if message.channelIndex != nil {
+            // Channel messages: resend in place (increments send count)
+            guard let messageService else { return }
+            do {
+                try await messageService.resendChannelMessage(messageID: message.id)
+                // Reload to show updated send count
+                if let channel = currentChannel {
+                    await loadChannelMessages(for: channel)
+                }
+            } catch {
+                logger.error("Failed to resend message: \(error)")
+            }
         } else {
+            // Direct messages: keep existing behavior (copy to compose field)
+            composingText = message.text
             await sendMessage()
         }
     }
