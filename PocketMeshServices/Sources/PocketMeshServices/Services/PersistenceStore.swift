@@ -1766,6 +1766,43 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
+    /// Fetch recent RX log entries that failed decryption due to missing keys.
+    public func fetchRecentNoMatchingKeyEntries(deviceID: UUID, since: Date) throws -> [RxLogEntryDTO] {
+        let targetDeviceID = deviceID
+        let targetStatus = DecryptStatus.noMatchingKey.rawValue
+        let cutoff = since
+        let descriptor = FetchDescriptor<RxLogEntry>(
+            predicate: #Predicate {
+                $0.deviceID == targetDeviceID &&
+                $0.decryptStatus == targetStatus &&
+                $0.receivedAt >= cutoff
+            },
+            sortBy: [SortDescriptor(\.receivedAt, order: .forward)]
+        )
+        let entries = try modelContext.fetch(descriptor)
+        return entries.map { RxLogEntryDTO(from: $0) }
+    }
+
+    /// Batch update RX log entries after successful decryption.
+    /// Note: decodedText is @Transient and not persisted.
+    public func batchUpdateRxLogDecryption(
+        _ updates: [(id: UUID, channelHash: UInt8?, channelName: String?, senderTimestamp: UInt32?)]
+    ) throws {
+        for update in updates {
+            let targetID = update.id
+            let descriptor = FetchDescriptor<RxLogEntry>(
+                predicate: #Predicate { $0.id == targetID }
+            )
+            guard let entry = try modelContext.fetch(descriptor).first else { continue }
+
+            entry.channelHash = update.channelHash.map { Int($0) }
+            entry.channelName = update.channelName
+            entry.decryptStatus = DecryptStatus.success.rawValue
+            entry.senderTimestamp = update.senderTimestamp.map { Int($0) }
+        }
+        try modelContext.save()
+    }
+
     // MARK: - Heard Repeats
 
     /// Finds a sent channel message matching the given criteria within a time window.
