@@ -62,6 +62,7 @@ struct LineOfSightView: View {
 
     @State private var viewModel: LineOfSightViewModel
     @State private var sheetDetent: PresentationDetent = analysisSheetDetentCollapsed
+    @State private var enableHalfDetent = false
     @State private var screenHeight: CGFloat = 0
     @State private var baseScreenHeight: CGFloat = 0
     @State private var showAnalysisSheet: Bool
@@ -92,6 +93,14 @@ struct LineOfSightView: View {
 
     private var mapOverlayBottomPadding: CGFloat {
         showAnalysisSheet ? sheetBottomInset : 0
+    }
+
+    private var availableSheetDetents: Set<PresentationDetent> {
+        if enableHalfDetent {
+            [analysisSheetDetentCollapsed, analysisSheetDetentHalf, analysisSheetDetentExpanded]
+        } else {
+            [analysisSheetDetentCollapsed, analysisSheetDetentExpanded]
+        }
     }
 
     // MARK: - Initialization
@@ -153,6 +162,7 @@ struct LineOfSightView: View {
             .onChange(of: viewModel.pointA) { oldValue, newValue in
                 if oldValue == nil, newValue != nil, viewModel.pointB != nil {
                     if showSheet {
+                        enableHalfDetent = true
                         withAnimation {
                             sheetDetent = analysisSheetDetentHalf
                         }
@@ -168,6 +178,7 @@ struct LineOfSightView: View {
             .onChange(of: viewModel.pointB) { oldValue, newValue in
                 if oldValue == nil, newValue != nil, viewModel.pointA != nil {
                     if showSheet {
+                        enableHalfDetent = true
                         withAnimation {
                             sheetDetent = analysisSheetDetentHalf
                         }
@@ -189,6 +200,11 @@ struct LineOfSightView: View {
 
                 if isRelocating, newValue != analysisSheetDetentCollapsed {
                     viewModel.relocatingPoint = nil
+                }
+
+                // Disable half detent once user drags away from it
+                if oldValue == analysisSheetDetentHalf, newValue != analysisSheetDetentHalf {
+                    enableHalfDetent = false
                 }
             }
             .onChange(of: viewModel.repeaterPoint) { oldValue, newValue in
@@ -238,10 +254,7 @@ struct LineOfSightView: View {
                 }
                 .sheet(isPresented: $showAnalysisSheet) {
                     analysisSheet
-                        .presentationDetents(
-                            [analysisSheetDetentCollapsed, analysisSheetDetentHalf, analysisSheetDetentExpanded],
-                            selection: $sheetDetent
-                        )
+                        .presentationDetents(availableSheetDetents, selection: $sheetDetent)
                         .presentationDragIndicator(.visible)
                         .presentationBackgroundInteraction(.enabled)
                         .presentationBackground(.regularMaterial)
@@ -1249,6 +1262,7 @@ struct LineOfSightView: View {
         // Clear results and show Analyze button
         viewModel.clearAnalysisResults()
         viewModel.relocatingPoint = nil
+        enableHalfDetent = true
         withAnimation {
             sheetDetent = analysisSheetDetentHalf
         }
