@@ -20,7 +20,7 @@ struct AboutSection: View {
             }
             .foregroundStyle(.primary)
 
-            Link(destination: URL(string: "https://meshcore.co.uk/map.html")!) {
+            Link(destination: URL(string: "https://map.meshcore.dev")!) {
                 HStack {
                     Label {
                         Text("MeshCore Online Map")
@@ -52,21 +52,7 @@ struct AboutSection: View {
             }
             .foregroundStyle(.primary)
 
-            Link(destination: URL(string: "https://github.com/sponsors/Avi0n")!) {
-                HStack {
-                    Label {
-                        Text("Support Me")
-                    } icon: {
-                        Image(systemName: "heart")
-                            .foregroundStyle(.tint)
-                    }
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            .foregroundStyle(.primary)
+
         } header: {
             Text("About")
         }
