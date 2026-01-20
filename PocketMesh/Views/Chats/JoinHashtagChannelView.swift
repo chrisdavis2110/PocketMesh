@@ -2,6 +2,7 @@ import SwiftUI
 import PocketMeshServices
 
 /// View for joining a hashtag channel (public, name-based)
+@MainActor
 struct JoinHashtagChannelView: View {
     @Environment(\.appState) private var appState
 
@@ -12,6 +13,15 @@ struct JoinHashtagChannelView: View {
     @State private var selectedSlot: UInt8
     @State private var isJoining = false
     @State private var errorMessage: String?
+    @State private var existingChannels: [ChannelDTO] = []
+
+    private var existingChannel: ChannelDTO? {
+        guard !channelName.isEmpty else { return nil }
+        let fullName = "#\(channelName)"
+        return existingChannels.first {
+            $0.name.localizedCaseInsensitiveCompare(fullName) == .orderedSame
+        }
+    }
 
     init(availableSlots: [UInt8], onComplete: @escaping (ChannelDTO?) -> Void) {
         self.availableSlots = availableSlots
@@ -77,24 +87,48 @@ struct JoinHashtagChannelView: View {
             Section {
                 Button {
                     Task {
-                        await joinChannel()
+                        guard !isJoining else { return }
+                        if let existing = existingChannel {
+                            onComplete(existing)
+                        } else {
+                            await joinChannel()
+                        }
                     }
                 } label: {
                     HStack {
                         Spacer()
                         if isJoining {
                             ProgressView()
+                        } else if existingChannel != nil {
+                            Text("Go to #\(channelName)")
                         } else {
                             Text("Join #\(channelName)")
                         }
                         Spacer()
                     }
                 }
-                .disabled(!isValidName || isJoining)
+                .disabled(!isValidName || (isJoining && existingChannel == nil))
+                .accessibilityHint(existingChannel != nil ? "Opens the channel you've already joined" : "Creates and joins this hashtag channel")
+            } footer: {
+                if existingChannel != nil {
+                    Label("Already joined", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .accessibilityLabel("Channel already joined")
+                        .frame(maxWidth: .infinity)
+                }
             }
         }
         .navigationTitle("Join Hashtag Channel")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            guard let deviceID = appState.connectedDevice?.id,
+                  let dataStore = appState.services?.dataStore else { return }
+            do {
+                existingChannels = try await dataStore.fetchChannels(deviceID: deviceID)
+            } catch {
+                // Fail open - allow creation if fetch fails
+            }
+        }
     }
 
     private func joinChannel() async {
