@@ -409,7 +409,7 @@ struct ContactRowView: View {
             ContactAvatar(contact: contact, size: 44)
 
             VStack(alignment: .leading, spacing: 2) {
-                HStack {
+                HStack(spacing: 4) {
                     Text(contact.displayName)
                         .font(.body)
                         .fontWeight(.medium)
@@ -420,6 +420,17 @@ struct ContactRowView: View {
                             .foregroundStyle(.orange)
                             .accessibilityLabel("Blocked")
                     }
+
+                    Spacer()
+
+                    if contact.isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundStyle(.yellow)
+                            .accessibilityLabel("Favorite")
+                    }
+
+                    RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
                 }
 
                 HStack(spacing: 8) {
@@ -456,18 +467,6 @@ struct ContactRowView: View {
             }
             .alignmentGuide(.listRowSeparatorLeading) { d in
                 d[.leading]
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                if contact.isFavorite {
-                    Image(systemName: "star.fill")
-                        .font(.caption)
-                        .foregroundStyle(.yellow)
-                }
-
-                RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
             }
         }
         .padding(.vertical, 4)

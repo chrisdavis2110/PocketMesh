@@ -10,27 +10,24 @@ struct ConversationRow: View {
             ContactAvatar(contact: contact, size: 44)
 
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    HStack(spacing: 4) {
-                        Text(contact.displayName)
-                            .font(.headline)
-                            .lineLimit(1)
-
-                        if contact.isFavorite {
-                            Image(systemName: "star.fill")
-                                .foregroundStyle(.yellow)
-                                .font(.caption)
-                                .accessibilityLabel("Favorite")
-                        }
-                    }
+                HStack(spacing: 4) {
+                    Text(contact.displayName)
+                        .font(.headline)
+                        .lineLimit(1)
 
                     Spacer()
 
-                    HStack(spacing: 4) {
-                        MutedIndicator(isMuted: contact.isMuted)
-                        if let date = contact.lastMessageDate {
-                            ConversationTimestamp(date: date)
-                        }
+                    MutedIndicator(isMuted: contact.isMuted)
+
+                    if contact.isFavorite {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(.yellow)
+                            .font(.caption)
+                            .accessibilityLabel("Favorite")
+                    }
+
+                    if let date = contact.lastMessageDate {
+                        ConversationTimestamp(date: date)
                     }
                 }
 
