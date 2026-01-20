@@ -14,10 +14,6 @@ struct ChannelAvatar: View {
     }
 
     private var avatarColor: Color {
-        if channel.isPublicChannel {
-            return .green
-        }
-        let colors: [Color] = [.blue, .orange, .purple, .pink, .cyan, .indigo, .mint]
-        return colors[Int(channel.index - 1) % colors.count]
+        Color(hex: 0x336688)
     }
 }

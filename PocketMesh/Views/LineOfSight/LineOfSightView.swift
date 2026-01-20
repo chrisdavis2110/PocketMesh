@@ -1399,7 +1399,7 @@ private struct RepeaterAnnotationView: View {
             ZStack {
                 // Background circle
                 Circle()
-                    .fill(.green)
+                    .fill(Color(hex: 0x00aaff)) // MeshCore cyan
                     .frame(width: circleSize, height: circleSize)
 
                 // Selection ring with point label

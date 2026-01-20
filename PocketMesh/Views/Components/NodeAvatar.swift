@@ -6,6 +6,7 @@ struct NodeAvatar: View {
     let publicKey: Data
     let role: RemoteNodeRole
     let size: CGFloat
+    var index: Int = 0
 
     var body: some View {
         ZStack {
@@ -22,18 +23,28 @@ struct NodeAvatar: View {
     private var iconName: String {
         switch role {
         case .roomServer:
-            return "door.left.hand.open"
+            return "door.left.hand.closed"
         case .repeater:
             return "antenna.radiowaves.left.and.right"
         }
     }
 
     private var avatarColor: Color {
-        let hash = publicKey.prefix(4).reduce(0) { $0 ^ Int($1) }
-        let colors: [Color] = role == .roomServer
-            ? [.orange, .red, .pink, .purple]
-            : [.blue, .cyan, .teal, .indigo]
-        return colors[abs(hash) % colors.count]
+        switch role {
+        case .roomServer:
+            let hash = publicKey.prefix(4).reduce(0) { $0 ^ Int($1) }
+            let colors: [Color] = [
+                Color(hex: 0xff8800),
+                Color(hex: 0xff6600),
+                Color(hex: 0xffaa00),
+                Color(hex: 0xcc5500)
+            ]
+            return colors[abs(hash) % colors.count]
+        case .repeater:
+            return index.isMultiple(of: 2)
+                ? Color(hex: 0x00aaff)  // cyan
+                : Color(hex: 0x0088cc)  // medium blue
+        }
     }
 }
 

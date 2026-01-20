@@ -312,8 +312,8 @@ struct ContactsListView: View {
             .listRowBackground(Color.clear)
             .listSectionSeparator(.hidden)
 
-            ForEach(filteredContacts) { contact in
-                contactRow(contact)
+            ForEach(Array(filteredContacts.enumerated()), id: \.element.id) { index, contact in
+                contactRow(contact, index: index)
             }
         }
         .listStyle(.plain)
@@ -328,30 +328,32 @@ struct ContactsListView: View {
             .listRowBackground(Color.clear)
             .listSectionSeparator(.hidden)
 
-            ForEach(filteredContacts) { contact in
-                contactSplitRow(contact)
+            ForEach(Array(filteredContacts.enumerated()), id: \.element.id) { index, contact in
+                contactSplitRow(contact, index: index)
                     .tag(contact)
             }
         }
         .listStyle(.plain)
     }
 
-    private func contactRow(_ contact: ContactDTO) -> some View {
+    private func contactRow(_ contact: ContactDTO, index: Int) -> some View {
         NavigationLink(value: contact) {
             ContactRowView(
                 contact: contact,
                 showTypeLabel: isSearching,
-                userLocation: appState.locationService.currentLocation
+                userLocation: appState.locationService.currentLocation,
+                index: index
             )
         }
         .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
 
-    private func contactSplitRow(_ contact: ContactDTO) -> some View {
+    private func contactSplitRow(_ contact: ContactDTO, index: Int) -> some View {
         ContactRowView(
             contact: contact,
             showTypeLabel: isSearching,
-            userLocation: appState.locationService.currentLocation
+            userLocation: appState.locationService.currentLocation,
+            index: index
         )
         .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
@@ -397,16 +399,18 @@ struct ContactRowView: View {
     let contact: ContactDTO
     let showTypeLabel: Bool
     let userLocation: CLLocation?
+    let index: Int
 
-    init(contact: ContactDTO, showTypeLabel: Bool = false, userLocation: CLLocation? = nil) {
+    init(contact: ContactDTO, showTypeLabel: Bool = false, userLocation: CLLocation? = nil, index: Int = 0) {
         self.contact = contact
         self.showTypeLabel = showTypeLabel
         self.userLocation = userLocation
+        self.index = index
     }
 
     var body: some View {
         HStack(spacing: 12) {
-            ContactAvatar(contact: contact, size: 44)
+            avatarView
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
@@ -470,6 +474,18 @@ struct ContactRowView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var avatarView: some View {
+        switch contact.type {
+        case .chat:
+            ContactAvatar(contact: contact, size: 44)
+        case .repeater:
+            NodeAvatar(publicKey: contact.publicKey, role: .repeater, size: 44, index: index)
+        case .room:
+            NodeAvatar(publicKey: contact.publicKey, role: .roomServer, size: 44)
+        }
     }
 
     private var contactTypeLabel: String {
