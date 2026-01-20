@@ -1,4 +1,5 @@
 import Combine
+import CoreLocation
 import SwiftUI
 import UIKit
 import MeshCore
@@ -15,10 +16,20 @@ struct TraceHop: Identifiable {
     let snr: Double
     let isStartNode: Bool
     let isEndNode: Bool
+    let latitude: Double?
+    let longitude: Double?
 
     /// Display string for hash (shows all bytes)
     var hashDisplayString: String? {
         hashBytes?.map { $0.hexString }.joined()
+    }
+
+    /// Whether this hop has a valid (non-zero) location.
+    /// Uses OR logic to match ContactDTO.hasLocation - if either coordinate is non-zero,
+    /// we have some location data. (0,0) is "Null Island" and extremely unlikely.
+    var hasLocation: Bool {
+        guard let lat = latitude, let lon = longitude else { return false }
+        return lat != 0 || lon != 0
     }
 
     /// Map SNR to 0-1 range for cellularbars variableValue
@@ -267,6 +278,44 @@ final class TracePathViewModel {
         }
     }
 
+    // MARK: - Distance Calculation
+
+    /// Total path distance in meters, or nil if any hop lacks valid location
+    var totalPathDistance: Double? {
+        guard let result, result.success else { return nil }
+
+        let hops = result.hops
+        guard hops.count >= 2 else { return nil }
+
+        var totalMeters: Double = 0
+
+        for i in 0..<(hops.count - 1) {
+            let current = hops[i]
+            let next = hops[i + 1]
+
+            guard current.hasLocation, next.hasLocation,
+                  let curLat = current.latitude, let curLon = current.longitude,
+                  let nextLat = next.latitude, let nextLon = next.longitude else {
+                return nil
+            }
+
+            let from = CLLocation(latitude: curLat, longitude: curLon)
+            let to = CLLocation(latitude: nextLat, longitude: nextLon)
+            totalMeters += from.distance(from: to)
+        }
+
+        return totalMeters
+    }
+
+    /// Names of intermediate repeaters that lack location data
+    var repeatersWithoutLocation: [String] {
+        guard let result else { return [] }
+
+        return result.hops
+            .filter { !$0.isStartNode && !$0.isEndNode && !$0.hasLocation }
+            .map { $0.resolvedName ?? $0.hashDisplayString ?? "Unknown" }
+    }
+
     // MARK: - Configuration
 
     func configure(appState: AppState) {
@@ -295,12 +344,31 @@ final class TracePathViewModel {
         errorMessage = nil
     }
 
-    // MARK: - Name Resolution
+    // MARK: - Hash Resolution
 
     /// Resolve a hash byte to contact name (single match only)
     func resolveHashToName(_ hashByte: UInt8) -> String? {
         let matches = allContacts.filter { $0.publicKey.first == hashByte }
         return matches.count == 1 ? matches[0].displayName : nil
+    }
+
+    /// Resolve a hash byte to contact location (single match only)
+    func resolveHashToLocation(_ hashByte: UInt8) -> (latitude: Double, longitude: Double)? {
+        let matches = allContacts.filter { $0.publicKey.first == hashByte }
+
+        guard matches.count == 1 else {
+            if matches.count > 1 {
+                logger.debug("Ambiguous hash 0x\(hashByte.hexString): \(matches.count) contacts match")
+            }
+            return nil
+        }
+
+        let contact = matches[0]
+        guard contact.hasLocation else {
+            logger.debug("Contact \(contact.displayName) has no location set")
+            return nil
+        }
+        return (contact.latitude, contact.longitude)
     }
 
     // MARK: - Data Loading
@@ -864,6 +932,7 @@ final class TracePathViewModel {
         // This answers "how well did this node receive the signal?"
         var hops: [TraceHop] = []
         let deviceName = appState?.connectedDevice?.nodeName ?? "My Device"
+        let deviceLocation = appState?.locationService.currentLocation
         let path = traceInfo.path
 
         // Start node has no SNR (it transmitted first, didn't receive anything)
@@ -872,14 +941,23 @@ final class TracePathViewModel {
             resolvedName: deviceName,
             snr: 0,
             isStartNode: true,
-            isEndNode: false
+            isEndNode: false,
+            latitude: deviceLocation?.coordinate.latitude,
+            longitude: deviceLocation?.coordinate.longitude
         ))
 
         // Intermediate hops - each shows SNR it measured when receiving
         for node in path where node.hashBytes != nil {
             let resolvedName: String?
+            var latitude: Double?
+            var longitude: Double?
+
             if let bytes = node.hashBytes, bytes.count == 1 {
                 resolvedName = resolveHashToName(bytes[0])
+                if let location = resolveHashToLocation(bytes[0]) {
+                    latitude = location.latitude
+                    longitude = location.longitude
+                }
             } else {
                 resolvedName = nil  // Multi-byte: no resolution possible
             }
@@ -889,7 +967,9 @@ final class TracePathViewModel {
                 resolvedName: resolvedName,
                 snr: node.snr,
                 isStartNode: false,
-                isEndNode: false
+                isEndNode: false,
+                latitude: latitude,
+                longitude: longitude
             ))
         }
 
@@ -900,7 +980,9 @@ final class TracePathViewModel {
             resolvedName: deviceName,
             snr: endSnr,
             isStartNode: false,
-            isEndNode: true
+            isEndNode: true,
+            latitude: deviceLocation?.coordinate.latitude,
+            longitude: deviceLocation?.coordinate.longitude
         ))
 
         result = TraceResult(
@@ -978,6 +1060,11 @@ final class TracePathViewModel {
     /// Test helper to set pending path hash
     func setPendingPathHashForTesting(_ pathHash: [UInt8]?) {
         pendingPathHash = pathHash
+    }
+
+    /// Test helper to set contacts for hash resolution
+    func setContactsForTesting(_ contacts: [ContactDTO]) {
+        allContacts = contacts
     }
     #endif
 }

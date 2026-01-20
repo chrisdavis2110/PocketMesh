@@ -45,6 +45,83 @@ private func createTestContact() -> ContactDTO {
     return ContactDTO(from: contact)
 }
 
+// MARK: - TraceHop Location Tests
+
+@Suite("TraceHop Location")
+@MainActor
+struct TraceHopLocationTests {
+
+    @Test("hasLocation returns true with valid non-zero coordinates")
+    func hasLocationWithValidCoordinates() {
+        let hop = TraceHop(
+            hashBytes: Data([0x3F]),
+            resolvedName: "Tower",
+            snr: 5.0,
+            isStartNode: false,
+            isEndNode: false,
+            latitude: 37.7749,
+            longitude: -122.4194
+        )
+        #expect(hop.hasLocation == true)
+    }
+
+    @Test("hasLocation returns false with zero coordinates")
+    func hasLocationWithZeroCoordinates() {
+        let hop = TraceHop(
+            hashBytes: Data([0x3F]),
+            resolvedName: "Tower",
+            snr: 5.0,
+            isStartNode: false,
+            isEndNode: false,
+            latitude: 0,
+            longitude: 0
+        )
+        #expect(hop.hasLocation == false)
+    }
+
+    @Test("hasLocation returns false with nil coordinates")
+    func hasLocationWithNilCoordinates() {
+        let hop = TraceHop(
+            hashBytes: Data([0x3F]),
+            resolvedName: "Tower",
+            snr: 5.0,
+            isStartNode: false,
+            isEndNode: false,
+            latitude: nil,
+            longitude: nil
+        )
+        #expect(hop.hasLocation == false)
+    }
+
+    @Test("hasLocation returns true if only latitude is non-zero")
+    func hasLocationWithOnlyLatitude() {
+        let hop = TraceHop(
+            hashBytes: Data([0x3F]),
+            resolvedName: "Tower",
+            snr: 5.0,
+            isStartNode: false,
+            isEndNode: false,
+            latitude: 45.0,
+            longitude: 0
+        )
+        #expect(hop.hasLocation == true)
+    }
+
+    @Test("hasLocation returns true if only longitude is non-zero")
+    func hasLocationWithOnlyLongitude() {
+        let hop = TraceHop(
+            hashBytes: Data([0x3F]),
+            resolvedName: "Tower",
+            snr: 5.0,
+            isStartNode: false,
+            isEndNode: false,
+            latitude: 0,
+            longitude: -122.0
+        )
+        #expect(hop.hasLocation == true)
+    }
+}
+
 // MARK: - Path Edit Clears Saved Path Tests
 
 @Suite("Path Edit Clears Saved Path")
@@ -792,6 +869,141 @@ struct PathCaptureTests {
     }
 }
 
+// MARK: - Location Resolution Tests
+
+@Suite("Location Resolution")
+@MainActor
+struct LocationResolutionTests {
+
+    @Test("resolveHashToLocation returns location for single matching contact")
+    func returnsLocationForSingleMatch() {
+        let viewModel = TracePathViewModel()
+        let deviceID = UUID()
+
+        let contact = ContactDTO(
+            id: UUID(),
+            deviceID: deviceID,
+            publicKey: Data([0x3F] + Array(repeating: UInt8(0), count: 31)),
+            name: "Tower",
+            typeRawValue: ContactType.repeater.rawValue,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 37.7749,
+            longitude: -122.4194,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+        viewModel.setContactsForTesting([contact])
+
+        let location = viewModel.resolveHashToLocation(0x3F)
+        #expect(location != nil)
+        #expect(location?.latitude == 37.7749)
+        #expect(location?.longitude == -122.4194)
+    }
+
+    @Test("resolveHashToLocation returns nil for no matches")
+    func returnsNilForNoMatch() {
+        let viewModel = TracePathViewModel()
+        viewModel.setContactsForTesting([])
+
+        let location = viewModel.resolveHashToLocation(0xFF)
+        #expect(location == nil)
+    }
+
+    @Test("resolveHashToLocation returns nil for multiple matches (ambiguous)")
+    func returnsNilForMultipleMatches() {
+        let viewModel = TracePathViewModel()
+        let deviceID = UUID()
+
+        let contact1 = ContactDTO(
+            id: UUID(),
+            deviceID: deviceID,
+            publicKey: Data([0x3F] + Array(repeating: UInt8(0), count: 31)),
+            name: "Tower1",
+            typeRawValue: ContactType.repeater.rawValue,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 37.0,
+            longitude: -122.0,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+        let contact2 = ContactDTO(
+            id: UUID(),
+            deviceID: deviceID,
+            publicKey: Data([0x3F] + Array(repeating: UInt8(1), count: 31)),
+            name: "Tower2",
+            typeRawValue: ContactType.repeater.rawValue,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 38.0,
+            longitude: -123.0,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+        viewModel.setContactsForTesting([contact1, contact2])
+
+        let location = viewModel.resolveHashToLocation(0x3F)
+        #expect(location == nil)
+    }
+
+    @Test("resolveHashToLocation returns nil for contact without location")
+    func returnsNilForContactWithoutLocation() {
+        let viewModel = TracePathViewModel()
+        let deviceID = UUID()
+
+        let contact = ContactDTO(
+            id: UUID(),
+            deviceID: deviceID,
+            publicKey: Data([0x3F] + Array(repeating: UInt8(0), count: 31)),
+            name: "Tower",
+            typeRawValue: ContactType.repeater.rawValue,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 0,
+            longitude: 0,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+        viewModel.setContactsForTesting([contact])
+
+        let location = viewModel.resolveHashToLocation(0x3F)
+        #expect(location == nil)
+    }
+}
+
 // MARK: - Failure Result Tests
 
 @Suite("Failure Result Path Display")
@@ -825,5 +1037,194 @@ struct FailureResultTests {
 
         #expect(result.tracedPathBytes.isEmpty)
         #expect(result.tracedPathString == "")
+    }
+}
+
+// MARK: - Total Path Distance Tests
+
+@Suite("Total Path Distance")
+@MainActor
+struct TotalPathDistanceTests {
+
+    @Test("calculates correct distance for multi-hop path")
+    func calculatesCorrectDistance() {
+        let viewModel = TracePathViewModel()
+
+        // San Francisco to Oakland to Berkeley (roughly)
+        let sf = (lat: 37.7749, lon: -122.4194)
+        let oakland = (lat: 37.8044, lon: -122.2712)
+        let berkeley = (lat: 37.8716, lon: -122.2727)
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: sf.lat, longitude: sf.lon),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Oakland", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: oakland.lat, longitude: oakland.lon),
+            TraceHop(hashBytes: Data([0x4F]), resolvedName: "Berkeley", snr: 4.0, isStartNode: false, isEndNode: false,
+                     latitude: berkeley.lat, longitude: berkeley.lon),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: sf.lat, longitude: sf.lon)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F, 0x4F])
+
+        let distance = viewModel.totalPathDistance
+        #expect(distance != nil)
+        // SF→Oakland ~13km, Oakland→Berkeley ~8km, Berkeley→SF ~17km ≈ 38km total
+        #expect(distance! > 30_000) // > 30km
+        #expect(distance! < 50_000) // < 50km
+    }
+
+    @Test("returns nil when hop missing location")
+    func returnsNilWhenHopMissingLocation() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: 37.7749, longitude: -122.4194),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Unknown", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: nil, longitude: nil),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: 37.7749, longitude: -122.4194)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        #expect(viewModel.totalPathDistance == nil)
+    }
+
+    @Test("returns nil when hop has zero location")
+    func returnsNilWhenHopHasZeroLocation() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: 37.7749, longitude: -122.4194),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: 0, longitude: 0),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: 37.7749, longitude: -122.4194)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        #expect(viewModel.totalPathDistance == nil)
+    }
+
+    @Test("returns nil for failed result")
+    func returnsNilForFailedResult() {
+        let viewModel = TracePathViewModel()
+
+        viewModel.result = TraceResult(hops: [], durationMs: 0, success: false, errorMessage: "Timeout", tracedPathBytes: [])
+        #expect(viewModel.totalPathDistance == nil)
+    }
+
+    @Test("returns nil when device location unavailable")
+    func returnsNilWhenDeviceLocationUnavailable() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: nil, longitude: nil),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: 37.8, longitude: -122.3),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: nil, longitude: nil)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        #expect(viewModel.totalPathDistance == nil)
+    }
+}
+
+// MARK: - Repeaters Without Location Tests
+
+@Suite("Repeaters Without Location")
+@MainActor
+struct RepeatersWithoutLocationTests {
+
+    @Test("returns names of hops missing locations")
+    func returnsNamesOfMissingLocations() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: 37.7749, longitude: -122.4194),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower A", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: nil, longitude: nil),
+            TraceHop(hashBytes: Data([0x4F]), resolvedName: "Tower B", snr: 4.0, isStartNode: false, isEndNode: false,
+                     latitude: 37.8, longitude: -122.3),
+            TraceHop(hashBytes: Data([0x5F]), resolvedName: "Tower C", snr: 3.0, isStartNode: false, isEndNode: false,
+                     latitude: 0, longitude: 0),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 2.0, isStartNode: false, isEndNode: true,
+                     latitude: 37.7749, longitude: -122.4194)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F, 0x4F, 0x5F])
+
+        let missing = viewModel.repeatersWithoutLocation
+        #expect(missing.count == 2)
+        #expect(missing.contains("Tower A"))
+        #expect(missing.contains("Tower C"))
+        #expect(!missing.contains("Tower B"))
+    }
+
+    @Test("uses hash display for unresolved names")
+    func usesHashDisplayForUnresolvedNames() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: 37.7749, longitude: -122.4194),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: nil, snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: nil, longitude: nil),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 2.0, isStartNode: false, isEndNode: true,
+                     latitude: 37.7749, longitude: -122.4194)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        let missing = viewModel.repeatersWithoutLocation
+        #expect(missing.count == 1)
+        #expect(missing[0] == "3F") // hex display
+    }
+
+    @Test("excludes start and end nodes")
+    func excludesStartAndEndNodes() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: nil, longitude: nil), // Start node missing - excluded
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: 37.8, longitude: -122.3),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 2.0, isStartNode: false, isEndNode: true,
+                     latitude: nil, longitude: nil) // End node missing - excluded
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        let missing = viewModel.repeatersWithoutLocation
+        #expect(missing.count == 0) // Only intermediate hops count
+    }
+
+    @Test("returns empty when device location missing but no intermediate repeaters affected")
+    func returnsEmptyWhenOnlyDeviceMissing() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "My Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: nil, longitude: nil),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: 37.8, longitude: -122.3),
+            TraceHop(hashBytes: nil, resolvedName: "My Device", snr: 2.0, isStartNode: false, isEndNode: true,
+                     latitude: nil, longitude: nil)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        let missing = viewModel.repeatersWithoutLocation
+        #expect(missing.count == 0)
     }
 }
