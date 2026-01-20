@@ -105,6 +105,12 @@ struct SettingsView: View {
                 Text("Debug")
             }
             #endif
+
+            Section {
+            } footer: {
+                Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                    .frame(maxWidth: .infinity)
+            }
         }
         .navigationTitle("Settings")
         .toolbar {
@@ -138,32 +144,6 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
-    }
-}
-
-// MARK: - About View
-
-struct AboutView: View {
-    var body: some View {
-        List {
-            Section {
-                HStack {
-                    Text("Version")
-                    Spacer()
-                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack {
-                    Text("Build")
-                    Spacer()
-                    Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-        }
-        .navigationTitle("About")
     }
 }
 
