@@ -72,32 +72,30 @@ struct TraceResultsSheet: View {
                     )
                 }
 
-                // Batch progress indicator
-                if viewModel.batchEnabled && viewModel.isBatchInProgress {
+                // Batch status row (progress or completion)
+                if viewModel.batchEnabled && (viewModel.isBatchInProgress || viewModel.isBatchComplete) {
                     HStack {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)...")
-                            .foregroundStyle(.secondary)
+                        if viewModel.isBatchComplete {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text("\(viewModel.successCount) of \(viewModel.batchSize) successful")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)...")
+                                .foregroundStyle(.secondary)
+                        }
                         Spacer()
                     }
                     .padding(.vertical, 4)
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Batch progress: trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)")
-                }
-
-                // Batch completion status
-                if viewModel.batchEnabled && viewModel.isBatchComplete {
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text("\(viewModel.successCount) of \(viewModel.batchSize) successful")
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(.vertical, 4)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Batch complete: \(viewModel.successCount) of \(viewModel.batchSize) traces successful")
+                    .accessibilityLabel(
+                        viewModel.isBatchComplete
+                            ? "Batch complete: \(viewModel.successCount) of \(viewModel.batchSize) traces successful"
+                            : "Batch progress: trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)"
+                    )
+                    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                 }
 
                 // Duration row with batch or single display
@@ -227,6 +225,7 @@ struct TraceResultsSheet: View {
                         .font(.caption)
                 }
             }
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         }
     }
 
