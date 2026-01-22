@@ -52,7 +52,7 @@ final class ContactsViewModel {
 
     /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.dataStore = appState.services?.dataStore
+        self.dataStore = appState.offlineDataStore
         self.contactService = appState.services?.contactService
     }
 

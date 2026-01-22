@@ -21,6 +21,7 @@ struct ContactsListView: View {
     @State private var showShareMyContact = false
     @State private var showAddContact = false
     @State private var showLocationDeniedAlert = false
+    @State private var showOfflineRefreshAlert = false
 
     private var filteredContacts: [ContactDTO] {
         // Fall back to lastHeard sort when distance is selected but location unavailable
@@ -164,7 +165,16 @@ struct ContactsListView: View {
             }
         }
         .refreshable {
-            await syncContacts()
+            if appState.connectionState != .ready {
+                showOfflineRefreshAlert = true
+            } else {
+                await syncContacts()
+            }
+        }
+        .alert("Cannot Refresh", isPresented: $showOfflineRefreshAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Connect to your device to sync contacts.")
         }
         .sensoryFeedback(.success, trigger: syncSuccessTrigger)
         .task {
@@ -172,6 +182,7 @@ struct ContactsListView: View {
             viewModel.configure(appState: appState)
             await loadContacts()
             nodesListLogger.info("NodesListView: loaded, contacts=\(viewModel.contacts.count)")
+            announceOfflineStateIfNeeded()
 
             // Request location for distance display (only if already authorized)
             if appState.locationService.isAuthorized {
@@ -375,13 +386,24 @@ struct ContactsListView: View {
     // MARK: - Actions
 
     private func loadContacts() async {
-        guard let deviceID = appState.connectedDevice?.id else { return }
+        guard let deviceID = appState.currentDeviceID else { return }
         viewModel.configure(appState: appState)
         await viewModel.loadContacts(deviceID: deviceID)
     }
 
+    private func announceOfflineStateIfNeeded() {
+        guard UIAccessibility.isVoiceOverRunning,
+              appState.connectionState == .disconnected,
+              appState.currentDeviceID != nil else { return }
+
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: "Viewing cached contacts. Connect to device for updates."
+        )
+    }
+
     private func syncContacts() async {
-        guard let deviceID = appState.connectedDevice?.id else { return }
+        guard let deviceID = appState.currentDeviceID else { return }
         await viewModel.syncContacts(deviceID: deviceID)
         syncSuccessTrigger.toggle()
     }

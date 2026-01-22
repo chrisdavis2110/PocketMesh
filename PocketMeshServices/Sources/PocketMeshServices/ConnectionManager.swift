@@ -899,9 +899,6 @@ public final class ConnectionManager {
         // Clear state
         await cleanupConnection()
 
-        // Clear persisted connection
-        clearPersistedConnection()
-
         logger.info("Disconnected")
     }
 

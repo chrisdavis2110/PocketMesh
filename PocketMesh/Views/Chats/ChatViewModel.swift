@@ -146,7 +146,7 @@ final class ChatViewModel {
 
     /// Configure with services from AppState (with link preview cache for message views)
     func configure(appState: AppState, linkPreviewCache: any LinkPreviewCaching) {
-        self.dataStore = appState.services?.dataStore
+        self.dataStore = appState.offlineDataStore
         self.messageService = appState.services?.messageService
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
@@ -157,7 +157,7 @@ final class ChatViewModel {
 
     /// Configure with services from AppState (for conversation list views that don't show previews)
     func configure(appState: AppState) {
-        self.dataStore = appState.services?.dataStore
+        self.dataStore = appState.offlineDataStore
         self.messageService = appState.services?.messageService
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
