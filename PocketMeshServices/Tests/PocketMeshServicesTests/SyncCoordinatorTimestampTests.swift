@@ -190,4 +190,32 @@ struct SyncCoordinatorTimestampTests {
         // Original and corrected must be different (caller uses original for RxLogEntry lookup)
         #expect(corrected != originalTimestamp)
     }
+
+    // MARK: - Underflow Prevention Tests
+
+    @Test("Receive time near Unix epoch does not crash")
+    func nearEpochReceiveTimeDoesNotCrash() {
+        // Device clock set to early 1970 - would previously cause UInt32 underflow crash
+        let nearEpoch = Date(timeIntervalSince1970: 1000) // ~16 minutes after Unix epoch
+        let timestamp: UInt32 = 500
+
+        // This should not crash - the fix uses TimeInterval arithmetic instead of UInt32
+        let (corrected, wasCorrected) = SyncCoordinator.correctTimestampIfNeeded(timestamp, receiveTime: nearEpoch)
+
+        // Timestamp is within range (500 is less than 6 months before 1000)
+        #expect(!wasCorrected)
+        #expect(corrected == timestamp)
+    }
+
+    @Test("Receive time at Unix epoch handles timestamp validation")
+    func epochReceiveTimeHandlesValidation() {
+        let epoch = Date(timeIntervalSince1970: 0)
+        let timestamp: UInt32 = 1_000_000 // ~11 days after epoch
+
+        let (corrected, wasCorrected) = SyncCoordinator.correctTimestampIfNeeded(timestamp, receiveTime: epoch)
+
+        // Timestamp is too far in the future from epoch perspective (> 5 minutes)
+        #expect(wasCorrected)
+        #expect(corrected == 0)
+    }
 }
