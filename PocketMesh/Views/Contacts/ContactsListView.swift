@@ -153,7 +153,11 @@ struct ContactsListView: View {
 
                     Button {
                         Task {
-                            await syncContacts()
+                            if appState.connectionState != .ready {
+                                showOfflineRefreshAlert = true
+                            } else {
+                                await syncContacts()
+                            }
                         }
                     } label: {
                         Label("Sync Nodes", systemImage: "arrow.triangle.2.circlepath")
