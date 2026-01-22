@@ -231,6 +231,7 @@ public actor SyncCoordinator {
     ///     defaults to foreground mode (channels sync). When provided and app is backgrounded,
     ///     channel sync is skipped to reduce BLE traffic.
     ///   - rxLogService: Optional service for updating contact public keys after sync.
+    ///   - forceFullSync: When true, ignores lastContactSync watermark and fetches all contacts.
     public func performFullSync(
         deviceID: UUID,
         dataStore: PersistenceStore,
@@ -238,7 +239,8 @@ public actor SyncCoordinator {
         channelService: some ChannelServiceProtocol,
         messagePollingService: some MessagePollingServiceProtocol,
         appStateProvider: AppStateProvider? = nil,
-        rxLogService: RxLogService? = nil
+        rxLogService: RxLogService? = nil,
+        forceFullSync: Bool = false
     ) async throws {
         // Prevent concurrent syncs - check before logging to avoid noise
         let currentState = await state
@@ -259,15 +261,15 @@ public actor SyncCoordinator {
                 // Fetch device once for both contacts (lastContactSync) and channels (maxChannels)
                 let device = try await dataStore.fetchDevice(id: deviceID)
 
-                // Phase 1: Contacts (incremental using lastContactSync)
-                let lastContactSync: Date? = {
+                // Phase 1: Contacts (incremental unless forced full)
+                let lastContactSync: Date? = forceFullSync ? nil : {
                     guard let timestamp = device?.lastContactSync, timestamp > 0 else { return nil }
                     return Date(timeIntervalSince1970: Double(timestamp))
                 }()
 
                 let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: lastContactSync)
                 let syncType = contactResult.isIncremental ? "incremental" : "full"
-                logger.info("Synced \(contactResult.contactsReceived) contacts (\(syncType))")
+                logger.info("Synced \(contactResult.contactsReceived) contacts (\(syncType)\(forceFullSync ? ", forced" : ""))")
                 await notifyContactsChanged()
 
                 // Update lastContactSync watermark for future incremental syncs
@@ -357,7 +359,8 @@ public actor SyncCoordinator {
     /// - Returns: `true` if sync succeeded, `false` if it failed
     public func performResync(
         deviceID: UUID,
-        services: ServiceContainer
+        services: ServiceContainer,
+        forceFullSync: Bool = false
     ) async -> Bool {
         logger.info("Attempting resync for device \(deviceID)")
 
@@ -374,7 +377,8 @@ public actor SyncCoordinator {
                 channelService: services.channelService,
                 messagePollingService: services.messagePollingService,
                 appStateProvider: services.appStateProvider,
-                rxLogService: services.rxLogService
+                rxLogService: services.rxLogService,
+                forceFullSync: forceFullSync
             )
 
             await wireDiscoveryHandlers(services: services, deviceID: deviceID)
@@ -424,7 +428,8 @@ public actor SyncCoordinator {
     /// - Parameters:
     ///   - deviceID: The connected device UUID
     ///   - services: The ServiceContainer with all services
-    public func onConnectionEstablished(deviceID: UUID, services: ServiceContainer) async throws {
+    ///   - forceFullSync: When true, forces a full contact sync instead of incremental.
+    public func onConnectionEstablished(deviceID: UUID, services: ServiceContainer, forceFullSync: Bool = false) async throws {
         logger.info("Connection established for device \(deviceID)")
 
         // Prevent duplicate sync if already syncing (race condition during rapid auto-reconnect cycles)
@@ -465,7 +470,8 @@ public actor SyncCoordinator {
                 channelService: services.channelService,
                 messagePollingService: services.messagePollingService,
                 appStateProvider: services.appStateProvider,
-                rxLogService: services.rxLogService
+                rxLogService: services.rxLogService,
+                forceFullSync: forceFullSync
             )
 
             // 5. Wire discovery handlers (for ongoing contact discovery)
@@ -664,10 +670,10 @@ public actor SyncCoordinator {
             // Look up path data from RxLogEntry using sender timestamp (stored during decryption)
             var pathNodes: Data?
             var pathLength = message.pathLength
-            self.logger.debug("Looking up RxLogEntry for channel \(channel?.index ?? 255) with senderTimestamp: \(timestamp)")
+            self.logger.debug("Looking up RxLogEntry for channel \(message.channelIndex) with senderTimestamp: \(timestamp)")
             do {
                 if let rxEntry = try await services.dataStore.findRxLogEntry(
-                    channelIndex: channel?.index,
+                    channelIndex: message.channelIndex,
                     senderTimestamp: timestamp,
                     withinSeconds: 10
                 ) {
@@ -675,7 +681,7 @@ public actor SyncCoordinator {
                     pathLength = rxEntry.pathLength  // Use RxLogEntry pathLength for consistency
                     self.logger.info("Correlated channel message to RxLogEntry: pathLength=\(pathLength), pathNodes=\(pathNodes?.count ?? 0) bytes")
                 } else {
-                    self.logger.warning("No RxLogEntry found for channel \(channel?.index ?? 255), senderTimestamp: \(timestamp)")
+                    self.logger.warning("No RxLogEntry found for channel \(message.channelIndex), senderTimestamp: \(timestamp)")
                 }
             } catch {
                 self.logger.error("Failed to lookup RxLogEntry for channel message: \(error)")

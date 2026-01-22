@@ -72,32 +72,30 @@ struct TraceResultsSheet: View {
                     )
                 }
 
-                // Batch progress indicator
-                if viewModel.batchEnabled && viewModel.isBatchInProgress {
+                // Batch status row (progress or completion)
+                if viewModel.batchEnabled && (viewModel.isBatchInProgress || viewModel.isBatchComplete) {
                     HStack {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)...")
-                            .foregroundStyle(.secondary)
+                        if viewModel.isBatchComplete {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text("\(viewModel.successCount) of \(viewModel.batchSize) successful")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)...")
+                                .foregroundStyle(.secondary)
+                        }
                         Spacer()
                     }
                     .padding(.vertical, 4)
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Batch progress: trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)")
-                }
-
-                // Batch completion status
-                if viewModel.batchEnabled && viewModel.isBatchComplete {
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text("\(viewModel.successCount) of \(viewModel.batchSize) successful")
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(.vertical, 4)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Batch complete: \(viewModel.successCount) of \(viewModel.batchSize) traces successful")
+                    .accessibilityLabel(
+                        viewModel.isBatchComplete
+                            ? "Batch complete: \(viewModel.successCount) of \(viewModel.batchSize) traces successful"
+                            : "Batch progress: trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)"
+                    )
+                    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                 }
 
                 // Duration row with batch or single display
@@ -227,6 +225,7 @@ struct TraceResultsSheet: View {
                         .font(.caption)
                 }
             }
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         }
     }
 
@@ -296,18 +295,23 @@ struct TraceResultsSheet: View {
     private var distanceInfoSheet: some View {
         NavigationStack {
             List {
-                Section {
-                    Text("Distance cannot be calculated because the following repeaters don't have location coordinates set.")
-                }
-                Section("Repeaters Without Locations") {
-                    ForEach(viewModel.repeatersWithoutLocation, id: \.self) { name in
-                        Text(name)
+                if result.hops.filter({ !$0.isStartNode && !$0.isEndNode }).count < 2 {
+                    Section {
+                        Text("Distance calculation requires at least 2 repeaters in the path.")
                     }
-                }
-                Section {
-                    Text("To calculate distance, add location coordinates to these contacts in their detail screens.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                } else if viewModel.repeatersWithoutLocation.isEmpty {
+                    Section {
+                        Text("Distance cannot be calculated. All repeaters have coordinates but an error occurred.")
+                    }
+                } else {
+                    Section {
+                        Text("Distance cannot be calculated because the following repeaters don't have location coordinates set.")
+                    }
+                    Section("Repeaters Without Locations") {
+                        ForEach(viewModel.repeatersWithoutLocation, id: \.self) { name in
+                            Text(name)
+                        }
+                    }
                 }
             }
             .navigationTitle("Distance Unavailable")

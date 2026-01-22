@@ -14,6 +14,6 @@ struct ChannelAvatar: View {
     }
 
     private var avatarColor: Color {
-        Color(hex: 0x336688)
+        AppColors.ChannelAvatar.color
     }
 }

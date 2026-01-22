@@ -280,18 +280,20 @@ final class TracePathViewModel {
 
     // MARK: - Distance Calculation
 
-    /// Total path distance in meters, or nil if any hop lacks valid location
+    /// Total path distance in meters between repeaters, or nil if any repeater lacks valid location.
+    /// Only considers intermediate hops (repeaters), not start/end nodes (local device).
     var totalPathDistance: Double? {
         guard let result, result.success else { return nil }
 
-        let hops = result.hops
-        guard hops.count >= 2 else { return nil }
+        // Filter to only intermediate repeaters (exclude start and end nodes)
+        let repeaters = result.hops.filter { !$0.isStartNode && !$0.isEndNode }
+        guard repeaters.count >= 2 else { return nil }
 
         var totalMeters: Double = 0
 
-        for i in 0..<(hops.count - 1) {
-            let current = hops[i]
-            let next = hops[i + 1]
+        for i in 0..<(repeaters.count - 1) {
+            let current = repeaters[i]
+            let next = repeaters[i + 1]
 
             guard current.hasLocation, next.hasLocation,
                   let curLat = current.latitude, let curLon = current.longitude,
@@ -398,6 +400,7 @@ final class TracePathViewModel {
         outboundPath.append(hop)
         activeSavedPath = nil
         pendingPathHash = nil
+        result = nil
     }
 
     /// Remove a repeater from the path
@@ -407,6 +410,7 @@ final class TracePathViewModel {
         outboundPath.remove(at: index)
         activeSavedPath = nil
         pendingPathHash = nil
+        result = nil
     }
 
     /// Move a repeater within the path
@@ -415,6 +419,7 @@ final class TracePathViewModel {
         outboundPath.move(fromOffsets: source, toOffset: destination)
         activeSavedPath = nil
         pendingPathHash = nil
+        result = nil
     }
 
     /// Copy full path string to clipboard
@@ -657,11 +662,11 @@ final class TracePathViewModel {
                     roundTripMs: 0,
                     hopsSNR: []
                 )
-                Task { @MainActor in
+                Task { @MainActor [weak self] in
                     do {
                         try await dataStore.appendTracePathRun(pathID: savedPath.id, run: failedRun)
                         if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
-                            activeSavedPath = updated
+                            self?.activeSavedPath = updated
                         }
                     } catch {
                         logger.error("Failed to record send failure: \(error.localizedDescription)")
@@ -840,9 +845,11 @@ final class TracePathViewModel {
                         pendingPathHash = nil
                         pendingTag = nil
 
-                        // Resume continuation (only if not already resumed by handleTraceResponse)
-                        traceContinuation?.resume()
-                        traceContinuation = nil
+                        // Resume continuation atomically (only if not already resumed by handleTraceResponse)
+                        if let continuation = traceContinuation {
+                            traceContinuation = nil
+                            continuation.resume()
+                        }
                     }
                 } catch {
                     // Cancelled - handleTraceResponse already resumed continuation
@@ -864,11 +871,11 @@ final class TracePathViewModel {
             hopsSNR: []
         )
 
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             do {
                 try await dataStore.appendTracePathRun(pathID: savedPath.id, run: failedRun)
                 if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
-                    activeSavedPath = updated
+                    self?.activeSavedPath = updated
                 }
             } catch {
                 logger.error("Failed to record run: \(error.localizedDescription)")
@@ -1027,12 +1034,12 @@ final class TracePathViewModel {
                 hopsSNR: hopsSNR
             )
 
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 do {
                     try await dataStore.appendTracePathRun(pathID: savedPath.id, run: runDTO)
                     // Refresh saved path to get updated runs
                     if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
-                        activeSavedPath = updated
+                        self?.activeSavedPath = updated
                     }
                     logger.info("Appended run to saved path")
                 } catch {

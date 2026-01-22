@@ -1,8 +1,6 @@
 import SwiftUI
 import PocketMeshServices
 
-private let sendButtonColor = Color(red: 36/255, green: 99/255, blue: 235/255)
-
 /// Reusable chat input bar with configurable styling
 struct ChatInputBar: View {
     @Environment(\.appState) private var appState
@@ -70,7 +68,7 @@ struct ChatInputBar: View {
             Button(action: onSend) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(canSend ? sendButtonColor : .secondary)
+                    .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
             }
             .buttonStyle(.glass)
             .disabled(!canSend)
@@ -80,7 +78,7 @@ struct ChatInputBar: View {
             Button(action: onSend) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(canSend ? sendButtonColor : .secondary)
+                    .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
             }
             .disabled(!canSend)
             .accessibilityLabel(sendAccessibilityLabel)
