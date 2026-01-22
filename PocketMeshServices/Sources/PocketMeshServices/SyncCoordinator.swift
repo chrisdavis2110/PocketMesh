@@ -669,6 +669,13 @@ public actor SyncCoordinator {
 
             let timestamp = UInt32(message.senderTimestamp.timeIntervalSince1970)
 
+            // Correct invalid timestamps (sender clock wrong)
+            let receiveTime = Date()
+            let (finalTimestamp, timestampCorrected) = Self.correctTimestampIfNeeded(timestamp, receiveTime: receiveTime)
+            if timestampCorrected {
+                self.logger.info("Corrected invalid channel message timestamp from \(Date(timeIntervalSince1970: TimeInterval(timestamp))) to \(receiveTime)")
+            }
+
             // Look up path data from RxLogEntry using sender timestamp (stored during decryption)
             var pathNodes: Data?
             var pathLength = message.pathLength
@@ -701,8 +708,8 @@ public actor SyncCoordinator {
                 contactID: nil,
                 channelIndex: message.channelIndex,
                 text: messageText,
-                timestamp: timestamp,
-                createdAt: Date(),
+                timestamp: finalTimestamp,
+                createdAt: receiveTime,
                 direction: .incoming,
                 status: .delivered,
                 textType: TextType(rawValue: message.textType) ?? .plain,
@@ -719,7 +726,8 @@ public actor SyncCoordinator {
                 retryAttempt: 0,
                 maxRetryAttempts: 0,
                 containsSelfMention: hasSelfMention,
-                mentionSeen: false
+                mentionSeen: false,
+                timestampCorrected: timestampCorrected
             )
 
             // Check for duplicate before saving
