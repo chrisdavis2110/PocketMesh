@@ -32,7 +32,7 @@ struct TracePathView: View {
     @State private var presentedResult: TraceResult?
     @State private var showingClearConfirmation = false
 
-    @State private var showJumpToPath = false
+    @State private var showJumpToPath = true
     @State private var pathLoadedFromSheet = false
     @AppStorage("tracePathViewMode") private var viewMode: TracePathViewMode = .list
 
@@ -142,7 +142,8 @@ struct TracePathView: View {
                 copyHapticTrigger: $copyHapticTrigger,
                 recentlyAddedRepeaterID: $recentlyAddedRepeaterID,
                 showingClearConfirmation: $showingClearConfirmation,
-                presentedResult: $presentedResult
+                presentedResult: $presentedResult,
+                showJumpToPath: $showJumpToPath
             )
             .scrollDismissesKeyboard(.interactively)
             .overlay(alignment: .bottom) {

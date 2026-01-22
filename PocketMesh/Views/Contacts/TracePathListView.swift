@@ -12,6 +12,7 @@ struct TracePathListView: View {
     @Binding var recentlyAddedRepeaterID: UUID?
     @Binding var showingClearConfirmation: Bool
     @Binding var presentedResult: TraceResult?
+    @Binding var showJumpToPath: Bool
 
     var body: some View {
         List {
@@ -200,6 +201,10 @@ struct TracePathListView: View {
                         Capsule()
                             .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1)
                     }
+                    .accessibilityLabel(viewModel.batchEnabled
+                        ? "Running trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)"
+                        : "Running trace, please wait")
+                    .accessibilityHint("Trace is in progress")
                 } else {
                     Button {
                         Task {
@@ -216,12 +221,26 @@ struct TracePathListView: View {
                     }
                     .liquidGlassProminentButtonStyle()
                     .radioDisabled(for: appState.connectionState, or: !viewModel.canRunTraceWhenConnected)
+                    .accessibilityLabel("Run trace")
+                    .accessibilityHint(viewModel.batchEnabled
+                        ? "Double tap to run \(viewModel.batchSize) traces"
+                        : "Double tap to trace the path")
                 }
                 Spacer()
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             .id("runTrace")
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showJumpToPath = false
+                }
+            }
+            .onDisappear {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showJumpToPath = true
+                }
+            }
         }
         .listSectionSeparator(.hidden)
     }
