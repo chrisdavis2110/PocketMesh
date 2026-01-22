@@ -552,7 +552,7 @@ public actor SyncCoordinator {
             let receiveTime = Date()
             let (finalTimestamp, timestampCorrected) = Self.correctTimestampIfNeeded(timestamp, receiveTime: receiveTime)
             if timestampCorrected {
-                self.logger.info("Corrected invalid direct message timestamp from \(Date(timeIntervalSince1970: TimeInterval(timestamp))) to \(receiveTime)")
+                self.logger.debug("Corrected invalid direct message timestamp from \(Date(timeIntervalSince1970: TimeInterval(timestamp))) to \(receiveTime)")
             }
 
             // Look up path data from RxLogEntry (for direct messages, channelIndex is nil)
@@ -673,7 +673,7 @@ public actor SyncCoordinator {
             let receiveTime = Date()
             let (finalTimestamp, timestampCorrected) = Self.correctTimestampIfNeeded(timestamp, receiveTime: receiveTime)
             if timestampCorrected {
-                self.logger.info("Corrected invalid channel message timestamp from \(Date(timeIntervalSince1970: TimeInterval(timestamp))) to \(receiveTime)")
+                self.logger.debug("Corrected invalid channel message timestamp from \(Date(timeIntervalSince1970: TimeInterval(timestamp))) to \(receiveTime)")
             }
 
             // Look up path data from RxLogEntry using sender timestamp (stored during decryption)
@@ -895,6 +895,11 @@ public actor SyncCoordinator {
     private static let timestampTolerancePast: TimeInterval = 6 * 30 * 24 * 60 * 60
 
     /// Corrects invalid timestamps from senders with broken clocks.
+    ///
+    /// MeshCore protocol does not specify timestamp validation. This is a client-side
+    /// policy to prevent timeline corruption when devices have severely incorrect clocks
+    /// (a common issue per MeshCore FAQ 6.1, 6.2). Original timestamps are preserved
+    /// for ACK deduplication (per payloads.md:65).
     ///
     /// Returns the corrected timestamp and whether correction was applied.
     /// Timestamps are considered invalid if:

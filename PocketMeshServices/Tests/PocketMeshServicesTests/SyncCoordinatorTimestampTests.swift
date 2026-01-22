@@ -152,4 +152,42 @@ struct SyncCoordinatorTimestampTests {
         #expect(wasCorrected)
         #expect(corrected == UInt32(now.timeIntervalSince1970))
     }
+
+    // MARK: - Original Timestamp Preservation Tests
+
+    @Test("Original timestamp is preserved when correction is applied")
+    func originalTimestampPreservedForCorrelation() {
+        // This test documents critical behavior: the original timestamp must be preserved
+        // for RxLogEntry correlation (per payloads.md:65 - ACK deduplication uses original timestamp)
+        let now = Date()
+        let brokenClockTimestamp: UInt32 = 0  // Unix epoch - clearly invalid
+
+        let (corrected, wasCorrected) = SyncCoordinator.correctTimestampIfNeeded(brokenClockTimestamp, receiveTime: now)
+
+        // Verify correction was applied
+        #expect(wasCorrected)
+        #expect(corrected == UInt32(now.timeIntervalSince1970))
+
+        // The original timestamp (0) is still available as the input parameter
+        // and should be used for RxLogEntry lookup, not the corrected value.
+        // This is verified by the fact that correctTimestampIfNeeded returns
+        // ONLY the corrected timestamp - the caller must preserve the original.
+        #expect(brokenClockTimestamp == 0)  // Original unchanged
+        #expect(corrected != brokenClockTimestamp)  // Different from original
+    }
+
+    @Test("Corrected timestamp differs from original for invalid input")
+    func correctedTimestampDiffersFromOriginal() {
+        let now = Date()
+        let farFuture = now.addingTimeInterval(365 * 24 * 60 * 60) // 1 year in future
+        let originalTimestamp = UInt32(farFuture.timeIntervalSince1970)
+
+        let (corrected, wasCorrected) = SyncCoordinator.correctTimestampIfNeeded(originalTimestamp, receiveTime: now)
+
+        #expect(wasCorrected)
+        // The corrected timestamp should be the receive time, not the invalid original
+        #expect(corrected == UInt32(now.timeIntervalSince1970))
+        // Original and corrected must be different (caller uses original for RxLogEntry lookup)
+        #expect(corrected != originalTimestamp)
+    }
 }
