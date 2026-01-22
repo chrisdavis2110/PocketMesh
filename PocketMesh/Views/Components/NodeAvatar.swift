@@ -32,18 +32,9 @@ struct NodeAvatar: View {
     private var avatarColor: Color {
         switch role {
         case .roomServer:
-            let hash = publicKey.prefix(4).reduce(0) { $0 ^ Int($1) }
-            let colors: [Color] = [
-                Color(hex: 0xff8800),
-                Color(hex: 0xff6600),
-                Color(hex: 0xffaa00),
-                Color(hex: 0xcc5500)
-            ]
-            return colors[abs(hash) % colors.count]
+            AppColors.NodeAvatar.RoomServer.color(for: publicKey)
         case .repeater:
-            return index.isMultiple(of: 2)
-                ? Color(hex: 0x00aaff)  // cyan
-                : Color(hex: 0x0088cc)  // medium blue
+            AppColors.NodeAvatar.Repeater.color(at: index)
         }
     }
 }

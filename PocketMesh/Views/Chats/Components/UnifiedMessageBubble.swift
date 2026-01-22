@@ -4,7 +4,6 @@ import PocketMeshServices
 /// Layout constants for message bubbles
 private enum MessageLayout {
     static let maxBubbleWidth: CGFloat = 280
-    static let outgoingBubbleColor = Color(red: 36/255, green: 99/255, blue: 235/255)
 }
 
 /// Configuration for message bubble appearance and behavior
@@ -85,6 +84,7 @@ struct UnifiedMessageBubble: View {
 
     @AppStorage("linkPreviewsEnabled") private var previewsEnabled = false
     @Environment(\.openURL) private var openURL
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     init(
         message: MessageDTO,
@@ -251,7 +251,7 @@ struct UnifiedMessageBubble: View {
     }
 
     private var senderColor: Color {
-        Color.forSenderName(senderName)
+        AppColors.SenderName.color(for: senderName, highContrast: colorSchemeContrast == .increased)
     }
 
     private var detectedURL: URL? {
@@ -260,9 +260,9 @@ struct UnifiedMessageBubble: View {
 
     private var bubbleColor: Color {
         if message.isOutgoing {
-            return message.hasFailed ? .red.opacity(0.8) : MessageLayout.outgoingBubbleColor
+            return message.hasFailed ? AppColors.Message.outgoingBubbleFailed : AppColors.Message.outgoingBubble
         } else {
-            return Color(.systemGray5)
+            return AppColors.Message.incomingBubble
         }
     }
 
