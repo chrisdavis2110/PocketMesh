@@ -1039,14 +1039,22 @@ final class TracePathViewModel {
             var latitude: Double?
             var longitude: Double?
 
-            if let bytes = node.hashBytes, bytes.count == 1 {
-                resolvedName = resolveHashToName(bytes[0])
-                if let location = resolveHashToLocation(bytes[0]) {
+            if let bytes = node.hashBytes, let firstByte = bytes.first {
+                // Look up name from outboundPath (user's selected path, no collisions)
+                if let matchingHop = outboundPath.first(where: { $0.hashByte == firstByte }) {
+                    resolvedName = matchingHop.resolvedName
+                } else {
+                    // Fallback for unexpected hops not in our path
+                    resolvedName = resolveHashToName(firstByte)
+                }
+
+                // Location still uses contact lookup
+                if let location = resolveHashToLocation(firstByte) {
                     latitude = location.latitude
                     longitude = location.longitude
                 }
             } else {
-                resolvedName = nil  // Multi-byte: no resolution possible
+                resolvedName = nil
             }
 
             hops.append(TraceHop(

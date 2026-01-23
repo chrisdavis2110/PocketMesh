@@ -1424,3 +1424,132 @@ struct CodeInputParsingTests {
         #expect(viewModel.activeSavedPath == nil)
     }
 }
+
+// MARK: - OutboundPath Name Resolution Tests
+
+@Suite("OutboundPath Name Resolution")
+@MainActor
+struct OutboundPathNameResolutionTests {
+
+    private func createContact(prefix: UInt8, name: String, lat: Double = 0, lon: Double = 0) -> ContactDTO {
+        ContactDTO(
+            id: UUID(),
+            deviceID: UUID(),
+            publicKey: Data([prefix] + Array(repeating: UInt8(0), count: 31)),
+            name: name,
+            typeRawValue: ContactType.repeater.rawValue,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: lat,
+            longitude: lon,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+    }
+
+    @Test("resolves name from outboundPath even with contact collision")
+    func resolvesNameFromOutboundPathWithCollision() {
+        let viewModel = TracePathViewModel()
+
+        // Two contacts with same first byte (collision)
+        let contact1 = createContact(prefix: 0x3F, name: "Flint Hill - KC3ELT")
+        let contact2 = createContact(prefix: 0x3F, name: "Other Tower")
+        // Make contact2 have different second byte so they're distinct
+        var contact2Key = contact2.publicKey
+        contact2Key = Data([0x3F, 0x01] + Array(repeating: UInt8(0), count: 30))
+        let contact2Modified = ContactDTO(
+            id: contact2.id,
+            deviceID: contact2.deviceID,
+            publicKey: contact2Key,
+            name: "Other Tower",
+            typeRawValue: contact2.typeRawValue,
+            flags: contact2.flags,
+            outPathLength: contact2.outPathLength,
+            outPath: contact2.outPath,
+            lastAdvertTimestamp: contact2.lastAdvertTimestamp,
+            latitude: contact2.latitude,
+            longitude: contact2.longitude,
+            lastModified: contact2.lastModified,
+            nickname: contact2.nickname,
+            isBlocked: contact2.isBlocked,
+            isMuted: contact2.isMuted,
+            isFavorite: contact2.isFavorite,
+            isDiscovered: contact2.isDiscovered,
+            lastMessageDate: contact2.lastMessageDate,
+            unreadCount: contact2.unreadCount
+        )
+
+        viewModel.setContactsForTesting([contact1, contact2Modified])
+
+        // Verify collision exists (old method would return nil)
+        #expect(viewModel.resolveHashToName(0x3F) == nil)
+
+        // User selects contact1 for their path
+        viewModel.addRepeater(contact1)
+
+        // Run trace
+        let traceInfo = TraceInfo(
+            tag: 12345,
+            authCode: 0,
+            flags: 0,
+            pathLength: 1,
+            path: [
+                TraceNode(hash: 0x3F, snr: 5.0),
+                TraceNode(hash: nil, snr: 3.0)
+            ]
+        )
+
+        viewModel.setPendingTagForTesting(12345)
+        viewModel.handleTraceResponse(traceInfo, deviceID: nil)
+
+        guard let result = viewModel.result else {
+            Issue.record("Result should not be nil")
+            return
+        }
+
+        // Name should resolve from outboundPath despite collision
+        #expect(result.hops[1].resolvedName == "Flint Hill - KC3ELT")
+    }
+
+    @Test("falls back to contact lookup when hop not in outboundPath")
+    func fallsBackToContactLookup() {
+        let viewModel = TracePathViewModel()
+
+        // Single contact (no collision)
+        let contact = createContact(prefix: 0xAB, name: "Test Tower")
+        viewModel.setContactsForTesting([contact])
+
+        // Empty outboundPath - user didn't select any repeaters
+        // (simulating an unexpected hop in the trace response)
+
+        let traceInfo = TraceInfo(
+            tag: 12345,
+            authCode: 0,
+            flags: 0,
+            pathLength: 1,
+            path: [
+                TraceNode(hash: 0xAB, snr: 5.0),
+                TraceNode(hash: nil, snr: 3.0)
+            ]
+        )
+
+        viewModel.setPendingTagForTesting(12345)
+        viewModel.handleTraceResponse(traceInfo, deviceID: nil)
+
+        guard let result = viewModel.result else {
+            Issue.record("Result should not be nil")
+            return
+        }
+
+        // Should fall back to contact lookup since outboundPath is empty
+        #expect(result.hops[1].resolvedName == "Test Tower")
+    }
+}
