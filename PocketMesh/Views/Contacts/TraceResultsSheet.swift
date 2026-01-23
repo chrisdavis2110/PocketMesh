@@ -268,8 +268,20 @@ struct TraceResultsSheet: View {
             Spacer()
 
             if let distance = viewModel.totalPathDistance {
-                Text(formatDistance(distance))
-                    .font(.body.monospacedDigit())
+                HStack {
+                    Text(formatDistance(distance))
+                        .font(.body.monospacedDigit())
+                    if viewModel.isDistanceUsingFallback {
+                        Button("Distance info", systemImage: "info.circle") {
+                            showingDistanceInfo = true
+                        }
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Partial distance")
+                        .accessibilityHint("Double tap to learn why device location is excluded")
+                    }
+                }
             } else {
                 HStack {
                     Text("Unavailable")
@@ -295,7 +307,18 @@ struct TraceResultsSheet: View {
     private var distanceInfoSheet: some View {
         NavigationStack {
             List {
-                if result.hops.filter({ !$0.isStartNode && !$0.isEndNode }).count < 2 {
+                if viewModel.isDistanceUsingFallback {
+                    Section {
+                        Text("Distance shown is between repeaters only. Your device's distance to the first repeater is not included because device location is unavailable.")
+                    } header: {
+                        Label("Partial Distance", systemImage: "location.slash")
+                    }
+                    Section {
+                        Text("Enable location services or set a location for your device to see the full path distance.")
+                    } header: {
+                        Label("To Include Full Path", systemImage: "lightbulb")
+                    }
+                } else if result.hops.filter({ !$0.isStartNode && !$0.isEndNode }).count < 2 {
                     Section {
                         Text("Distance calculation requires at least 2 repeaters in the path.")
                     }
@@ -314,7 +337,7 @@ struct TraceResultsSheet: View {
                     }
                 }
             }
-            .navigationTitle("Distance Unavailable")
+            .navigationTitle(viewModel.isDistanceUsingFallback ? "Distance Info" : "Distance Unavailable")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
