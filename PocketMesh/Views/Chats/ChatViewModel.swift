@@ -40,12 +40,22 @@ final class ChatViewModel {
     /// Favorite conversations sorted by last message date
     var favoriteConversations: [Conversation] {
         rebuildConversationCacheIfNeeded()
+        // Touch source arrays to maintain observation dependencies even when cache is valid.
+        // Without this, SwiftUI won't track changes after initial render because
+        // @ObservationIgnored cache properties don't register dependencies.
+        _ = conversations.count
+        _ = channels.count
+        _ = roomSessions.count
         return cachedFavoriteConversations
     }
 
     /// Non-favorite conversations sorted by last message date
     var nonFavoriteConversations: [Conversation] {
         rebuildConversationCacheIfNeeded()
+        // Touch source arrays to maintain observation dependencies
+        _ = conversations.count
+        _ = channels.count
+        _ = roomSessions.count
         return cachedNonFavoriteConversations
     }
 
