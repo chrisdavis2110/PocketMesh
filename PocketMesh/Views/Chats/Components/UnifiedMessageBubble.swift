@@ -346,21 +346,19 @@ struct UnifiedMessageBubble: View {
             }
         }
 
-        // Incoming message details in submenu
+        // Incoming message path and details
         if !message.isOutgoing {
-            Menu {
-                if message.pathNodes != nil {
-                    Button {
-                        onShowPath?(message)
-                    } label: {
-                        Label("View Path", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-                    }
+            if message.pathNodes != nil {
+                Button {
+                    onShowPath?(message)
+                } label: {
+                    Label("View Path", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
                 }
+            }
 
-                Text("Hops: \(hopCountFormatted(message.pathLength))")
+            Text("Hops: \(hopCountFormatted(message.pathLength))")
 
-                Divider()
-
+            Menu {
                 Text("Sent: \(message.date.formatted(date: .abbreviated, time: .shortened))\(message.timestampCorrected ? " (adjusted)" : "")")
                     .accessibilityLabel(message.timestampCorrected
                         ? "Sent time adjusted due to sender clock error"
