@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct ConversationSwipeActionsModifier: ViewModifier {
-    @Environment(AppState.self) private var appState: AppState?
+    @Environment(\.appState) private var appState
 
     let conversation: Conversation
     let viewModel: ChatViewModel
     let onDelete: () -> Void
 
     private var isConnected: Bool {
-        appState?.connectionState == .ready
+        appState.connectionState == .ready
     }
 
     func body(content: Content) -> some View {
