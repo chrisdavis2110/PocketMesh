@@ -74,7 +74,7 @@ public actor ContactService {
     private var syncProgressHandler: (@Sendable (Int, Int) -> Void)?
 
     /// Cleanup handler called when a contact is deleted or blocked
-    private var cleanupHandler: (@Sendable (UUID, ContactCleanupReason) async -> Void)?
+    private var cleanupHandler: (@Sendable (UUID, ContactCleanupReason, Data) async -> Void)?
 
     // MARK: - Initialization
 
@@ -96,7 +96,7 @@ public actor ContactService {
     }
 
     /// Set handler for contact cleanup operations (deletion/blocking)
-    public func setCleanupHandler(_ handler: @escaping @Sendable (UUID, ContactCleanupReason) async -> Void) {
+    public func setCleanupHandler(_ handler: @escaping @Sendable (UUID, ContactCleanupReason, Data) async -> Void) {
         cleanupHandler = handler
     }
 
@@ -138,7 +138,7 @@ public actor ContactService {
                 for localContact in localContacts where !devicePublicKeys.contains(localContact.publicKey) {
                     try await dataStore.deleteMessagesForContact(contactID: localContact.id)
                     try await dataStore.deleteContact(id: localContact.id)
-                    await cleanupHandler?(localContact.id, .deleted)
+                    await cleanupHandler?(localContact.id, .deleted, localContact.publicKey)
                 }
             }
 
@@ -207,8 +207,8 @@ public actor ContactService {
                 // Delete the contact
                 try await dataStore.deleteContact(id: contactID)
 
-                // Trigger cleanup (notifications, badge)
-                await cleanupHandler?(contactID, .deleted)
+                // Trigger cleanup (notifications, badge, session)
+                await cleanupHandler?(contactID, .deleted, publicKey)
             }
 
             // Notify UI to refresh contacts list
@@ -417,9 +417,9 @@ public actor ContactService {
 
         // Trigger cleanup for blocking state changes
         if isBeingBlocked {
-            await cleanupHandler?(contactID, .blocked)
+            await cleanupHandler?(contactID, .blocked, existing.publicKey)
         } else if isBeingUnblocked {
-            await cleanupHandler?(contactID, .unblocked)
+            await cleanupHandler?(contactID, .unblocked, existing.publicKey)
         }
     }
 
