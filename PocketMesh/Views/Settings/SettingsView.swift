@@ -108,8 +108,13 @@ struct SettingsView: View {
 
             Section {
             } footer: {
-                Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                    .frame(maxWidth: .infinity)
+                let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+                let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+                VStack {
+                    Text("v\(version)")
+                    Text("Build \(build)")
+                }
+                .frame(maxWidth: .infinity)
             }
         }
         .navigationTitle("Settings")
