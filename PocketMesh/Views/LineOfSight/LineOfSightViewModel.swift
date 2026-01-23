@@ -279,8 +279,9 @@ final class LineOfSightViewModel {
     // MARK: - Configuration
 
     func configure(appState: AppState) {
-        self.dataStore = appState.services?.dataStore
-        self.deviceID = appState.connectedDevice?.id
+        // Use offline-capable data store and device ID to support browsing cached data when disconnected
+        self.dataStore = appState.offlineDataStore
+        self.deviceID = appState.currentDeviceID
 
         // Initialize frequency from connected device (stored in kHz, convert to MHz)
         if let deviceFrequencyKHz = appState.connectedDevice?.frequency {
