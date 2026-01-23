@@ -18,6 +18,7 @@ struct TracePathListView: View {
     @State private var isRepeatersExpanded = false
     @State private var codeInput = ""
     @State private var codeInputError: String?
+    @State private var pastedSuccessfully = false
 
     var body: some View {
         List {
@@ -59,7 +60,7 @@ struct TracePathListView: View {
             if let error = codeInputError {
                 Text(error)
                     .foregroundStyle(.red)
-            } else {
+            } else if !pastedSuccessfully {
                 Text("Press Return to add repeaters")
             }
         }
@@ -68,6 +69,7 @@ struct TracePathListView: View {
     private func processCodeInput() {
         guard !codeInput.trimmingCharacters(in: .whitespaces).isEmpty else { return }
 
+        pastedSuccessfully = false
         let result = viewModel.addRepeatersFromCodes(codeInput)
         codeInputError = result.errorMessage
 
@@ -81,7 +83,13 @@ struct TracePathListView: View {
               !pasteboardString.isEmpty else { return }
 
         codeInput = pasteboardString
-        processCodeInput()
+        let result = viewModel.addRepeatersFromCodes(codeInput)
+        codeInputError = result.errorMessage
+        pastedSuccessfully = !result.added.isEmpty
+
+        if !result.added.isEmpty {
+            addHapticTrigger += 1
+        }
     }
 
     // MARK: - Repeaters Section

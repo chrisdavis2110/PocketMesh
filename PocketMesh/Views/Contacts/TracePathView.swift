@@ -185,7 +185,7 @@ private struct JumpToPathButton: View {
 
     var body: some View {
         Button(action: onTap) {
-            Label("Jump to Path", systemImage: "arrow.down")
+            Label("Run Below", systemImage: "arrow.down")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 16)
