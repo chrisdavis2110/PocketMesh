@@ -153,6 +153,8 @@ public enum RadioPresets {
         // North America
         RadioPreset(id: "us-ca", name: "USA/Canada", region: .northAmerica,
                     frequencyMHz: 910.525, bandwidthKHz: 62.5, spreadingFactor: 7, codingRate: 5),
+        RadioPreset(id: "wcmesh", name: "WCMesh (SoCal)", region: .northAmerica,
+                    frequencyMHz: 927.875, bandwidthKHz: 62.5, spreadingFactor: 7, codingRate: 5),
 
         // Asia
         RadioPreset(id: "vn", name: "Vietnam", region: .asia,
