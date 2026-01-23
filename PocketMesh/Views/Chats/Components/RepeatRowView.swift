@@ -76,12 +76,13 @@ struct RepeatRowView: View {
             return "<unknown repeater>"
         }
 
-        // Try to find contact with matching public key prefix
-        if let contact = contacts.first(where: { contact in
-            guard let firstByte = contact.publicKey.first else { return false }
+        // Only match repeater-type contacts (contacts and rooms cannot repeat messages)
+        if let repeater = contacts.first(where: { contact in
+            guard contact.type == .repeater,
+                  let firstByte = contact.publicKey.first else { return false }
             return firstByte == repeaterByte
         }) {
-            return contact.displayName
+            return repeater.displayName
         }
 
         return "<unknown repeater>"
