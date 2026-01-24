@@ -31,13 +31,8 @@ struct RoomConversationView: View {
             }
             .ignoreKeyboardOnIPad()
             .environment(keyboardObserver)
-            .navigationTitle(session.name)
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationHeader(title: session.name, subtitle: connectionStatus)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    headerView
-                }
-
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         showingRoomInfo = true
@@ -67,19 +62,6 @@ struct RoomConversationView: View {
             .refreshable {
                 await viewModel.refreshMessages()
             }
-    }
-
-    // MARK: - Header
-
-    private var headerView: some View {
-        VStack(spacing: 0) {
-            Text(session.name)
-                .font(.headline)
-
-            Text(connectionStatus)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
     }
 
     private var connectionStatus: String {

@@ -41,13 +41,8 @@ struct ChatView: View {
             .overlay(alignment: .bottom) {
                 mentionSuggestionsOverlay
             }
-            .navigationTitle(contact.displayName)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationHeader(title: contact.displayName, subtitle: connectionStatus)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                headerView
-            }
-
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showingContactInfo = true
@@ -200,19 +195,6 @@ struct ChatView: View {
             }
         } catch {
             logger.error("Failed to mark new mention seen: \(error)")
-        }
-    }
-
-    // MARK: - Header
-
-    private var headerView: some View {
-        VStack(spacing: 0) {
-            Text(contact.displayName)
-                .font(.headline)
-
-            Text(connectionStatus)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
         }
     }
 

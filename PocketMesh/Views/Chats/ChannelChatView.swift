@@ -42,13 +42,8 @@ struct ChannelChatView: View {
             .overlay(alignment: .bottom) {
                 mentionSuggestionsOverlay
             }
-            .navigationTitle(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationHeader(title: channelDisplayName, subtitle: channelTypeLabel)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                headerView
-            }
-
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showingChannelInfo = true
@@ -158,15 +153,12 @@ struct ChannelChatView: View {
 
     // MARK: - Header
 
-    private var headerView: some View {
-        VStack(spacing: 0) {
-            Text(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
-                .font(.headline)
+    private var channelDisplayName: String {
+        channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name
+    }
 
-            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? L10n.Chats.Chats.Channel.typePublic : L10n.Chats.Chats.Channel.typePrivate)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
+    private var channelTypeLabel: String {
+        channel.isPublicChannel || channel.name.hasPrefix("#") ? L10n.Chats.Chats.Channel.typePublic : L10n.Chats.Chats.Channel.typePrivate
     }
 
     // MARK: - Mention Tracking
