@@ -872,6 +872,47 @@ public final class AppState {
             )
         }
 
+        // Channel quick reply handler
+        services.notificationService.onChannelQuickReply = { [weak self] deviceID, channelIndex, text in
+            guard let self else { return }
+
+            // Fetch channel for display name in failure notification
+            let channel = try? await services.dataStore.fetchChannel(deviceID: deviceID, index: channelIndex)
+            let channelName = channel?.name ?? "Channel \(channelIndex)"
+
+            guard self.connectionState == .ready else {
+                await services.notificationService.postChannelQuickReplyFailedNotification(
+                    channelName: channelName,
+                    deviceID: deviceID,
+                    channelIndex: channelIndex
+                )
+                return
+            }
+
+            do {
+                _ = try await services.messageService.sendChannelMessage(
+                    text: text,
+                    channelIndex: channelIndex,
+                    deviceID: deviceID
+                )
+
+                // Clear unread state - user replied so they've seen the channel
+                try? await services.dataStore.clearChannelUnreadCount(deviceID: deviceID, index: channelIndex)
+                await services.notificationService.removeDeliveredNotifications(
+                    forChannelIndex: channelIndex,
+                    deviceID: deviceID
+                )
+                await services.notificationService.updateBadgeCount()
+                self.syncCoordinator?.notifyConversationsChanged()
+            } catch {
+                await services.notificationService.postChannelQuickReplyFailedNotification(
+                    channelName: channelName,
+                    deviceID: deviceID,
+                    channelIndex: channelIndex
+                )
+            }
+        }
+
         // Mark as read handler
         services.notificationService.onMarkAsRead = { [weak self] contactID, messageID in
             guard let self else { return }
