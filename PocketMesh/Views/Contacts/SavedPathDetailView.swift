@@ -160,7 +160,7 @@ private struct RunDetailView: View {
 
             if run.success && !run.hopsSNR.isEmpty {
                 Section(L10n.Contacts.Contacts.PathDetail.perHopSNR) {
-                    ForEach(run.hopsSNR.enumerated(), id: \.offset) { index, snr in
+                    ForEach(Array(run.hopsSNR.enumerated()), id: \.offset) { index, snr in
                         LabeledContent(L10n.Contacts.Contacts.PathDetail.hop(index + 1)) {
                             Text(snr, format: .number.precision(.fractionLength(2)))
                             + Text(" dB")

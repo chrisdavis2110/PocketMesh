@@ -150,7 +150,7 @@ struct TracePathListView: View {
                     .foregroundStyle(.secondary)
                     .frame(minHeight: 44)
             } else {
-                ForEach(viewModel.outboundPath.enumerated(), id: \.element.id) { index, hop in
+                ForEach(Array(viewModel.outboundPath.enumerated()), id: \.element.id) { index, hop in
                     TracePathHopRow(hop: hop, hopNumber: index + 1)
                 }
                 .onMove { source, destination in
