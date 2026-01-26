@@ -130,7 +130,7 @@ public actor WiFiTransport: MeshTransport {
                 group.cancelAll()
                 // On timeout, cancel the pending connection
                 if let err = error as? WiFiTransportError, err == .connectionTimeout {
-                    await self.cancelPendingConnection()
+                    self.cancelPendingConnection()
                 }
                 throw error
             }
@@ -264,7 +264,7 @@ public actor WiFiTransport: MeshTransport {
                 }
 
                 if let error {
-                    await self.logger.error("Receive error: \(error.localizedDescription)")
+                    self.logger.error("Receive error: \(error.localizedDescription)")
                     return
                 }
 

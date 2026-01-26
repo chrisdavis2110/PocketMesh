@@ -394,7 +394,7 @@ public actor BLEStateMachine {
             // Create timeout task
             let timeoutTask = Task {
                 try? await Task.sleep(for: .seconds(connectionTimeout))
-                await self.handleConnectionTimeout(for: peripheral)
+                self.handleConnectionTimeout(for: peripheral)
             }
 
             phase = .connecting(
