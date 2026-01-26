@@ -9,6 +9,7 @@ struct ToolsView: View {
         case tracePath
         case lineOfSight
         case rxLog
+        case wardrive
     }
 
     private enum SidebarDestination: Hashable {
@@ -34,6 +35,8 @@ struct ToolsView: View {
             "Trace Path"
         case .rxLog:
             "RX Log"
+        case .wardrive:
+            "Wardrive"
         case .lineOfSight, .none:
             "Tools"
         }
@@ -90,6 +93,12 @@ struct ToolsView: View {
                     } label: {
                         Label("RX Log", systemImage: "waveform.badge.magnifyingglass")
                     }
+
+                    NavigationLink {
+                        WardriveView()
+                    } label: {
+                        Label("Wardrive", systemImage: "location.fill")
+                    }
                 }
                 .navigationTitle("Tools")
                 .toolbar {
@@ -128,6 +137,14 @@ struct ToolsView: View {
                 } label: {
                     Label("RX Log", systemImage: "waveform.badge.magnifyingglass")
                 }
+
+                Button {
+                    selectedTool = .wardrive
+                    isShowingLineOfSightPoints = false
+                    sidebarPath = NavigationPath()
+                } label: {
+                    Label("Wardrive", systemImage: "location.fill")
+                }
             }
             .listStyle(.sidebar)
             .navigationTitle("Tools")
@@ -156,6 +173,8 @@ struct ToolsView: View {
             LineOfSightView(viewModel: lineOfSightViewModel, layoutMode: .map)
         case .rxLog:
             RxLogView()
+        case .wardrive:
+            WardriveView()
         case .none:
             ContentUnavailableView("Select a tool", systemImage: "wrench.and.screwdriver")
         }
