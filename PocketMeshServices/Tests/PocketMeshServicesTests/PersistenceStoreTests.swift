@@ -540,7 +540,7 @@ struct PersistenceStoreTests {
         try await store.incrementChannelUnreadCount(channelID: channelID)
         try await store.incrementChannelUnreadCount(channelID: channelID)
 
-        let (contacts, channels, rooms) = try await store.getTotalUnreadCounts()
+        let (contacts, channels, rooms) = try await store.getTotalUnreadCounts(deviceID: device.id)
         #expect(contacts == 3)  // 2 + 1
         #expect(channels == 3)
         #expect(rooms == 0)
@@ -583,7 +583,7 @@ struct PersistenceStoreTests {
         try await store.saveContact(blockedContact)
 
         // Get total unread counts - should exclude blocked contact
-        let (contacts, _, _) = try await store.getTotalUnreadCounts()
+        let (contacts, _, _) = try await store.getTotalUnreadCounts(deviceID: device.id)
 
         // Should only include the 2 unread from the regular contact, not the 5 from blocked
         #expect(contacts == 2, "Blocked contacts should not contribute to unread count total")
@@ -725,7 +725,7 @@ struct PersistenceStoreTests {
         try await store.incrementUnreadCount(contactID: contact2ID)
         try await store.setContactMuted(contact2ID, isMuted: true)
 
-        let (contacts, _, _) = try await store.getTotalUnreadCounts()
+        let (contacts, _, _) = try await store.getTotalUnreadCounts(deviceID: device.id)
 
         // Only Alice's 2 unreads should count, Bob is muted
         #expect(contacts == 2)

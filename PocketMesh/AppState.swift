@@ -485,9 +485,13 @@ public final class AppState {
         }
 
         // Configure badge count callback
-        services.notificationService.getBadgeCount = { [dataStore = services.dataStore] in
+        services.notificationService.getBadgeCount = { [weak self, dataStore = services.dataStore] in
+            let deviceID = await MainActor.run { self?.currentDeviceID }
+            guard let deviceID else {
+                return (contacts: 0, channels: 0, rooms: 0)
+            }
             do {
-                return try await dataStore.getTotalUnreadCounts()
+                return try await dataStore.getTotalUnreadCounts(deviceID: deviceID)
             } catch {
                 return (contacts: 0, channels: 0, rooms: 0)
             }
