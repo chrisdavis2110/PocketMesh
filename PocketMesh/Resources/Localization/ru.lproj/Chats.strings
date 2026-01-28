@@ -223,6 +223,9 @@
 /* Location: ChannelInfoSheet.swift - Error when services unavailable */
 "chats.error.servicesUnavailable" = "Сервисы недоступны";
 
+/* Location: ChatView.swift - Error when loading older messages fails */
+"chats.errors.loadOlderMessagesFailed" = "Не удалось загрузить старые сообщения";
+
 // MARK: - Channel Options Sheet
 
 /* Location: ChannelOptionsSheet.swift - Loading indicator text */
