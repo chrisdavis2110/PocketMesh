@@ -10,6 +10,7 @@ struct ToolsView: View {
         case lineOfSight
         case rxLog
         case noiseFloor
+        case cli
         case wardrive
     }
 
@@ -38,6 +39,8 @@ struct ToolsView: View {
             L10n.Tools.Tools.rxLog
         case .noiseFloor:
             L10n.Tools.Tools.noiseFloor
+        case .cli:
+            L10n.Tools.Tools.cli
         case .wardrive:
             L10n.Tools.Tools.wardrive
         case .lineOfSight, .none:
@@ -106,6 +109,9 @@ struct ToolsView: View {
                     }
 
                     NavigationLink {
+                        CLIToolView()
+                    } label: {
+                        Label(L10n.Tools.Tools.cli, systemImage: "terminal")
                         WardriveView()
                     } label: {
                         Label("Wardrive", systemImage: "location.fill")
@@ -158,6 +164,14 @@ struct ToolsView: View {
                 }
 
                 Button {
+                    selectedTool = .cli
+                    isShowingLineOfSightPoints = false
+                    sidebarPath = NavigationPath()
+                } label: {
+                    Label(L10n.Tools.Tools.cli, systemImage: "terminal")
+                }
+              
+                Button {
                     selectedTool = .wardrive
                     isShowingLineOfSightPoints = false
                     sidebarPath = NavigationPath()
@@ -194,6 +208,8 @@ struct ToolsView: View {
             RxLogView()
         case .noiseFloor:
             NoiseFloorView()
+        case .cli:
+            CLIToolView()
         case .wardrive:
             WardriveView()
         case .none:
