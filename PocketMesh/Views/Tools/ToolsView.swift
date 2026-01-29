@@ -11,6 +11,7 @@ struct ToolsView: View {
         case rxLog
         case noiseFloor
         case cli
+        case wardrive
     }
 
     private enum SidebarDestination: Hashable {
@@ -40,6 +41,8 @@ struct ToolsView: View {
             L10n.Tools.Tools.noiseFloor
         case .cli:
             L10n.Tools.Tools.cli
+        case .wardrive:
+            L10n.Tools.Tools.wardrive
         case .lineOfSight, .none:
             L10n.Tools.Tools.title
         }
@@ -109,6 +112,9 @@ struct ToolsView: View {
                         CLIToolView()
                     } label: {
                         Label(L10n.Tools.Tools.cli, systemImage: "terminal")
+                        WardriveView()
+                    } label: {
+                        Label("Wardrive", systemImage: "location.fill")
                     }
                 }
                 .navigationTitle(L10n.Tools.Tools.title)
@@ -164,6 +170,14 @@ struct ToolsView: View {
                 } label: {
                     Label(L10n.Tools.Tools.cli, systemImage: "terminal")
                 }
+              
+                Button {
+                    selectedTool = .wardrive
+                    isShowingLineOfSightPoints = false
+                    sidebarPath = NavigationPath()
+                } label: {
+                    Label("Wardrive", systemImage: "location.fill")
+                }
             }
             .listStyle(.sidebar)
             .navigationTitle(L10n.Tools.Tools.title)
@@ -196,6 +210,8 @@ struct ToolsView: View {
             NoiseFloorView()
         case .cli:
             CLIToolView()
+        case .wardrive:
+            WardriveView()
         case .none:
             ContentUnavailableView(L10n.Tools.Tools.selectTool, systemImage: "wrench.and.screwdriver")
         }
