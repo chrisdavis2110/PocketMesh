@@ -140,6 +140,9 @@ struct ChatsView: View {
             .onChange(of: appState.pendingChatContact) { _, _ in
                 handlePendingNavigation()
             }
+            .onChange(of: appState.pendingChannel) { _, _ in
+                handlePendingChannelNavigation()
+            }
             .onChange(of: appState.pendingRoomSession) { _, _ in
                 handlePendingRoomNavigation()
             }
@@ -294,6 +297,7 @@ struct ChatsView: View {
                 chatsViewLogger.debug("ChatsView: loaded, conversations=\(viewModel.conversations.count), channels=\(viewModel.channels.count), rooms=\(viewModel.roomSessions.count)")
                 announceOfflineStateIfNeeded()
                 handlePendingNavigation()
+                handlePendingChannelNavigation()
                 handlePendingRoomNavigation()
             }
         )
@@ -404,6 +408,7 @@ struct ChatsView: View {
                 await loadConversations()
                 announceOfflineStateIfNeeded()
                 handlePendingNavigation()
+                handlePendingChannelNavigation()
                 handlePendingRoomNavigation()
             }
         )
@@ -581,6 +586,12 @@ struct ChatsView: View {
         guard let contact = appState.pendingChatContact else { return }
         navigate(to: .direct(contact))
         appState.clearPendingNavigation()
+    }
+
+    private func handlePendingChannelNavigation() {
+        guard let channel = appState.pendingChannel else { return }
+        navigate(to: .channel(channel))
+        appState.clearPendingChannelNavigation()
     }
 
     private func handlePendingRoomNavigation() {

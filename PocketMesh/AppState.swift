@@ -141,6 +141,9 @@ public final class AppState {
     /// Contact to navigate to
     var pendingChatContact: ContactDTO?
 
+    /// Channel to navigate to
+    var pendingChannel: ChannelDTO?
+
     /// Room session to navigate to
     var pendingRoomSession: RemoteNodeSessionDTO?
 
@@ -768,6 +771,12 @@ public final class AppState {
         selectedTab = 0
     }
 
+    func navigateToChannel(with channel: ChannelDTO) {
+        tabBarVisibility = .hidden
+        pendingChannel = channel
+        selectedTab = 0
+    }
+
     func navigateToDiscovery() {
         pendingDiscoveryNavigation = true
         selectedTab = 1
@@ -788,6 +797,10 @@ public final class AppState {
 
     func clearPendingRoomNavigation() {
         pendingRoomSession = nil
+    }
+
+    func clearPendingChannelNavigation() {
+        pendingChannel = nil
     }
 
     func clearPendingDiscoveryNavigation() {
@@ -871,6 +884,14 @@ public final class AppState {
                 }
                 self.navigateToContactDetail(contact)
             }
+        }
+
+        // Channel notification tap handler
+        services.notificationService.onChannelNotificationTapped = { [weak self] deviceID, channelIndex in
+            guard let self else { return }
+
+            guard let channel = try? await services.dataStore.fetchChannel(deviceID: deviceID, index: channelIndex) else { return }
+            self.navigateToChannel(with: channel)
         }
 
         // Quick reply handler
