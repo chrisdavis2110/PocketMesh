@@ -267,7 +267,6 @@ final class ChatViewModel {
                     isBlocked: updated.isBlocked,
                     isMuted: isMuted,
                     isFavorite: updated.isFavorite,
-                    isDiscovered: updated.isDiscovered,
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     ocvPreset: updated.ocvPreset,
@@ -390,7 +389,6 @@ final class ChatViewModel {
                     isBlocked: updated.isBlocked,
                     isMuted: updated.isMuted,
                     isFavorite: isFavorite,
-                    isDiscovered: updated.isDiscovered,
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     ocvPreset: updated.ocvPreset,
@@ -921,7 +919,6 @@ final class ChatViewModel {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
