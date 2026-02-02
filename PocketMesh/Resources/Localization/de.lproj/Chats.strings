@@ -612,6 +612,9 @@
 /* Location: UnifiedMessageBubble.swift - Message status retrying */
 "chats.message.status.retrying" = "Wird wiederholt...";
 
+/* Location: UnifiedMessageBubble.swift - Message status retrying with attempt count - %d is current attempt, %d is max attempts */
+"chats.message.status.retryingAttempt" = "Wiederholung %d/%d";
+
 /* Location: UnifiedMessageBubble.swift - SNR quality excellent */
 "chats.signal.excellent" = "Ausgezeichnet";
 

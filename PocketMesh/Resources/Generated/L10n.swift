@@ -500,6 +500,10 @@ public enum L10n {
           public static let retry = L10n.tr("Chats", "chats.message.status.retry", fallback: "Retry")
           /// Location: UnifiedMessageBubble.swift - Message status retrying
           public static let retrying = L10n.tr("Chats", "chats.message.status.retrying", fallback: "Retrying...")
+          /// Location: UnifiedMessageBubble.swift - Message status retrying with attempt count - %d is current attempt, %d is max attempts
+          public static func retryingAttempt(_ p1: Int, _ p2: Int) -> String {
+            return L10n.tr("Chats", "chats.message.status.retryingAttempt", p1, p2, fallback: "Retrying %d/%d")
+          }
           /// Location: UnifiedMessageBubble.swift - Message status sending
           public static let sending = L10n.tr("Chats", "chats.message.status.sending", fallback: "Sending...")
           /// Location: UnifiedMessageBubble.swift - Message status sent

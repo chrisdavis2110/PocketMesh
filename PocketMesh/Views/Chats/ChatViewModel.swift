@@ -587,6 +587,8 @@ final class ChatViewModel {
             containsSelfMention: message.containsSelfMention,
             mentionSeen: message.mentionSeen,
             heardRepeats: message.heardRepeats,
+            retryAttempt: message.retryAttempt,
+            maxRetryAttempts: message.maxRetryAttempts,
             previewState: .idle,
             loadedPreview: nil
         )
@@ -628,6 +630,8 @@ final class ChatViewModel {
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
             heardRepeats: item.heardRepeats,
+            retryAttempt: item.retryAttempt,
+            maxRetryAttempts: item.maxRetryAttempts,
             previewState: previewStates[messageID] ?? .idle,
             loadedPreview: loadedPreviews[messageID]
         )
@@ -1013,6 +1017,10 @@ final class ChatViewModel {
 
         errorMessage = nil
 
+        // Update status to pending and reload immediately for instant "Sending" feedback
+        try? await dataStore?.updateMessageStatus(id: message.id, status: .pending)
+        await loadMessages(for: contact)
+
         do {
             // Retry the existing message (preserves message identity)
             logger.info("retryMessage: calling retryDirectMessage with messageID")
@@ -1282,6 +1290,8 @@ final class ChatViewModel {
                 containsSelfMention: message.containsSelfMention,
                 mentionSeen: message.mentionSeen,
                 heardRepeats: message.heardRepeats,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts,
                 previewState: previewStates[message.id] ?? .idle,
                 loadedPreview: loadedPreviews[message.id]
             )
@@ -1414,6 +1424,8 @@ final class ChatViewModel {
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
             heardRepeats: item.heardRepeats,
+            retryAttempt: item.retryAttempt,
+            maxRetryAttempts: item.maxRetryAttempts,
             previewState: previewStates[messageID] ?? .idle,
             loadedPreview: loadedPreviews[messageID]
         )
@@ -1478,7 +1490,7 @@ final class ChatViewModel {
                 lastDeviceID = contact.deviceID
 
                 do {
-                    _ = try await messageService.sendExistingMessage(
+                    _ = try await messageService.retryDirectMessage(
                         messageID: queued.messageID,
                         to: contact
                     )
