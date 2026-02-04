@@ -65,7 +65,8 @@ public final class AppState {
         connectedDevice?.id ?? connectionManager.lastConnectedDeviceID
     }
 
-    /// Data store that works regardless of connection state - uses services when connected, cached standalone store when disconnected
+    /// Data store that works regardless of connection state - uses services when connected,
+    /// cached standalone store when disconnected
     public var offlineDataStore: PersistenceStore? {
         if let services {
             cachedOfflineStore = nil  // Clear cache when services available
@@ -512,8 +513,26 @@ public final class AppState {
         messageEventBroadcaster.remoteNodeService = services.remoteNodeService
         messageEventBroadcaster.dataStore = services.dataStore
 
+        // Wire session state change handler for room connection status UI updates
+        await services.remoteNodeService.setSessionStateChangedHandler { [weak self] sessionID, isConnected in
+            await MainActor.run {
+                self?.messageEventBroadcaster.handleSessionStateChanged(sessionID: sessionID, isConnected: isConnected)
+            }
+        }
+
         // Wire room server service for room message handling
         messageEventBroadcaster.roomServerService = services.roomServerService
+
+        // Wire room message status handler for delivery confirmation UI updates
+        await services.roomServerService.setStatusUpdateHandler { [weak self] messageID, status in
+            await MainActor.run {
+                if status == .failed {
+                    self?.messageEventBroadcaster.handleRoomMessageFailed(messageID: messageID)
+                } else {
+                    self?.messageEventBroadcaster.handleRoomMessageStatusUpdated(messageID: messageID)
+                }
+            }
+        }
 
         // Wire binary protocol and repeater admin services
         messageEventBroadcaster.binaryProtocolService = services.binaryProtocolService
@@ -784,12 +803,20 @@ public final class AppState {
     func handleEnterBackground() {
         // Stop battery refresh - don't poll while UI isn't visible
         stopBatteryRefreshLoop()
+
+        // Stop room keepalives to save battery/bandwidth
+        Task {
+            await services?.remoteNodeService.stopAllKeepAlives()
+        }
     }
 
     /// Called when app returns to foreground
     func handleReturnToForeground() async {
         // Update badge count from database
         await services?.notificationService.updateBadgeCount()
+
+        // Resume room keepalives for connected sessions
+        await services?.remoteNodeService.resumeRoomKeepAlives()
 
         // Check for missed battery thresholds and restart polling if connected
         if services != nil {
