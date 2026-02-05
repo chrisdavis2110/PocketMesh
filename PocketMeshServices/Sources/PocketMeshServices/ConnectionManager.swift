@@ -506,6 +506,9 @@ public final class ConnectionManager {
         await onConnectionReady?()
         await performInitialSync(deviceID: deviceID, services: newServices, context: "WiFi reconnect")
 
+        // User may have disconnected while sync was in progress
+        guard connectionIntent.wantsConnection else { return }
+
         currentTransportType = .wifi
         connectionState = .ready
         startWiFiHeartbeat()
@@ -598,6 +601,8 @@ public final class ConnectionManager {
                 forceFullSync: forceFullSync
             )
         } catch {
+            // Don't start resync if user disconnected while sync was in progress
+            guard connectionIntent.wantsConnection else { return }
             let prefix = context.isEmpty ? "" : "\(context): "
             logger.warning("\(prefix)Initial sync failed, starting resync loop: \(error.localizedDescription)")
             startResyncLoop(deviceID: deviceID, services: services, forceFullSync: forceFullSync)
@@ -1215,6 +1220,9 @@ public final class ConnectionManager {
             await onConnectionReady?()
             await performInitialSync(deviceID: deviceID, services: newServices, forceFullSync: forceFullSync)
 
+            // User may have disconnected while sync was in progress
+            guard connectionIntent.wantsConnection else { return }
+
             // Wire disconnection handler for auto-reconnect
             await newWiFiTransport.setDisconnectionHandler { [weak self] error in
                 Task { @MainActor in
@@ -1321,6 +1329,9 @@ public final class ConnectionManager {
         // Notify observers BEFORE sync starts so they can wire callbacks
         await onConnectionReady?()
         await performInitialSync(deviceID: deviceID, services: newServices, context: "Device switch", forceFullSync: true)
+
+        // User may have disconnected while sync was in progress
+        guard connectionIntent.wantsConnection else { return }
 
         currentTransportType = .bluetooth
         connectionState = .ready
@@ -1633,6 +1644,9 @@ public final class ConnectionManager {
         }
         await performInitialSync(deviceID: deviceID, services: newServices, forceFullSync: shouldForceFullSync)
 
+        // User may have disconnected while sync was in progress
+        guard connectionIntent.wantsConnection else { return }
+
         currentTransportType = .bluetooth
         connectionState = .ready
         logger.info("Connection complete - device ready")
@@ -1886,6 +1900,9 @@ public final class ConnectionManager {
         // Notify observers BEFORE sync starts so they can wire callbacks
         await onConnectionReady?()
         await performInitialSync(deviceID: deviceID, services: newServices, context: "[BLE] iOS auto-reconnect")
+
+        // User may have disconnected while sync was in progress
+        guard connectionIntent.wantsConnection else { return }
 
         currentTransportType = .bluetooth
         connectionState = .ready
