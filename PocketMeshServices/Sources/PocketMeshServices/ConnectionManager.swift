@@ -966,9 +966,14 @@ public final class ConnectionManager {
             } else {
                 // Same device - let auto-reconnect complete instead of racing with it.
                 // The reconnection handler will create the session when auto-reconnect succeeds.
-                logger.info(
-                    "Deferring to iOS auto-reconnect for device \(deviceID) - blePhase: \(blePhase), blePeripheralState: \(blePeripheralState)"
+                logger.warning(
+                    "[BLE] Deferring to iOS auto-reconnect for device \(deviceID.uuidString.prefix(8)) - connectionState: \(String(describing: connectionState)), blePhase: \(blePhase), blePeripheralState: \(blePeripheralState)"
                 )
+                if connectionState == .disconnected {
+                    logger.warning(
+                        "[BLE] STATE MISMATCH: User tapped Connect but deferring to auto-reconnect while UI shows disconnected - this may cause silent failure. Device: \(deviceID.uuidString.prefix(8))"
+                    )
+                }
                 return
             }
         }
