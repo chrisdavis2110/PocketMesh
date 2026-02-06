@@ -84,9 +84,80 @@ public enum DevicePlatform: Sendable {
         switch self {
         case .esp32: return 0.060  // 60ms required by ESP32 BLE stack
         case .nrf52: return 0.025  // Light pacing to avoid RX queue pressure
-        case .unknown: return 0  // No pacing needed
+        case .unknown: return 0.060  // Conservative ESP32-safe default for unrecognized devices
         }
     }
+
+    /// Detects the device platform from the model string for BLE write pacing.
+    ///
+    /// Uses specific model substrings rather than vendor prefixes, because vendors like
+    /// Heltec, RAK, Seeed, and Elecrow ship devices on multiple chip families.
+    /// Unrecognized devices fall to `.unknown` (conservative 60ms pacing).
+    public static func detect(from model: String) -> DevicePlatform {
+        for rule in platformRules {
+            if model.localizedStandardContains(rule.substring) {
+                return rule.platform
+            }
+        }
+        return .unknown
+    }
+
+    private static let platformRules: [(substring: String, platform: DevicePlatform)] = [
+        // ESP32 — Heltec
+        ("Heltec V2", .esp32),
+        ("Heltec V3", .esp32),
+        ("Heltec V4", .esp32),
+        ("Heltec Tracker", .esp32),
+        ("Heltec E290", .esp32),
+        ("Heltec E213", .esp32),
+        ("Heltec T190", .esp32),
+        ("Heltec CT62", .esp32),
+        // ESP32 — LilyGo
+        ("T-Beam", .esp32),
+        ("T-Deck", .esp32),
+        ("T-LoRa", .esp32),
+        ("TLora", .esp32),
+        // ESP32 — Seeed
+        ("Xiao S3 WIO", .esp32),
+        ("Xiao C3", .esp32),
+        ("Xiao C6", .esp32),
+        // ESP32 — RAK
+        ("RAK 3112", .esp32),
+        // ESP32 — Other
+        ("Station G2", .esp32),
+        ("Meshadventurer", .esp32),
+        ("Generic ESP32", .esp32),
+        ("ThinkNode M2", .esp32),
+        // nRF52 — Heltec
+        ("MeshPocket", .nrf52),
+        ("Mesh Pocket", .nrf52),
+        ("T114", .nrf52),
+        ("Mesh Solar", .nrf52),
+        // nRF52 — Seeed
+        ("Xiao-nrf52", .nrf52),
+        ("Xiao_nrf52", .nrf52),
+        ("WM1110", .nrf52),
+        ("Wio Tracker", .nrf52),
+        ("T1000-E", .nrf52),
+        ("SenseCap Solar", .nrf52),
+        // nRF52 — RAK
+        ("WisMesh Tag", .nrf52),
+        ("RAK 4631", .nrf52),
+        ("RAK 3401", .nrf52),
+        // nRF52 — LilyGo
+        ("T-Echo", .nrf52),
+        // nRF52 — Elecrow
+        ("ThinkNode-M1", .nrf52),
+        ("ThinkNode M3", .nrf52),
+        ("ThinkNode-M6", .nrf52),
+        // nRF52 — Other
+        ("Ikoka", .nrf52),
+        ("ProMicro", .nrf52),
+        ("Minewsemi", .nrf52),
+        ("Meshtiny", .nrf52),
+        ("Keepteen", .nrf52),
+        ("Nano G2 Ultra", .nrf52),
+    ]
 }
 
 /// Manages the connection lifecycle for mesh devices.
@@ -1725,32 +1796,10 @@ public final class ConnectionManager {
         )
     }
 
-    /// Detects the device platform from the model string for BLE write pacing configuration.
-    /// - Parameter model: The device model string from DeviceCapabilities
-    /// - Returns: The detected platform type
-    private func detectPlatform(from model: String) -> DevicePlatform {
-        // ESP32-based devices
-        let esp32Models = ["Heltec", "T-Beam", "T-Deck", "LILYGO", "Station", "TLora", "Ebyte"]
-        // nRF52-based devices
-        let nrf52Models = ["RAK", "T-Echo", "Tracker", "Seeed", "Wio", "Ikoka", "Mesh Pocket"]
-
-        for indicator in esp32Models {
-            if model.localizedStandardContains(indicator) {
-                return .esp32
-            }
-        }
-        for indicator in nrf52Models {
-            if model.localizedStandardContains(indicator) {
-                return .nrf52
-            }
-        }
-        return .unknown
-    }
-
     /// Configures BLE write pacing based on detected device platform.
     /// - Parameter capabilities: The device capabilities from queryDevice()
     private func configureBLEPacing(for capabilities: MeshCore.DeviceCapabilities) async {
-        let platform = detectPlatform(from: capabilities.model)
+        let platform = DevicePlatform.detect(from: capabilities.model)
         let pacing = platform.recommendedWritePacing
         await stateMachine.setWritePacingDelay(pacing)
         if pacing > 0 {
