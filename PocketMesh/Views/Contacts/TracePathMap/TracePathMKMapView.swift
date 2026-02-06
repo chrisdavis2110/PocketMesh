@@ -33,6 +33,10 @@ struct TracePathMKMapView: UIViewRepresentable {
             forAnnotationViewWithReuseIdentifier: TracePathRepeaterPinView.reuseIdentifier
         )
         mapView.register(
+            TracePathClusterView.self,
+            forAnnotationViewWithReuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier
+        )
+        mapView.register(
             StatsBadgeView.self,
             forAnnotationViewWithReuseIdentifier: StatsBadgeView.reuseIdentifier
         )
@@ -56,13 +60,16 @@ struct TracePathMKMapView: UIViewRepresentable {
         // Update map type
         mapView.mapType = mapType
 
-        // Update repeater annotations
-        updateRepeaterAnnotations(in: mapView, coordinator: coordinator)
+        // Pre-compute path membership for all repeaters
+        let pathState = buildPathState()
 
-        // Update overlays
+        // Update repeater annotations
+        updateRepeaterAnnotations(in: mapView, coordinator: coordinator, pathState: pathState)
+
+        // Update overlays (with change detection)
         updateOverlays(in: mapView, coordinator: coordinator)
 
-        // Update badge annotations
+        // Update badge annotations (with change detection)
         updateBadgeAnnotations(in: mapView, coordinator: coordinator)
 
         // Update region
@@ -82,9 +89,36 @@ struct TracePathMKMapView: UIViewRepresentable {
         Coordinator(setCameraRegion: { cameraRegion = $0 })
     }
 
+    // MARK: - Path State
+
+    struct RepeaterPathInfo {
+        let inPath: Bool
+        let hopIndex: Int?
+        let isLastHop: Bool
+    }
+
+    /// Pre-compute path membership for all repeaters in a single pass
+    private func buildPathState() -> [UUID: RepeaterPathInfo] {
+        var state: [UUID: RepeaterPathInfo] = [:]
+        state.reserveCapacity(repeaters.count)
+        for repeater in repeaters {
+            let inPath = isRepeaterInPath(repeater)
+            state[repeater.id] = RepeaterPathInfo(
+                inPath: inPath,
+                hopIndex: inPath ? hopIndex(repeater) : nil,
+                isLastHop: inPath ? isLastHop(repeater) : false
+            )
+        }
+        return state
+    }
+
     // MARK: - Annotation Updates
 
-    private func updateRepeaterAnnotations(in mapView: MKMapView, coordinator: Coordinator) {
+    private func updateRepeaterAnnotations(
+        in mapView: MKMapView,
+        coordinator: Coordinator,
+        pathState: [UUID: RepeaterPathInfo]
+    ) {
         let currentAnnotations = mapView.annotations.compactMap { $0 as? RepeaterAnnotation }
         let currentIDs = Set(currentAnnotations.map { $0.repeater.id })
         let newIDs = Set(repeaters.map { $0.id })
@@ -99,38 +133,58 @@ struct TracePathMKMapView: UIViewRepresentable {
             .map { RepeaterAnnotation(repeater: $0) }
         mapView.addAnnotations(toAdd)
 
-        // Update all pin views for selection state
+        // Determine which annotations changed path membership and need re-adding
+        // (MapKit doesn't pick up clusteringIdentifier changes on existing views)
+        let currentInPathIDs = Set(pathState.filter { $0.value.inPath }.map { $0.key })
+        let previousInPathIDs = coordinator.previousInPathIDs
+        let changedIDs = currentInPathIDs.symmetricDifference(previousInPathIDs)
+        coordinator.previousInPathIDs = currentInPathIDs
+
+        if !changedIDs.isEmpty {
+            let toReAdd = mapView.annotations
+                .compactMap { $0 as? RepeaterAnnotation }
+                .filter { changedIDs.contains($0.repeater.id) }
+            mapView.removeAnnotations(toReAdd)
+            mapView.addAnnotations(toReAdd)
+        }
+
+        // Update visible pin views using pre-computed state
         for annotation in mapView.annotations.compactMap({ $0 as? RepeaterAnnotation }) {
-            if let view = mapView.view(for: annotation) as? TracePathRepeaterPinView {
-                let inPath = isRepeaterInPath(annotation.repeater)
-                let index = hopIndex(annotation.repeater)
-                let isLast = isLastHop(annotation.repeater)
-                view.configure(
-                    for: annotation.repeater,
-                    inPath: inPath,
-                    hopIndex: index,
-                    isLastHop: isLast,
-                    showLabel: showLabels
-                )
+            guard let view = mapView.view(for: annotation) as? TracePathRepeaterPinView else {
+                continue
             }
+            let info = pathState[annotation.repeater.id] ?? RepeaterPathInfo(
+                inPath: false, hopIndex: nil, isLastHop: false
+            )
+            view.configure(
+                for: annotation.repeater,
+                inPath: info.inPath,
+                hopIndex: info.hopIndex,
+                isLastHop: info.isLastHop,
+                showLabel: showLabels
+            )
         }
     }
 
     private func updateOverlays(in mapView: MKMapView, coordinator: Coordinator) {
-        // Remove existing path overlays
+        let newIdentities = Set(lineOverlays.map { ObjectIdentifier($0) })
+
+        guard newIdentities != coordinator.lastOverlayIdentities else { return }
+        coordinator.lastOverlayIdentities = newIdentities
+
         let existingPathOverlays = mapView.overlays.compactMap { $0 as? PathLineOverlay }
         mapView.removeOverlays(existingPathOverlays)
-
-        // Add current overlays
         mapView.addOverlays(lineOverlays)
     }
 
     private func updateBadgeAnnotations(in mapView: MKMapView, coordinator: Coordinator) {
-        // Remove existing badge annotations
+        let newIdentities = Set(badgeAnnotations.map { ObjectIdentifier($0) })
+
+        guard newIdentities != coordinator.lastBadgeIdentities else { return }
+        coordinator.lastBadgeIdentities = newIdentities
+
         let existingBadges = mapView.annotations.compactMap { $0 as? StatsBadgeAnnotation }
         mapView.removeAnnotations(existingBadges)
-
-        // Add current badges
         mapView.addAnnotations(badgeAnnotations)
     }
 
@@ -150,6 +204,11 @@ struct TracePathMKMapView: UIViewRepresentable {
         var lastAppliedRegion: MKCoordinateRegion?
         var hasPendingProgrammaticRegion = false
         var hasPendingUserGesture = false
+
+        // Change detection state
+        var previousInPathIDs: Set<UUID> = []
+        var lastOverlayIdentities: Set<ObjectIdentifier> = []
+        var lastBadgeIdentities: Set<ObjectIdentifier> = []
 
         /// Tracks whether the initial MKMapView region change has been received.
         /// The first region change is from MKMapView initialization, not a user gesture.
@@ -176,6 +235,18 @@ struct TracePathMKMapView: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, viewFor annotation: any MKAnnotation) -> MKAnnotationView? {
             if annotation is MKUserLocation {
                 return nil
+            }
+
+            if let clusterAnnotation = annotation as? MKClusterAnnotation {
+                let view = mapView.dequeueReusableAnnotationView(
+                    withIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier,
+                    for: annotation
+                ) as? TracePathClusterView ?? TracePathClusterView(
+                    annotation: annotation,
+                    reuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier
+                )
+                view.configure(with: clusterAnnotation)
+                return view
             }
 
             if let repeaterAnnotation = annotation as? RepeaterAnnotation {
@@ -226,6 +297,14 @@ struct TracePathMKMapView: UIViewRepresentable {
                 return PathLineRenderer(overlay: pathOverlay)
             }
             return MKOverlayRenderer(overlay: overlay)
+        }
+
+        func mapView(_ mapView: MKMapView, didSelect annotation: any MKAnnotation) {
+            mapView.deselectAnnotation(annotation, animated: false)
+
+            if let cluster = annotation as? MKClusterAnnotation {
+                mapView.showAnnotations(cluster.memberAnnotations, animated: true)
+            }
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
