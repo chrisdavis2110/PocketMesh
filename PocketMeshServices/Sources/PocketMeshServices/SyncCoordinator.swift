@@ -448,7 +448,16 @@ public actor SyncCoordinator {
             await setLastSyncDate(Date())
 
             logger.info("Full sync complete")
+        } catch let error as CancellationError {
+            // Defensive: ensure activity count is decremented even if cancellation
+            // occurs outside the contacts/channels error path.
+            await endSyncActivityOnce()
+            await setState(.idle)
+            throw error
         } catch {
+            // Defensive: ensure activity count is decremented even if an error is
+            // thrown from a path that bypasses the inner contacts/channels catch.
+            await endSyncActivityOnce()
             await setState(.failed(.syncFailed(error.localizedDescription)))
             throw error
         }

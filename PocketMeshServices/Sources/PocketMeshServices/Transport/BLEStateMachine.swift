@@ -351,45 +351,61 @@ public actor BLEStateMachine: BLEStateMachineProtocol {
     /// - Parameter data: Data to send
     /// - Throws: BLEError if not connected or write fails
     public func send(_ data: Data) async throws {
-        guard case .connected(let peripheral, let tx, _, _) = phase else {
-            throw BLEError.notConnected
-        }
+        while true {
+            try Task.checkCancellation()
 
-        guard peripheral.state == .connected else {
-            throw BLEError.notConnected
-        }
-
-        // Wait for any pending write to complete (serializes concurrent sends)
-        if pendingWriteContinuation != nil {
-            consecutiveQueuedWrites += 1
-            let queueDepth = writeWaiters.count + 1
-            if consecutiveQueuedWrites >= queuePressureThreshold {
-                logger.warning("[BLE] Write queue pressure: depth=\(queueDepth), consecutive=\(consecutiveQueuedWrites)")
-            } else {
-                logger.debug("[BLE] Write queued, depth: \(queueDepth)")
+            guard case .connected(let peripheral, _, _, _) = phase else {
+                throw BLEError.notConnected
             }
-            await withCheckedContinuation { (waiter: CheckedContinuation<Void, Never>) in
-                writeWaiters.append(waiter)
+
+            guard peripheral.state == .connected else {
+                throw BLEError.notConnected
             }
-        }
 
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            pendingWriteContinuation = continuation
-            peripheral.writeValue(data, for: tx, type: .withResponse)
+            // Wait for any pending write to complete (serializes concurrent sends).
+            // IMPORTANT: after waking, loop and re-check slot ownership to avoid
+            // continuation overwrite if multiple waiters are resumed together.
+            if pendingWriteContinuation != nil {
+                consecutiveQueuedWrites += 1
+                let queueDepth = writeWaiters.count + 1
+                if consecutiveQueuedWrites >= queuePressureThreshold {
+                    logger.warning("[BLE] Write queue pressure: depth=\(queueDepth), consecutive=\(consecutiveQueuedWrites)")
+                } else {
+                    logger.debug("[BLE] Write queued, depth: \(queueDepth)")
+                }
+                await withCheckedContinuation { (waiter: CheckedContinuation<Void, Never>) in
+                    writeWaiters.append(waiter)
+                }
+                continue
+            }
 
-            // Cancel any previous timeout task and create a new one
-            writeTimeoutTask?.cancel()
-            writeTimeoutTask = Task {
-                try? await Task.sleep(for: .seconds(writeTimeout))
-                guard !Task.isCancelled else { return }
-                if let pending = self.pendingWriteContinuation {
-                    self.pendingWriteContinuation = nil
-                    self.consecutiveQueuedWrites = 0
-                    pending.resume(throwing: BLEError.operationTimeout)
-                    self.writeTimeoutTask = nil
-                    self.resumeNextWriteWaiter()
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                // Revalidate at claim time in case phase changed between loop iterations.
+                guard case .connected(let currentPeripheral, let currentTx, _, _) = self.phase,
+                      currentPeripheral.state == .connected,
+                      self.pendingWriteContinuation == nil else {
+                    continuation.resume(throwing: BLEError.notConnected)
+                    return
+                }
+
+                self.pendingWriteContinuation = continuation
+                currentPeripheral.writeValue(data, for: currentTx, type: .withResponse)
+
+                // Cancel any previous timeout task and create a new one
+                self.writeTimeoutTask?.cancel()
+                self.writeTimeoutTask = Task {
+                    try? await Task.sleep(for: .seconds(self.writeTimeout))
+                    guard !Task.isCancelled else { return }
+                    if let pending = self.pendingWriteContinuation {
+                        self.pendingWriteContinuation = nil
+                        self.consecutiveQueuedWrites = 0
+                        pending.resume(throwing: BLEError.operationTimeout)
+                        self.writeTimeoutTask = nil
+                        self.resumeNextWriteWaiter()
+                    }
                 }
             }
+            return
         }
     }
 

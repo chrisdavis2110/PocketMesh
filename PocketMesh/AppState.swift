@@ -181,6 +181,10 @@ public final class AppState {
     /// Counter for sync/settings operations (on-demand) - shows pill
     private var syncActivityCount: Int = 0
 
+    /// Current sync phase reported by SyncCoordinator callbacks.
+    /// Used to defer non-essential settings reads during connect/sync.
+    private(set) var currentSyncPhase: SyncPhase?
+
     // MARK: - Ready Toast
 
     /// Whether the "Ready" toast pill is visible (shown briefly after connection completes)
@@ -297,6 +301,14 @@ public final class AppState {
         return .hidden
     }
 
+    /// Whether Settings startup reads should run right now.
+    /// We allow reads once the device is ready, or during message-only sync where
+    /// the sync pill is already hidden and contacts/channels contention is finished.
+    var canRunSettingsStartupReads: Bool {
+        if connectionState == .ready { return true }
+        return connectionState == .connected && currentSyncPhase == .messages
+    }
+
     // MARK: - Derived State
 
     /// Whether connecting
@@ -351,6 +363,7 @@ public final class AppState {
             syncCoordinator = nil
             // Reset sync activity count to prevent stuck pill
             syncActivityCount = 0
+            currentSyncPhase = nil
             // Reset CLI tool state on disconnect (preserves command history)
             cliToolViewModel?.reset()
             // Hide ready toast on disconnect
@@ -414,7 +427,9 @@ public final class AppState {
                     self.showReadyToastBriefly()
                 }
             },
-            onPhaseChanged: { _ in }
+            onPhaseChanged: { @MainActor [weak self] phase in
+                self?.currentSyncPhase = phase
+            }
         )
 
         // Wire resync failed callback for "Sync Failed" pill
