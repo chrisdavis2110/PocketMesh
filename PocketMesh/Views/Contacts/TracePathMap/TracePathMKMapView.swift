@@ -13,10 +13,8 @@ struct TracePathMKMapView: UIViewRepresentable {
     @Binding var cameraRegion: MKCoordinateRegion?
     let cameraRegionVersion: Int
 
-    // Callbacks for repeater state
-    let isRepeaterInPath: (ContactDTO) -> Bool
-    let hopIndex: (ContactDTO) -> Int?
-    let isLastHop: (ContactDTO) -> Bool
+    // Pre-computed path membership for all repeaters (closure to defer computation to updateUIView)
+    let pathState: () -> [UUID: TracePathMapViewModel.RepeaterPathInfo]
     let onRepeaterTap: (ContactDTO) -> Void
 
     func makeUIView(context: Context) -> MKMapView {
@@ -47,18 +45,14 @@ struct TracePathMKMapView: UIViewRepresentable {
         coordinator.isUpdatingFromSwiftUI = true
         defer { coordinator.isUpdatingFromSwiftUI = false }
 
-        // Update callbacks
-        coordinator.isRepeaterInPath = isRepeaterInPath
-        coordinator.hopIndex = hopIndex
-        coordinator.isLastHop = isLastHop
+        // Update callbacks and state
+        let pathState = pathState()
+        coordinator.pathState = pathState
         coordinator.onRepeaterTap = onRepeaterTap
         coordinator.showLabels = showLabels
 
         // Update map type
         mapView.mapType = mapType
-
-        // Pre-compute path membership for all repeaters
-        let pathState = buildPathState()
 
         // Update repeater annotations
         updateRepeaterAnnotations(in: mapView, coordinator: coordinator, pathState: pathState)
@@ -83,35 +77,12 @@ struct TracePathMKMapView: UIViewRepresentable {
         Coordinator(setCameraRegion: { cameraRegion = $0 })
     }
 
-    // MARK: - Path State
-
-    struct RepeaterPathInfo {
-        let inPath: Bool
-        let hopIndex: Int?
-        let isLastHop: Bool
-    }
-
-    /// Pre-compute path membership for all repeaters in a single pass
-    private func buildPathState() -> [UUID: RepeaterPathInfo] {
-        var state: [UUID: RepeaterPathInfo] = [:]
-        state.reserveCapacity(repeaters.count)
-        for repeater in repeaters {
-            let inPath = isRepeaterInPath(repeater)
-            state[repeater.id] = RepeaterPathInfo(
-                inPath: inPath,
-                hopIndex: inPath ? hopIndex(repeater) : nil,
-                isLastHop: inPath ? isLastHop(repeater) : false
-            )
-        }
-        return state
-    }
-
     // MARK: - Annotation Updates
 
     private func updateRepeaterAnnotations(
         in mapView: MKMapView,
         coordinator: Coordinator,
-        pathState: [UUID: RepeaterPathInfo]
+        pathState: [UUID: TracePathMapViewModel.RepeaterPathInfo]
     ) {
         let currentAnnotations = mapView.annotations.compactMap { $0 as? RepeaterAnnotation }
         let currentIDs = Set(currentAnnotations.map { $0.repeater.id })
@@ -147,7 +118,7 @@ struct TracePathMKMapView: UIViewRepresentable {
             guard let view = mapView.view(for: annotation) as? TracePathRepeaterPinView else {
                 continue
             }
-            let info = pathState[annotation.repeater.id] ?? RepeaterPathInfo(
+            let info = pathState[annotation.repeater.id] ?? TracePathMapViewModel.RepeaterPathInfo(
                 inPath: false, hopIndex: nil, isLastHop: false
             )
             view.configure(
@@ -188,9 +159,7 @@ struct TracePathMKMapView: UIViewRepresentable {
     class Coordinator: NSObject, MKMapViewDelegate {
         var setCameraRegion: (MKCoordinateRegion?) -> Void
 
-        var isRepeaterInPath: ((ContactDTO) -> Bool)?
-        var hopIndex: ((ContactDTO) -> Int?)?
-        var isLastHop: ((ContactDTO) -> Bool)?
+        var pathState: [UUID: TracePathMapViewModel.RepeaterPathInfo] = [:]
         var onRepeaterTap: ((ContactDTO) -> Void)?
         var showLabels: Bool = true
 
@@ -252,17 +221,20 @@ struct TracePathMKMapView: UIViewRepresentable {
                     reuseIdentifier: TracePathRepeaterPinView.reuseIdentifier
                 )
 
-                let inPath = isRepeaterInPath?(repeaterAnnotation.repeater) ?? false
-                let index = hopIndex?(repeaterAnnotation.repeater)
-                let isLast = isLastHop?(repeaterAnnotation.repeater) ?? false
+                let info = pathState[repeaterAnnotation.repeater.id]
+                    ?? TracePathMapViewModel.RepeaterPathInfo(inPath: false, hopIndex: nil, isLastHop: false)
 
                 view.configure(
                     for: repeaterAnnotation.repeater,
-                    inPath: inPath,
-                    hopIndex: index,
-                    isLastHop: isLast,
+                    inPath: info.inPath,
+                    hopIndex: info.hopIndex,
+                    isLastHop: info.isLastHop,
                     showLabel: showLabels
                 )
+
+                view.onTap = { [weak self] in
+                    self?.onRepeaterTap?(repeaterAnnotation.repeater)
+                }
 
                 return view
             }
@@ -294,9 +266,9 @@ struct TracePathMKMapView: UIViewRepresentable {
 
             if let cluster = annotation as? MKClusterAnnotation {
                 mapView.showAnnotations(cluster.memberAnnotations, animated: true)
-            } else if let repeaterAnnotation = annotation as? RepeaterAnnotation {
-                onRepeaterTap?(repeaterAnnotation.repeater)
             }
+            // Repeater taps are handled by UITapGestureRecognizer on the pin view
+            // to bypass MapKit's ~300ms selection delay
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {

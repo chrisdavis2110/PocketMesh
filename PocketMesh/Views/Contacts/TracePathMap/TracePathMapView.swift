@@ -106,9 +106,7 @@ struct TracePathMapView: View {
             showLabels: mapViewModel.showLabels,
             cameraRegion: $mapViewModel.cameraRegion,
             cameraRegionVersion: mapViewModel.cameraRegionVersion,
-            isRepeaterInPath: { mapViewModel.isRepeaterInPath($0) },
-            hopIndex: { mapViewModel.hopIndex(for: $0) },
-            isLastHop: { mapViewModel.isLastHop($0) },
+            pathState: { mapViewModel.pathState },
             onRepeaterTap: { repeater in
                 let result = mapViewModel.handleRepeaterTap(repeater)
                 if result == .rejectedMiddleHop {

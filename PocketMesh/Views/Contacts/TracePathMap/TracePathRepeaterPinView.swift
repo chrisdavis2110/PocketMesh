@@ -7,6 +7,10 @@ final class TracePathRepeaterPinView: MKAnnotationView {
     static let reuseIdentifier = "TracePathRepeaterPinView"
     static let clusteringID = "repeater"
 
+    // MARK: - Tap Handling
+
+    var onTap: (() -> Void)?
+
     // MARK: - UI Components
 
     private let circleView = UIView()
@@ -103,6 +107,14 @@ final class TracePathRepeaterPinView: MKAnnotationView {
         centerOffset = CGPoint(x: 0, y: -totalHeight / 2)
 
         canShowCallout = false
+
+        // Tap gesture fires immediately, bypassing MapKit's ~300ms selection delay
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        addGestureRecognizer(tapGesture)
+    }
+
+    @objc private func handleTap() {
+        onTap?()
     }
 
     // MARK: - Configuration
@@ -240,6 +252,7 @@ final class TracePathRepeaterPinView: MKAnnotationView {
 
     override func prepareForReuse() {
         super.prepareForReuse()
+        onTap = nil
         selectionRing.isHidden = true
         hideNumberBadge()
         hideNameLabel()

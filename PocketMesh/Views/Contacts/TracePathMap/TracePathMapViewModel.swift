@@ -41,6 +41,43 @@ final class TracePathMapViewModel {
     private weak var traceViewModel: TracePathViewModel?
     private var userLocation: CLLocation?
 
+    // MARK: - Path State
+
+    struct RepeaterPathInfo {
+        let inPath: Bool
+        let hopIndex: Int?
+        let isLastHop: Bool
+    }
+
+    /// Pre-computed path membership for all repeaters, keyed by repeater ID.
+    /// Iterates the path once (O(M) resolutions) then does O(N) dictionary lookups,
+    /// instead of O(N × M × N) per-repeater closure calls.
+    var pathState: [UUID: RepeaterPathInfo] {
+        let repeaters = repeatersWithLocation
+
+        // Build path lookup: resolve each hop to a repeater UUID
+        var pathLookup: [UUID: (index: Int, isLast: Bool)] = [:]
+        if let path = traceViewModel?.outboundPath {
+            for (index, hop) in path.enumerated() {
+                if let repeater = findRepeater(for: hop) {
+                    pathLookup[repeater.id] = (index: index + 1, isLast: index == path.count - 1)
+                }
+            }
+        }
+
+        // Build state for all repeaters with O(1) lookups
+        var state: [UUID: RepeaterPathInfo] = [:]
+        state.reserveCapacity(repeaters.count)
+        for repeater in repeaters {
+            if let info = pathLookup[repeater.id] {
+                state[repeater.id] = RepeaterPathInfo(inPath: true, hopIndex: info.index, isLastHop: info.isLast)
+            } else {
+                state[repeater.id] = RepeaterPathInfo(inPath: false, hopIndex: nil, isLastHop: false)
+            }
+        }
+        return state
+    }
+
     // MARK: - Computed Properties
 
     /// Repeaters to display on map
@@ -101,15 +138,6 @@ final class TracePathMapViewModel {
     func isRepeaterInPath(_ repeater: ContactDTO) -> Bool {
         guard let path = traceViewModel?.outboundPath else { return false }
         return path.contains { hopMatches($0, repeater: repeater) }
-    }
-
-    /// Get the hop index for a repeater in the path (1-based for display)
-    func hopIndex(for repeater: ContactDTO) -> Int? {
-        guard let path = traceViewModel?.outboundPath else { return nil }
-        if let index = path.firstIndex(where: { hopMatches($0, repeater: repeater) }) {
-            return index + 1
-        }
-        return nil
     }
 
     /// Check if repeater is the last hop (can be removed)
