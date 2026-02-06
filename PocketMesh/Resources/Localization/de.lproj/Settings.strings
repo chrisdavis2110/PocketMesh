@@ -213,6 +213,21 @@
 /* Description for empty state */
 "trustedContacts.noContactsDescription" = "Füge Kontakte hinzu, um vertrauenswürdige auszuwählen";
 
+/* Title for empty state when search returns no results */
+"trustedContacts.noResults" = "Keine Ergebnisse";
+
+/* Description for empty state when search returns no results */
+"trustedContacts.noResultsDescription" = "Keine Kontakte stimmen mit \"%@\" überein";
+
+/* Search prompt for trusted contacts list */
+"trustedContacts.searchPrompt" = "Kontakte suchen";
+
+/* Toggle label for showing only favorite contacts */
+"trustedContacts.favoritesOnly" = "Nur Favoriten";
+
+/* Apply button label */
+"trustedContacts.apply" = "Anwenden";
+
 
 // MARK: - About Section
 

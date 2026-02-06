@@ -213,6 +213,21 @@
 /* Description for empty state */
 "trustedContacts.noContactsDescription" = "Добавьте контакты, чтобы выбрать доверенных";
 
+/* Title for empty state when search returns no results */
+"trustedContacts.noResults" = "Нет результатов";
+
+/* Description for empty state when search returns no results */
+"trustedContacts.noResultsDescription" = "Нет контактов, соответствующих \"%@\"";
+
+/* Search prompt for trusted contacts list */
+"trustedContacts.searchPrompt" = "Поиск контактов";
+
+/* Toggle label for showing only favorite contacts */
+"trustedContacts.favoritesOnly" = "Только избранные";
+
+/* Apply button label */
+"trustedContacts.apply" = "Применить";
+
 
 // MARK: - About Section
 

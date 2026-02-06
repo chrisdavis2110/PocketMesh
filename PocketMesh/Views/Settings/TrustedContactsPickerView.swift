@@ -40,11 +40,19 @@ struct TrustedContactsPickerView: View {
 
             Section {
                 if filteredContacts.isEmpty {
-                    ContentUnavailableView(
-                        L10n.Settings.TrustedContacts.noContacts,
-                        systemImage: "person.2.slash",
-                        description: Text(L10n.Settings.TrustedContacts.noContactsDescription)
-                    )
+                    if !searchText.isEmpty || showFavoritesOnly {
+                        ContentUnavailableView(
+                            L10n.Settings.TrustedContacts.noResults,
+                            systemImage: "magnifyingglass",
+                            description: Text(L10n.Settings.TrustedContacts.noResultsDescription(searchText))
+                        )
+                    } else {
+                        ContentUnavailableView(
+                            L10n.Settings.TrustedContacts.noContacts,
+                            systemImage: "person.2.slash",
+                            description: Text(L10n.Settings.TrustedContacts.noContactsDescription)
+                        )
+                    }
                 } else {
                     ForEach(filteredContacts) { contact in
                         Button {

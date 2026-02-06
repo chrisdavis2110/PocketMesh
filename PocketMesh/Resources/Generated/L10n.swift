@@ -2976,6 +2976,12 @@ public enum L10n {
       public static let noContacts = L10n.tr("Settings", "trustedContacts.noContacts", fallback: "No Contacts")
       /// Description for empty state
       public static let noContactsDescription = L10n.tr("Settings", "trustedContacts.noContactsDescription", fallback: "Add contacts to select trusted ones")
+      /// Title for empty state when search returns no results
+      public static let noResults = L10n.tr("Settings", "trustedContacts.noResults", fallback: "No Results")
+      /// Description for empty state when search returns no results
+      public static func noResultsDescription(_ p1: Any) -> String {
+        return L10n.tr("Settings", "trustedContacts.noResultsDescription", String(describing: p1), fallback: "No contacts match \"%@\"")
+      }
       /// Search prompt for trusted contacts list
       public static let searchPrompt = L10n.tr("Settings", "trustedContacts.searchPrompt", fallback: "Search Contacts")
       /// Navigation title for trusted contacts picker

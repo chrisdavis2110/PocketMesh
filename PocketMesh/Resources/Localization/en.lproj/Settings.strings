@@ -213,6 +213,12 @@
 /* Description for empty state */
 "trustedContacts.noContactsDescription" = "Add contacts to select trusted ones";
 
+/* Title for empty state when search returns no results */
+"trustedContacts.noResults" = "No Results";
+
+/* Description for empty state when search returns no results */
+"trustedContacts.noResultsDescription" = "No contacts match \"%@\"";
+
 /* Search prompt for trusted contacts list */
 "trustedContacts.searchPrompt" = "Search Contacts";
 

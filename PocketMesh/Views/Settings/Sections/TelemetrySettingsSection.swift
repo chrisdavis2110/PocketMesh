@@ -54,7 +54,7 @@ struct TelemetrySettingsSection: View {
                 }
                 .radioDisabled(for: appState.connectionState, or: isSaving)
 
-                if filterByTrustedBinding.wrappedValue {
+                if isFilterByTrusted {
                     NavigationLink {
                         TrustedContactsPickerView()
                     } label: {
@@ -72,6 +72,10 @@ struct TelemetrySettingsSection: View {
     }
 
     // MARK: - Bindings
+
+    private var isFilterByTrusted: Bool {
+        device?.telemetryModeBase == 1
+    }
 
     /// Mode value for "enabled" telemetry: 1 if trusted filtering active, 2 otherwise
     private var enabledMode: UInt8 {

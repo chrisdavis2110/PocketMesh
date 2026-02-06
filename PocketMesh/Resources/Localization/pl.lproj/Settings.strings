@@ -213,6 +213,21 @@
 /* Description for empty state */
 "trustedContacts.noContactsDescription" = "Dodaj kontakty, aby wybrać zaufane";
 
+/* Title for empty state when search returns no results */
+"trustedContacts.noResults" = "Brak wyników";
+
+/* Description for empty state when search returns no results */
+"trustedContacts.noResultsDescription" = "Żaden kontakt nie pasuje do \"%@\"";
+
+/* Search prompt for trusted contacts list */
+"trustedContacts.searchPrompt" = "Szukaj kontaktów";
+
+/* Toggle label for showing only favorite contacts */
+"trustedContacts.favoritesOnly" = "Tylko ulubione";
+
+/* Apply button label */
+"trustedContacts.apply" = "Zastosuj";
+
 
 // MARK: - About Section
 

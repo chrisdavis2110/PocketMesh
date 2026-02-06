@@ -213,6 +213,21 @@
 /* Description for empty state */
 "trustedContacts.noContactsDescription" = "Додайте контакти, щоб вибрати довірених";
 
+/* Title for empty state when search returns no results */
+"trustedContacts.noResults" = "Немає результатів";
+
+/* Description for empty state when search returns no results */
+"trustedContacts.noResultsDescription" = "Жоден контакт не відповідає \"%@\"";
+
+/* Search prompt for trusted contacts list */
+"trustedContacts.searchPrompt" = "Пошук контактів";
+
+/* Toggle label for showing only favorite contacts */
+"trustedContacts.favoritesOnly" = "Лише обрані";
+
+/* Apply button label */
+"trustedContacts.apply" = "Застосувати";
+
 
 // MARK: - About Section
 
