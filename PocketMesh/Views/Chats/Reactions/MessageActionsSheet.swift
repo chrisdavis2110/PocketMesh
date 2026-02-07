@@ -30,7 +30,6 @@ struct MessageActionsSheet: View {
     @State private var longPressHapticTrigger = 0
     @State private var showEmojiPicker = false
     @State private var isDetailExpanded = false
-    @State private var selectedDetent: PresentationDetent = .medium
     @State private var repeats: [MessageRepeatDTO]?
     @State private var contacts: [ContactDTO] = []
     @State private var pathViewModel = MessagePathViewModel()
@@ -62,7 +61,8 @@ struct MessageActionsSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large], selection: $selectedDetent)
+        .presentationDetents([.medium, .large])
+        .presentationContentInteraction(.scrolls)
         .presentationDragIndicator(.visible)
         .onAppear {
             longPressHapticTrigger += 1
@@ -218,7 +218,6 @@ struct MessageActionsSheet: View {
             Button {
                 withAnimation {
                     isDetailExpanded.toggle()
-                    selectedDetent = isDetailExpanded ? .large : .medium
                 }
             } label: {
                 HStack {

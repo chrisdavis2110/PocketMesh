@@ -62,12 +62,6 @@ struct MessagePathContent: View {
             // Raw path hex + copy button
             if !pathBytes.isEmpty {
                 HStack {
-                    Text(message.pathString)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
                     Button(L10n.Chats.Chats.Path.copyButton, systemImage: "doc.on.doc") {
                         copyHapticTrigger += 1
                         UIPasteboard.general.string = message.pathStringForClipboard
@@ -76,6 +70,12 @@ struct MessagePathContent: View {
                     .buttonStyle(.borderless)
                     .accessibilityLabel(L10n.Chats.Chats.Path.copyAccessibility)
                     .accessibilityHint(L10n.Chats.Chats.Path.copyHint)
+
+                    Text(message.pathString)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
                 }
                 .padding(.top, 8)
                 .sensoryFeedback(.success, trigger: copyHapticTrigger)
