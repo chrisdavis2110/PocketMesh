@@ -189,6 +189,7 @@ final class TracePathMapViewModel {
 
     func runTrace() async {
         centerOnPath()
+        traceViewModel?.batchEnabled = false
         await traceViewModel?.runTrace()
     }
 
