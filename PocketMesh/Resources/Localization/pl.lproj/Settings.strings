@@ -811,7 +811,7 @@
 "location.header" = "Lokalizacja";
 
 /* Footer for location settings section */
-"location.footer" = "Gdy automatyczna aktualizacja jest włączona, lokalizacja urządzenia jest odświeżana podczas wysyłania ogłoszeń. Nie wysyła to Twojej lokalizacji przez sieć mesh, chyba że opcja Udostępniaj lokalizację publicznie jest włączona.";
+"location.footer" = "Gdy opcja Udostępniaj lokalizację publicznie jest włączona, Twoja lokalizacja będzie transmitowana przez sieć mesh podczas wysyłania ogłoszeń. Włączenie opcji Automatyczna aktualizacja lokalizacji spowoduje automatyczne zaktualizowanie lokalizacji urządzenia przed wysłaniem ogłoszeń.";
 
 /* Toggle label for auto-update location */
 "location.autoUpdate" = "Automatyczna aktualizacja lokalizacji";

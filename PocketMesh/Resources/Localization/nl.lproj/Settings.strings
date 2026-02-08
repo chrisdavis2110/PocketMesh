@@ -811,7 +811,7 @@
 "location.header" = "Locatie";
 
 /* Footer for location settings section */
-"location.footer" = "Wanneer automatisch bijwerken is ingeschakeld, wordt de apparaatlocatie vernieuwd bij het verzenden van adverts. Dit stuurt je locatie niet over het mesh-netwerk tenzij Locatie openbaar delen is ingeschakeld.";
+"location.footer" = "Wanneer Locatie openbaar delen is ingeschakeld, wordt uw locatie via het mesh-netwerk uitgezonden bij het verzenden van adverts. Door Locatie automatisch bijwerken in te schakelen wordt de locatie van uw apparaat automatisch bijgewerkt voordat adverts worden verzonden.";
 
 /* Toggle label for auto-update location */
 "location.autoUpdate" = "Locatie automatisch bijwerken";

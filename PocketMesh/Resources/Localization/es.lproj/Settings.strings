@@ -811,7 +811,7 @@
 "location.header" = "Ubicación";
 
 /* Footer for location settings section */
-"location.footer" = "Cuando la actualización automática está activada, la ubicación del dispositivo se actualiza al enviar adverts. Esto no envía tu ubicación a través de la red mesh a menos que Compartir ubicación públicamente esté activado.";
+"location.footer" = "Cuando Compartir ubicación públicamente está activado, tu ubicación se transmitirá a través de la red mesh al enviar adverts. Activar Actualización automática de ubicación actualizará automáticamente la ubicación de tu dispositivo antes de enviar adverts.";
 
 /* Toggle label for auto-update location */
 "location.autoUpdate" = "Actualizar ubicación automáticamente";

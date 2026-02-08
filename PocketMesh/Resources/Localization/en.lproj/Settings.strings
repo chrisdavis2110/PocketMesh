@@ -586,7 +586,7 @@
 "location.header" = "Location";
 
 /* Footer for location settings section */
-"location.footer" = "When Auto-Update is enabled, your device location is refreshed when sending adverts. This does not send your location across the mesh unless Share Location Publicly is enabled.";
+"location.footer" = "When Share Location Publicly is enabled, your location will be broadcast across the mesh when sending adverts. Enabling Auto-Update Location will automatically update your device's location before sending adverts.";
 
 /* Toggle label for auto-update location */
 "location.autoUpdate" = "Auto-Update Location";

@@ -811,7 +811,7 @@
 "location.header" = "Position";
 
 /* Footer for location settings section */
-"location.footer" = "Lorsque la mise à jour automatique est activée, la position de l'appareil est actualisée lors de l'envoi d'adverts. Cela n'envoie pas votre position sur le réseau mesh sauf si Partager la position publiquement est activé.";
+"location.footer" = "Lorsque Partager la position publiquement est activé, votre position sera diffusée sur le réseau mesh lors de l'envoi d'adverts. Activer la mise à jour automatique de la position mettra automatiquement à jour la position de votre appareil avant l'envoi d'adverts.";
 
 /* Toggle label for auto-update location */
 "location.autoUpdate" = "Mettre à jour la position automatiquement";
