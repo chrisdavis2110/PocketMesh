@@ -15,8 +15,8 @@ struct AdvancedSettingsView: View {
                 // Manual Radio Configuration
                 AdvancedRadioSection()
 
-                // Contacts Settings
-                ContactsSettingsSection()
+                // Nodes Settings
+                NodesSettingsSection()
 
                 // Telemetry Settings
                 TelemetrySettingsSection()
@@ -58,7 +58,7 @@ struct AdvancedSettingsView: View {
                 }
             }
         }
-        .task {
+        .task(id: refreshTaskID) {
             await refreshDeviceSettings()
         }
         .task(id: appState.connectedDevice?.id) {
@@ -66,10 +66,23 @@ struct AdvancedSettingsView: View {
         }
     }
 
+    private var refreshTaskID: String {
+        let deviceID = appState.connectedDevice?.id.uuidString ?? "none"
+        let syncPhase = appState.currentSyncPhase.map { String(describing: $0) } ?? "none"
+        return "\(deviceID)-\(String(describing: appState.connectionState))-\(syncPhase)"
+    }
+
     /// Fetch fresh device settings to ensure cache is up-to-date
     private func refreshDeviceSettings() async {
-        guard let settingsService = appState.services?.settingsService else { return }
+        // Wait until contact/channel sync contention is over before sending startup reads.
+        guard appState.canRunSettingsStartupReads,
+              let settingsService = appState.services?.settingsService else { return }
         _ = try? await settingsService.getSelfInfo()
+
+        // Only refresh autoAddConfig on v1.12+ firmware
+        if appState.connectedDevice?.supportsAutoAddConfig == true {
+            try? await settingsService.refreshAutoAddConfig()
+        }
     }
 
     private func loadOCVFromDevice() {

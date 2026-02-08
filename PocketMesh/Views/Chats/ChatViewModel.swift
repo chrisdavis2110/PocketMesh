@@ -143,6 +143,9 @@ final class ChatViewModel {
     /// Last message previews cache
     private var lastMessageCache: [UUID: MessageDTO] = [:]
 
+    /// Store for recently used reaction emojis
+    let recentEmojisStore = RecentEmojisStore()
+
     /// Preview state per message (keyed by message ID)
     private var previewStates: [UUID: PreviewLoadState] = [:]
 
@@ -151,6 +154,10 @@ final class ChatViewModel {
 
     /// In-flight preview fetch tasks (prevents duplicate fetches)
     private var previewFetchTasks: [UUID: Task<Void, Never>] = [:]
+
+    /// In-flight reaction sends (prevents duplicate reactions on rapid taps)
+    /// Key format: "{messageID}-{emoji}"
+    private var inFlightReactions: Set<String> = []
 
     // MARK: - Pagination State
 
@@ -169,6 +176,15 @@ final class ChatViewModel {
     /// Total messages fetched from database (unfiltered, for accurate offset calculation)
     private var totalFetchedCount = 0
 
+    /// Message ID that should show the "New Messages" divider above it
+    private(set) var newMessagesDividerMessageID: UUID?
+
+    /// Whether the divider position has been computed for the current conversation
+    private var dividerComputed = false
+
+    /// Minimum unread count before showing the "New Messages" divider
+    private let newMessagesDividerMinUnreadCount = 10
+
     // MARK: - Dependencies
 
     private var dataStore: DataStore?
@@ -177,8 +193,12 @@ final class ChatViewModel {
     private var notificationService: NotificationService?
     private var channelService: ChannelService?
     private var roomServerService: RoomServerService?
+    private var contactService: ContactService?
     private var syncCoordinator: SyncCoordinator?
     private weak var appState: AppState?
+
+    /// Contact ID currently having its favorite status toggled (for loading UI)
+    var togglingFavoriteID: UUID?
 
     // MARK: - Initialization
 
@@ -192,6 +212,7 @@ final class ChatViewModel {
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
         self.roomServerService = appState.services?.roomServerService
+        self.contactService = appState.services?.contactService
         self.syncCoordinator = appState.syncCoordinator
         self.linkPreviewCache = linkPreviewCache
     }
@@ -204,6 +225,7 @@ final class ChatViewModel {
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
         self.roomServerService = appState.services?.roomServerService
+        self.contactService = appState.services?.contactService
         self.syncCoordinator = appState.syncCoordinator
     }
 
@@ -214,37 +236,42 @@ final class ChatViewModel {
         self.linkPreviewCache = linkPreviewCache
     }
 
-    // MARK: - Mute
+    // MARK: - Notification Level
 
-    /// Toggles mute state for a conversation with optimistic UI update
-    func toggleMute(_ conversation: Conversation) async {
+    /// Sets notification level for a conversation with optimistic UI update
+    func setNotificationLevel(_ conversation: Conversation, level: NotificationLevel) async {
         guard appState?.connectionState == .ready else { return }
-        let originalState = conversation.isMuted
-        let newState = !originalState
+        let originalLevel = conversation.notificationLevel
 
         // Optimistic UI update
-        updateConversationMuteState(conversation, isMuted: newState)
+        updateConversationNotificationLevel(conversation, level: level)
 
         do {
             switch conversation {
             case .direct(let contact):
-                try await dataStore?.setContactMuted(contact.id, isMuted: newState)
+                // Contacts still use boolean muted
+                try await dataStore?.setContactMuted(contact.id, isMuted: level == .muted)
             case .channel(let channel):
-                try await dataStore?.setChannelMuted(channel.id, isMuted: newState)
+                try await dataStore?.setChannelNotificationLevel(channel.id, level: level)
             case .room(let session):
-                try await dataStore?.setSessionMuted(session.id, isMuted: newState)
+                try await dataStore?.setSessionNotificationLevel(session.id, level: level)
             }
-            // Update badge on success
             await notificationService?.updateBadgeCount()
         } catch {
             // Rollback on failure
-            updateConversationMuteState(conversation, isMuted: originalState)
-            logger.error("Failed to toggle mute: \(error)")
+            updateConversationNotificationLevel(conversation, level: originalLevel)
+            logger.error("Failed to set notification level: \(error)")
         }
     }
 
-    /// Updates the mute state in the local conversations array
-    private func updateConversationMuteState(_ conversation: Conversation, isMuted: Bool) {
+    /// Toggles between muted and all (for swipe action)
+    func toggleMute(_ conversation: Conversation) async {
+        let newLevel: NotificationLevel = conversation.isMuted ? .all : .muted
+        await setNotificationLevel(conversation, level: newLevel)
+    }
+
+    /// Updates the notification level in the local conversations array
+    private func updateConversationNotificationLevel(_ conversation: Conversation, level: NotificationLevel) {
         invalidateConversationCache()
         switch conversation {
         case .direct(let contact):
@@ -265,9 +292,8 @@ final class ChatViewModel {
                     lastModified: updated.lastModified,
                     nickname: updated.nickname,
                     isBlocked: updated.isBlocked,
-                    isMuted: isMuted,
+                    isMuted: level == .muted,
                     isFavorite: updated.isFavorite,
-                    isDiscovered: updated.isDiscovered,
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     ocvPreset: updated.ocvPreset,
@@ -287,7 +313,7 @@ final class ChatViewModel {
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     unreadMentionCount: updated.unreadMentionCount,
-                    isMuted: isMuted,
+                    notificationLevel: level,
                     isFavorite: updated.isFavorite
                 )
             }
@@ -309,11 +335,12 @@ final class ChatViewModel {
                     lastUptimeSeconds: updated.lastUptimeSeconds,
                     lastNoiseFloor: updated.lastNoiseFloor,
                     unreadCount: updated.unreadCount,
-                    isMuted: isMuted,
+                    notificationLevel: level,
                     isFavorite: updated.isFavorite,
                     lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
                     neighborCount: updated.neighborCount,
-                    lastSyncTimestamp: updated.lastSyncTimestamp
+                    lastSyncTimestamp: updated.lastSyncTimestamp,
+                    lastMessageDate: updated.lastMessageDate
                 )
             }
         }
@@ -321,7 +348,21 @@ final class ChatViewModel {
 
     // MARK: - Favorite
 
-    /// Toggles favorite state for a conversation with optimistic UI update
+    /// Sets favorite state for a conversation with optimistic UI update
+    func setFavorite(_ conversation: Conversation, isFavorite: Bool) async {
+        guard appState?.connectionState == .ready else { return }
+        guard conversation.isFavorite != isFavorite else { return }
+
+        // Reuse existing toggle logic
+        await toggleFavorite(conversation)
+    }
+
+    /// Toggles favorite state for a conversation.
+    ///
+    /// For direct messages (contacts), this pushes the change to the device and waits
+    /// for confirmation before updating the UI. For channels and rooms (app-only),
+    /// this uses optimistic updates.
+    ///
     /// - Parameters:
     ///   - conversation: The conversation to toggle
     ///   - disableAnimation: When true, disables SwiftUI List animations to prevent
@@ -331,38 +372,83 @@ final class ChatViewModel {
         let originalState = conversation.isFavorite
         let newState = !originalState
 
-        // Optimistic UI update
-        if disableAnimation {
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                updateConversationFavoriteState(conversation, isFavorite: newState)
-            }
-        } else {
-            updateConversationFavoriteState(conversation, isFavorite: newState)
-        }
+        switch conversation {
+        case .direct(let contact):
+            // Contacts sync with device - wait for confirmation
+            togglingFavoriteID = contact.id
+            defer { togglingFavoriteID = nil }
 
-        do {
-            switch conversation {
-            case .direct(let contact):
-                try await dataStore?.setContactFavorite(contact.id, isFavorite: newState)
-            case .channel(let channel):
-                try await dataStore?.setChannelFavorite(channel.id, isFavorite: newState)
-            case .room(let session):
-                try await dataStore?.setSessionFavorite(session.id, isFavorite: newState)
+            do {
+                try await contactService?.setContactFavorite(contact.id, isFavorite: newState)
+                // Device confirmed - update local UI
+                if disableAnimation {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        updateConversationFavoriteState(conversation, isFavorite: newState)
+                    }
+                } else {
+                    updateConversationFavoriteState(conversation, isFavorite: newState)
+                }
+            } catch {
+                logger.error("Failed to toggle contact favorite: \(error)")
             }
-        } catch {
-            // Rollback on failure
+
+        case .channel(let channel):
+            // Channels are app-only - optimistic update
             if disableAnimation {
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
-                    updateConversationFavoriteState(conversation, isFavorite: originalState)
+                    updateConversationFavoriteState(conversation, isFavorite: newState)
                 }
             } else {
-                updateConversationFavoriteState(conversation, isFavorite: originalState)
+                updateConversationFavoriteState(conversation, isFavorite: newState)
             }
-            logger.error("Failed to toggle favorite: \(error)")
+
+            do {
+                try await dataStore?.setChannelFavorite(channel.id, isFavorite: newState)
+            } catch {
+                // Rollback on failure
+                if disableAnimation {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        updateConversationFavoriteState(conversation, isFavorite: originalState)
+                    }
+                } else {
+                    updateConversationFavoriteState(conversation, isFavorite: originalState)
+                }
+                logger.error("Failed to toggle channel favorite: \(error)")
+            }
+
+        case .room(let session):
+            // Rooms are app-only - optimistic update
+            if disableAnimation {
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    updateConversationFavoriteState(conversation, isFavorite: newState)
+                }
+            } else {
+                updateConversationFavoriteState(conversation, isFavorite: newState)
+            }
+
+            do {
+                try await dataStore?.setSessionFavorite(session.id, isFavorite: newState)
+            } catch {
+                // Rollback on failure
+                if disableAnimation {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        updateConversationFavoriteState(conversation, isFavorite: originalState)
+                    }
+                } else {
+                    updateConversationFavoriteState(conversation, isFavorite: originalState)
+                }
+                logger.error("Failed to toggle room favorite: \(error)")
+            }
         }
     }
 
@@ -390,7 +476,6 @@ final class ChatViewModel {
                     isBlocked: updated.isBlocked,
                     isMuted: updated.isMuted,
                     isFavorite: isFavorite,
-                    isDiscovered: updated.isDiscovered,
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     ocvPreset: updated.ocvPreset,
@@ -410,7 +495,7 @@ final class ChatViewModel {
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     unreadMentionCount: updated.unreadMentionCount,
-                    isMuted: updated.isMuted,
+                    notificationLevel: updated.notificationLevel,
                     isFavorite: isFavorite
                 )
             }
@@ -432,11 +517,12 @@ final class ChatViewModel {
                     lastUptimeSeconds: updated.lastUptimeSeconds,
                     lastNoiseFloor: updated.lastNoiseFloor,
                     unreadCount: updated.unreadCount,
-                    isMuted: updated.isMuted,
+                    notificationLevel: updated.notificationLevel,
                     isFavorite: isFavorite,
                     lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
                     neighborCount: updated.neighborCount,
-                    lastSyncTimestamp: updated.lastSyncTimestamp
+                    lastSyncTimestamp: updated.lastSyncTimestamp,
+                    lastMessageDate: updated.lastMessageDate
                 )
             }
         }
@@ -501,10 +587,11 @@ final class ChatViewModel {
 
     /// Load room sessions for a device
     func loadRoomSessions(deviceID: UUID) async {
-        guard let roomServerService else { return }
+        guard let dataStore else { return }
 
         do {
-            roomSessions = try await roomServerService.fetchRoomSessions(deviceID: deviceID)
+            let sessions = try await dataStore.fetchRemoteNodeSessions(deviceID: deviceID)
+            roomSessions = sessions.filter { $0.isRoom }
             invalidateConversationCache()
         } catch {
             // Silently handle - rooms are optional
@@ -528,6 +615,8 @@ final class ChatViewModel {
         // Clear preview state only when switching to a different conversation
         if currentContact?.id != contact.id {
             clearPreviewState()
+            newMessagesDividerMessageID = nil
+            dividerComputed = false
         }
 
         currentContact = contact
@@ -545,10 +634,65 @@ final class ChatViewModel {
         totalFetchedCount = 0
 
         do {
-            messages = try await dataStore.fetchMessages(contactID: contact.id, limit: pageSize, offset: 0)
-            totalFetchedCount = messages.count
-            hasMoreMessages = messages.count == pageSize
+            var fetchedMessages = try await dataStore.fetchMessages(contactID: contact.id, limit: pageSize, offset: 0)
+            let unfilteredCount = fetchedMessages.count
+            totalFetchedCount = unfilteredCount
+
+            // Hide sent reaction messages (unless failed)
+            fetchedMessages = filterOutgoingReactionMessages(fetchedMessages, isDM: true)
+
+            messages = fetchedMessages
+            hasMoreMessages = unfilteredCount == pageSize
+
+            // Compute divider position from unread count before it gets cleared
+            if !dividerComputed && contact.unreadCount > newMessagesDividerMinUnreadCount {
+                let dividerIndex = fetchedMessages.count - contact.unreadCount
+                if dividerIndex > 0 && dividerIndex < fetchedMessages.count {
+                    newMessagesDividerMessageID = fetchedMessages[dividerIndex].id
+                }
+                dividerComputed = true
+            }
+
             await buildDisplayItems()
+
+            // Index loaded messages for reaction matching and process any pending reactions
+            if let reactionService = appState?.services?.reactionService {
+                for message in fetchedMessages {
+                    let pendingMatches = await reactionService.indexDMMessage(
+                        id: message.id,
+                        contactID: contact.id,
+                        text: message.text,
+                        timestamp: message.reactionTimestamp
+                    )
+
+                    // Process any pending reactions that now have their target
+                    for pending in pendingMatches {
+                        let exists = try? await dataStore.reactionExists(
+                            messageID: message.id,
+                            senderName: pending.senderName,
+                            emoji: pending.parsed.emoji
+                        )
+
+                        if exists != true {
+                            let reactionDTO = ReactionDTO(
+                                messageID: message.id,
+                                emoji: pending.parsed.emoji,
+                                senderName: pending.senderName,
+                                messageHash: pending.parsed.messageHash,
+                                rawText: pending.rawText,
+                                contactID: contact.id,
+                                deviceID: contact.deviceID
+                            )
+                            if let result = await reactionService.persistReactionAndUpdateSummary(
+                                reactionDTO,
+                                using: dataStore
+                            ) {
+                                updateReactionSummary(for: result.messageID, summary: result.summary)
+                            }
+                        }
+                    }
+                }
+            }
 
             // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearUnreadCount(contactID: contact.id)
@@ -581,12 +725,16 @@ final class ChatViewModel {
             showTimestamp: flags.showTimestamp,
             showDirectionGap: flags.showDirectionGap,
             showSenderName: flags.showSenderName,
+            showNewMessagesDivider: false,
             detectedURL: nil,  // URL detection deferred to avoid main thread blocking
             isOutgoing: message.isOutgoing,
             status: message.status,
             containsSelfMention: message.containsSelfMention,
             mentionSeen: message.mentionSeen,
             heardRepeats: message.heardRepeats,
+            retryAttempt: message.retryAttempt,
+            maxRetryAttempts: message.maxRetryAttempts,
+            reactionSummary: message.reactionSummary,
             previewState: .idle,
             loadedPreview: nil
         )
@@ -622,12 +770,16 @@ final class ChatViewModel {
             showTimestamp: item.showTimestamp,
             showDirectionGap: item.showDirectionGap,
             showSenderName: item.showSenderName,
+            showNewMessagesDivider: item.showNewMessagesDivider,
             detectedURL: detectedURL,
             isOutgoing: item.isOutgoing,
             status: item.status,
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
             heardRepeats: item.heardRepeats,
+            retryAttempt: item.retryAttempt,
+            maxRetryAttempts: item.maxRetryAttempts,
+            reactionSummary: item.reactionSummary,
             previewState: previewStates[messageID] ?? .idle,
             loadedPreview: loadedPreviews[messageID]
         )
@@ -693,6 +845,8 @@ final class ChatViewModel {
         // Clear preview state only when switching to a different conversation
         if currentChannel?.id != channel.id {
             clearPreviewState()
+            newMessagesDividerMessageID = nil
+            dividerComputed = false
         }
 
         currentChannel = channel
@@ -739,11 +893,74 @@ final class ChatViewModel {
                 }
             }
 
+            // Hide sent reaction messages (unless failed)
+            fetchedMessages = filterOutgoingReactionMessages(fetchedMessages, isDM: false)
+
             // Use unfiltered count to determine if more messages exist
             hasMoreMessages = unfilteredCount == pageSize
             messages = fetchedMessages
+
+            // Compute divider position from unread count before it gets cleared
+            if !dividerComputed && channel.unreadCount > newMessagesDividerMinUnreadCount {
+                let dividerIndex = fetchedMessages.count - channel.unreadCount
+                if dividerIndex > 0 && dividerIndex < fetchedMessages.count {
+                    newMessagesDividerMessageID = fetchedMessages[dividerIndex].id
+                }
+                dividerComputed = true
+            }
+
             buildChannelSenders(deviceID: channel.deviceID)
             await buildDisplayItems()
+
+            // Index loaded messages for reaction matching and process any pending reactions
+            if let reactionService = appState?.services?.reactionService {
+                let localNodeName = appState?.connectedDevice?.nodeName
+                let deviceID = appState?.connectedDevice?.id ?? UUID()
+                for message in fetchedMessages {
+                    let senderName: String?
+                    if message.isOutgoing {
+                        senderName = localNodeName
+                    } else {
+                        senderName = message.senderNodeName
+                    }
+                    if let senderName {
+                        let pendingMatches = await reactionService.indexMessage(
+                            id: message.id,
+                            channelIndex: channel.index,
+                            senderName: senderName,
+                            text: message.text,
+                            timestamp: message.timestamp
+                        )
+
+                        // Process any pending reactions that now have their target
+                        for pending in pendingMatches {
+                            let exists = try? await dataStore.reactionExists(
+                                messageID: message.id,
+                                senderName: pending.senderNodeName,
+                                emoji: pending.parsed.emoji
+                            )
+
+                            if exists != true {
+                                let reactionDTO = ReactionDTO(
+                                    messageID: message.id,
+                                    emoji: pending.parsed.emoji,
+                                    senderName: pending.senderNodeName,
+                                    messageHash: pending.parsed.messageHash,
+                                    rawText: pending.rawText,
+                                    channelIndex: pending.channelIndex,
+                                    deviceID: deviceID
+                                )
+                                if let result = await reactionService.persistReactionAndUpdateSummary(
+                                    reactionDTO,
+                                    using: dataStore
+                                ) {
+                                    updateReactionSummary(for: result.messageID, summary: result.summary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
@@ -808,6 +1025,15 @@ final class ChatViewModel {
                 }
             }
 
+            // Hide sent reaction messages (unless failed)
+            let isDM = currentContact != nil
+            olderMessages = filterOutgoingReactionMessages(olderMessages, isDM: isDM)
+
+            // Filter out messages already in array (race condition: appendMessageIfNew can add
+            // a message while this fetch is in-flight, causing duplicates)
+            let existingIDs = Set(messages.map(\.id))
+            olderMessages = olderMessages.filter { !existingIDs.contains($0.id) }
+
             // Prepend older messages (they're chronologically earlier)
             messages.insert(contentsOf: olderMessages, at: 0)
 
@@ -818,6 +1044,97 @@ final class ChatViewModel {
 
             // Rebuild display items with new messages
             await buildDisplayItems()
+
+            // Index older channel messages for reaction matching and process pending reactions
+            if let channel = currentChannel,
+               let reactionService = appState?.services?.reactionService {
+                let localNodeName = appState?.connectedDevice?.nodeName
+                let deviceID = appState?.connectedDevice?.id ?? UUID()
+                for message in olderMessages {
+                    let senderName: String?
+                    if message.isOutgoing {
+                        senderName = localNodeName
+                    } else {
+                        senderName = message.senderNodeName
+                    }
+                    if let senderName {
+                        let pendingMatches = await reactionService.indexMessage(
+                            id: message.id,
+                            channelIndex: channel.index,
+                            senderName: senderName,
+                            text: message.text,
+                            timestamp: message.timestamp
+                        )
+
+                        // Process any pending reactions that now have their target
+                        for pending in pendingMatches {
+                            let exists = try? await dataStore.reactionExists(
+                                messageID: message.id,
+                                senderName: pending.senderNodeName,
+                                emoji: pending.parsed.emoji
+                            )
+
+                            if exists != true {
+                                let reactionDTO = ReactionDTO(
+                                    messageID: message.id,
+                                    emoji: pending.parsed.emoji,
+                                    senderName: pending.senderNodeName,
+                                    messageHash: pending.parsed.messageHash,
+                                    rawText: pending.rawText,
+                                    channelIndex: pending.channelIndex,
+                                    deviceID: deviceID
+                                )
+                                if let result = await reactionService.persistReactionAndUpdateSummary(
+                                    reactionDTO,
+                                    using: dataStore
+                                ) {
+                                    updateReactionSummary(for: result.messageID, summary: result.summary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Index older DM messages for reaction matching and process pending reactions
+            if let contact = currentContact,
+               let reactionService = appState?.services?.reactionService {
+                for message in olderMessages {
+                    let pendingMatches = await reactionService.indexDMMessage(
+                        id: message.id,
+                        contactID: contact.id,
+                        text: message.text,
+                        timestamp: message.reactionTimestamp
+                    )
+
+                    // Process any pending reactions that now have their target
+                    for pending in pendingMatches {
+                        let exists = try? await dataStore.reactionExists(
+                            messageID: message.id,
+                            senderName: pending.senderName,
+                            emoji: pending.parsed.emoji
+                        )
+
+                        if exists != true {
+                            let reactionDTO = ReactionDTO(
+                                messageID: message.id,
+                                emoji: pending.parsed.emoji,
+                                senderName: pending.senderName,
+                                messageHash: pending.parsed.messageHash,
+                                rawText: pending.rawText,
+                                contactID: contact.id,
+                                deviceID: contact.deviceID
+                            )
+                            if let result = await reactionService.persistReactionAndUpdateSummary(
+                                reactionDTO,
+                                using: dataStore
+                            ) {
+                                updateReactionSummary(for: result.messageID, summary: result.summary)
+                            }
+                        }
+                    }
+                }
+            }
 
         } catch {
             errorMessage = L10n.Chats.Chats.Errors.loadOlderMessagesFailed
@@ -838,11 +1155,24 @@ final class ChatViewModel {
         errorMessage = nil
 
         do {
-            _ = try await messageService.sendChannelMessage(
+            let (messageID, timestamp) = try await messageService.sendChannelMessage(
                 text: text,
                 channelIndex: channel.index,
                 deviceID: channel.deviceID
             )
+
+            // Index immediately for reaction matching (before reload to avoid race)
+            // Pending reactions handled by loadChannelMessages below
+            if let reactionService = appState?.services?.reactionService,
+               let localNodeName = appState?.connectedDevice?.nodeName {
+                _ = await reactionService.indexMessage(
+                    id: messageID,
+                    channelIndex: channel.index,
+                    senderName: localNodeName,
+                    text: text,
+                    timestamp: timestamp
+                )
+            }
 
             // Reload messages to show the sent message
             await loadChannelMessages(for: channel)
@@ -853,6 +1183,194 @@ final class ChatViewModel {
             errorMessage = error.localizedDescription
             // Restore the text so user can retry
             composingText = text
+        }
+    }
+
+    /// Send a reaction emoji to a message (channel or DM)
+    func sendReaction(emoji: String, to message: MessageDTO) async {
+        guard let reactionService = appState?.services?.reactionService,
+              let messageService,
+              let dataStore else {
+            return
+        }
+
+        // Prevent duplicate sends from rapid taps
+        let reactionKey = "\(message.id)-\(emoji)"
+        guard !inFlightReactions.contains(reactionKey) else {
+            logger.debug("Reaction \(emoji) already in flight for message \(message.id), ignoring")
+            return
+        }
+        inFlightReactions.insert(reactionKey)
+        defer { inFlightReactions.remove(reactionKey) }
+
+        let localNodeName = appState?.connectedDevice?.nodeName ?? "Me"
+
+        // Check if user already reacted with this emoji
+        if let alreadyReacted = try? await dataStore.reactionExists(
+            messageID: message.id,
+            senderName: localNodeName,
+            emoji: emoji
+        ), alreadyReacted {
+            logger.debug("User already reacted with \(emoji), ignoring")
+            return
+        }
+
+        // Handle channel vs DM
+        if let channelIndex = message.channelIndex {
+            await sendChannelReaction(
+                emoji: emoji,
+                to: message,
+                channelIndex: channelIndex,
+                localNodeName: localNodeName
+            )
+        } else if let contactID = message.contactID {
+            await sendDMReaction(
+                emoji: emoji,
+                to: message,
+                contactID: contactID,
+                localNodeName: localNodeName
+            )
+        }
+    }
+
+    private func sendChannelReaction(
+        emoji: String,
+        to message: MessageDTO,
+        channelIndex: UInt8,
+        localNodeName: String
+    ) async {
+        guard let reactionService = appState?.services?.reactionService,
+              let messageService,
+              let dataStore else { return }
+
+        // Determine target sender name
+        let targetSenderName: String
+        if message.isOutgoing {
+            targetSenderName = localNodeName
+        } else {
+            guard let senderName = message.senderNodeName else { return }
+            targetSenderName = senderName
+        }
+
+        let reactionText = reactionService.buildReactionText(
+            emoji: emoji,
+            targetSender: targetSenderName,
+            targetText: message.text,
+            targetTimestamp: message.reactionTimestamp
+        )
+
+        do {
+            _ = try await messageService.sendChannelMessage(
+                text: reactionText,
+                channelIndex: channelIndex,
+                deviceID: message.deviceID
+            )
+
+            recentEmojisStore.recordUsage(emoji)
+
+            // Optimistic local update
+            let messageHash = ReactionParser.generateMessageHash(
+                text: message.text,
+                timestamp: message.reactionTimestamp
+            )
+            let reactionDTO = ReactionDTO(
+                messageID: message.id,
+                emoji: emoji,
+                senderName: localNodeName,
+                messageHash: messageHash,
+                rawText: reactionText,
+                channelIndex: channelIndex,
+                deviceID: message.deviceID
+            )
+            if let result = await reactionService.persistReactionAndUpdateSummary(
+                reactionDTO,
+                using: dataStore
+            ) {
+                updateReactionSummary(for: result.messageID, summary: result.summary)
+            }
+        } catch {
+            logger.error("Failed to send channel reaction: \(error)")
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func sendDMReaction(
+        emoji: String,
+        to message: MessageDTO,
+        contactID: UUID,
+        localNodeName: String
+    ) async {
+        guard let reactionService = appState?.services?.reactionService,
+              let messageService,
+              let dataStore else { return }
+
+        // Fetch the contact for sending
+        guard let contact = try? await dataStore.fetchContact(id: contactID) else {
+            logger.error("Failed to fetch contact for DM reaction")
+            return
+        }
+
+        let reactionText = reactionService.buildDMReactionText(
+            emoji: emoji,
+            targetText: message.text,
+            targetTimestamp: message.reactionTimestamp
+        )
+        logger.debug("[DM-REACTION-SEND] Building reaction: timestamp=\(message.timestamp), senderTimestamp=\(message.senderTimestamp ?? 0), reactionTimestamp=\(message.reactionTimestamp), text=\(message.text.prefix(30))")
+
+        do {
+            // Send as DM to the contact
+            _ = try await messageService.sendDirectMessage(
+                text: reactionText,
+                to: contact
+            )
+
+            recentEmojisStore.recordUsage(emoji)
+
+            // Optimistic local update
+            let messageHash = ReactionParser.generateMessageHash(
+                text: message.text,
+                timestamp: message.reactionTimestamp
+            )
+            let reactionDTO = ReactionDTO(
+                messageID: message.id,
+                emoji: emoji,
+                senderName: localNodeName,
+                messageHash: messageHash,
+                rawText: reactionText,
+                contactID: contactID,
+                deviceID: message.deviceID
+            )
+            if let result = await reactionService.persistReactionAndUpdateSummary(
+                reactionDTO,
+                using: dataStore
+            ) {
+                updateReactionSummary(for: result.messageID, summary: result.summary)
+            }
+        } catch {
+            logger.error("Failed to send DM reaction: \(error)")
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - Reaction Filtering
+
+    /// Filter out outgoing reaction messages unless they failed to send.
+    /// Reaction messages are hidden from the UI to avoid clutter since they're displayed as badges.
+    /// - Parameters:
+    ///   - messages: The messages to filter
+    ///   - isDM: Whether these are DM messages (uses parseDM) or channel messages (uses parse)
+    /// - Returns: Filtered messages with successful outgoing reactions removed
+    private func filterOutgoingReactionMessages(_ messages: [MessageDTO], isDM: Bool) -> [MessageDTO] {
+        messages.filter { message in
+            guard message.direction == .outgoing else { return true }
+
+            let isReaction = isDM
+                ? ReactionParser.parseDM(message.text) != nil
+                : ReactionParser.parse(message.text) != nil
+
+            guard isReaction else { return true }
+
+            return message.status == .failed
         }
     }
 
@@ -917,7 +1435,6 @@ final class ChatViewModel {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -939,8 +1456,19 @@ final class ChatViewModel {
         // Load contact message previews
         for contact in conversations {
             do {
-                let messages = try await dataStore.fetchMessages(contactID: contact.id, limit: 1)
-                if let lastMessage = messages.last {
+                // Fetch extra messages in case recent ones are reactions
+                let messages = try await dataStore.fetchMessages(contactID: contact.id, limit: 10)
+
+                // Find the last non-reaction message (skip outgoing reactions unless failed)
+                let lastMessage = messages.last { message in
+                    guard message.direction == .outgoing,
+                          ReactionParser.parseDM(message.text) != nil else {
+                        return true
+                    }
+                    return message.status == .failed
+                }
+
+                if let lastMessage {
                     lastMessageCache[contact.id] = lastMessage
                 }
             } catch {
@@ -966,19 +1494,27 @@ final class ChatViewModel {
                     // Fetch extra messages in case recent ones are from blocked senders
                     let messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index, limit: 20)
 
-                    // Filter out messages from blocked senders and get the last valid one
-                    let lastMessage: MessageDTO?
-                    if blockedNames.isEmpty {
-                        lastMessage = messages.last
-                    } else {
-                        lastMessage = messages.last { message in
-                            guard let senderName = message.senderNodeName else { return true }
-                            return !blockedNames.contains(senderName)
+                    // Filter out messages from blocked senders and outgoing reactions
+                    let lastMessage = messages.last { message in
+                        // Skip blocked senders
+                        if !blockedNames.isEmpty,
+                           let senderName = message.senderNodeName,
+                           blockedNames.contains(senderName) {
+                            return false
                         }
+                        // Skip outgoing reactions (unless failed)
+                        if message.direction == .outgoing,
+                           ReactionParser.parse(message.text) != nil,
+                           message.status != .failed {
+                            return false
+                        }
+                        return true
                     }
 
                     if let lastMessage {
                         lastMessageCache[channel.id] = lastMessage
+                    } else {
+                        lastMessageCache.removeValue(forKey: channel.id)
                     }
                 } catch {
                     // Silently ignore errors for preview loading
@@ -1012,6 +1548,10 @@ final class ChatViewModel {
         logger.info("retryMessage: starting retry for contact \(contact.displayName)")
 
         errorMessage = nil
+
+        // Update status to pending and reload immediately for instant "Sending" feedback
+        try? await dataStore?.updateMessageStatus(id: message.id, status: .pending)
+        await loadMessages(for: contact)
 
         do {
             // Retry the existing message (preserves message identity)
@@ -1276,12 +1816,16 @@ final class ChatViewModel {
                 showTimestamp: flags.showTimestamp,
                 showDirectionGap: flags.showDirectionGap,
                 showSenderName: flags.showSenderName,
+                showNewMessagesDivider: message.id == newMessagesDividerMessageID,
                 detectedURL: urls[index],
                 isOutgoing: message.isOutgoing,
                 status: message.status,
                 containsSelfMention: message.containsSelfMention,
                 mentionSeen: message.mentionSeen,
                 heardRepeats: message.heardRepeats,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts,
+                reactionSummary: message.reactionSummary,
                 previewState: previewStates[message.id] ?? .idle,
                 loadedPreview: loadedPreviews[message.id]
             )
@@ -1398,22 +1942,76 @@ final class ChatViewModel {
         rebuildDisplayItem(for: messageID)
     }
 
+    /// Update reaction summary for a specific message inline (O(1) update)
+    func updateReactionSummary(for messageID: UUID, summary: String) {
+        guard let index = messages.firstIndex(where: { $0.id == messageID }),
+              let existing = messagesByID[messageID] else {
+            return
+        }
+
+        // Create updated MessageDTO with new reaction summary
+        let updated = MessageDTO(
+            id: existing.id,
+            deviceID: existing.deviceID,
+            contactID: existing.contactID,
+            channelIndex: existing.channelIndex,
+            text: existing.text,
+            timestamp: existing.timestamp,
+            createdAt: existing.createdAt,
+            direction: existing.direction,
+            status: existing.status,
+            textType: existing.textType,
+            ackCode: existing.ackCode,
+            pathLength: existing.pathLength,
+            snr: existing.snr,
+            pathNodes: existing.pathNodes,
+            senderKeyPrefix: existing.senderKeyPrefix,
+            senderNodeName: existing.senderNodeName,
+            isRead: existing.isRead,
+            replyToID: existing.replyToID,
+            roundTripTime: existing.roundTripTime,
+            heardRepeats: existing.heardRepeats,
+            sendCount: existing.sendCount,
+            retryAttempt: existing.retryAttempt,
+            maxRetryAttempts: existing.maxRetryAttempts,
+            deduplicationKey: existing.deduplicationKey,
+            linkPreviewURL: existing.linkPreviewURL,
+            linkPreviewTitle: existing.linkPreviewTitle,
+            linkPreviewImageData: existing.linkPreviewImageData,
+            linkPreviewIconData: existing.linkPreviewIconData,
+            linkPreviewFetched: existing.linkPreviewFetched,
+            containsSelfMention: existing.containsSelfMention,
+            mentionSeen: existing.mentionSeen,
+            timestampCorrected: existing.timestampCorrected,
+            reactionSummary: summary
+        )
+
+        messages[index] = updated
+        messagesByID[messageID] = updated
+        rebuildDisplayItem(for: messageID)
+    }
+
     /// Rebuild a single display item with current preview state (O(1) lookup)
     private func rebuildDisplayItem(for messageID: UUID) {
         guard let index = displayItemIndexByID[messageID] else { return }
         let item = displayItems[index]
+        let message = messagesByID[messageID]
 
         displayItems[index] = MessageDisplayItem(
             messageID: item.messageID,
             showTimestamp: item.showTimestamp,
             showDirectionGap: item.showDirectionGap,
             showSenderName: item.showSenderName,
+            showNewMessagesDivider: item.showNewMessagesDivider,
             detectedURL: item.detectedURL,
             isOutgoing: item.isOutgoing,
             status: item.status,
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
             heardRepeats: item.heardRepeats,
+            retryAttempt: item.retryAttempt,
+            maxRetryAttempts: item.maxRetryAttempts,
+            reactionSummary: message?.reactionSummary,
             previewState: previewStates[messageID] ?? .idle,
             loadedPreview: loadedPreviews[messageID]
         )
@@ -1478,7 +2076,7 @@ final class ChatViewModel {
                 lastDeviceID = contact.deviceID
 
                 do {
-                    _ = try await messageService.sendExistingMessage(
+                    _ = try await messageService.retryDirectMessage(
                         messageID: queued.messageID,
                         to: contact
                     )
@@ -1495,5 +2093,18 @@ final class ChatViewModel {
                 await loadConversations(deviceID: deviceID)
             }
         } while !sendQueue.isEmpty
+    }
+}
+
+// MARK: - Environment Key
+
+private struct ChatViewModelKey: EnvironmentKey {
+    static let defaultValue: ChatViewModel? = nil
+}
+
+extension EnvironmentValues {
+    var chatViewModel: ChatViewModel? {
+        get { self[ChatViewModelKey.self] }
+        set { self[ChatViewModelKey.self] = newValue }
     }
 }

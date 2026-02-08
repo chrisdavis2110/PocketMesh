@@ -46,6 +46,17 @@ public enum BLEPhase: @unchecked Sendable {
         continuation: CheckedContinuation<Void, Error>
     )
 
+    /// Discovery chain complete, continuation consumed.
+    /// Transitional phase between notification subscription success and
+    /// `connect()` creating the data stream. Holds characteristics without
+    /// a continuation, preventing double-resume if `cancelCurrentOperation`
+    /// runs before `connect()` transitions to `.connected`.
+    case discoveryComplete(
+        peripheral: CBPeripheral,
+        tx: CBCharacteristic,
+        rx: CBCharacteristic
+    )
+
     /// Fully connected and ready for communication
     case connected(
         peripheral: CBPeripheral,
@@ -61,6 +72,10 @@ public enum BLEPhase: @unchecked Sendable {
         tx: CBCharacteristic?,
         rx: CBCharacteristic?
     )
+
+    /// iOS state restoration received, waiting for Bluetooth power state.
+    /// Transitions to .autoReconnecting when Bluetooth powers on.
+    case restoringState(peripheral: CBPeripheral)
 
     /// Intentionally disconnecting
     case disconnecting(
@@ -78,9 +93,23 @@ public enum BLEPhase: @unchecked Sendable {
         case .discoveringServices: "discoveringServices"
         case .discoveringCharacteristics: "discoveringCharacteristics"
         case .subscribingToNotifications: "subscribingToNotifications"
+        case .discoveryComplete: "discoveryComplete"
         case .connected: "connected"
         case .autoReconnecting: "autoReconnecting"
+        case .restoringState: "restoringState"
         case .disconnecting: "disconnecting"
+        }
+    }
+
+    /// Whether this phase is part of the service/characteristic discovery chain.
+    /// Used by `cleanupPhaseResources` to preserve the discovery timeout when
+    /// transitioning within the chain.
+    public var isDiscoveryChain: Bool {
+        switch self {
+        case .discoveringServices, .discoveringCharacteristics, .subscribingToNotifications:
+            return true
+        default:
+            return false
         }
     }
 
@@ -97,8 +126,10 @@ public enum BLEPhase: @unchecked Sendable {
              .discoveringServices(let p, _),
              .discoveringCharacteristics(let p, _, _),
              .subscribingToNotifications(let p, _, _, _),
+             .discoveryComplete(let p, _, _),
              .connected(let p, _, _, _),
              .autoReconnecting(let p, _, _),
+             .restoringState(let p),
              .disconnecting(let p):
             return p
         case .idle, .waitingForBluetooth:

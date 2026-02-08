@@ -213,6 +213,21 @@
 /* Description for empty state */
 "trustedContacts.noContactsDescription" = "Додайте контакти, щоб вибрати довірених";
 
+/* Title for empty state when search returns no results */
+"trustedContacts.noResults" = "Немає результатів";
+
+/* Description for empty state when search returns no results */
+"trustedContacts.noResultsDescription" = "Жоден контакт не відповідає \"%@\"";
+
+/* Search prompt for trusted contacts list */
+"trustedContacts.searchPrompt" = "Пошук контактів";
+
+/* Toggle label for showing only favorite contacts */
+"trustedContacts.favoritesOnly" = "Лише обрані";
+
+/* Apply button label */
+"trustedContacts.apply" = "Застосувати";
+
 
 // MARK: - About Section
 
@@ -359,6 +374,54 @@
 
 /* Description for auto-add nodes toggle */
 "contacts.autoAddDescription" = "Автоматично додавати вузли з отриманих оголошень";
+
+
+// MARK: - Nodes Settings Section
+
+/* Section header for nodes settings */
+"nodes.header" = "Nodes";
+
+/* Label for auto-add mode picker */
+"nodes.autoAddMode" = "Auto-Add Mode";
+
+/* Auto-add mode: manual */
+"nodes.autoAddMode.manual" = "Manual";
+
+/* Auto-add mode: manual description */
+"nodes.autoAddMode.manualDescription" = "Review all nodes in Discover before adding";
+
+/* Auto-add mode: selected types */
+"nodes.autoAddMode.selectedTypes" = "Selected Types";
+
+/* Auto-add mode: selected types description */
+"nodes.autoAddMode.selectedTypesDescription" = "Auto-add only the types enabled below";
+
+/* Auto-add mode: all */
+"nodes.autoAddMode.all" = "All";
+
+/* Auto-add mode: all description */
+"nodes.autoAddMode.allDescription" = "Auto-add every discovered node";
+
+/* Section header for auto-add types */
+"nodes.autoAddTypes.header" = "Auto-Add Types";
+
+/* Toggle label for auto-add contacts */
+"nodes.autoAddContacts" = "Contacts";
+
+/* Toggle label for auto-add repeaters */
+"nodes.autoAddRepeaters" = "Repeaters";
+
+/* Toggle label for auto-add room servers */
+"nodes.autoAddRoomServers" = "Room Servers";
+
+/* Section header for storage settings */
+"nodes.storage.header" = "Storage";
+
+/* Toggle label for overwrite oldest */
+"nodes.overwriteOldest" = "Overwrite Oldest";
+
+/* Description for overwrite oldest toggle */
+"nodes.overwriteOldestDescription" = "When storage is full, replace the oldest non-favorite node";
 
 
 // MARK: - Danger Zone Section
@@ -630,6 +693,9 @@
 /* Alert message when max retries exceeded */
 "alert.retry.ensureConnected" = "Будь ласка, переконайтеся, що ваш пристрій підключено.";
 
+/* Fallback message for retry alerts when error description is unavailable */
+"alert.retry.fallbackMessage" = "Переконайтеся, що пристрій підключено, і спробуйте знову.";
+
 
 // MARK: - Battery Curve Chart
 
@@ -698,3 +764,24 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Поширює оголошення по всій мережі mesh";
+
+
+// MARK: - Location Settings Section
+
+/* Section header for location settings */
+"location.header" = "Місцезнаходження";
+
+/* Footer for location settings section */
+"location.footer" = "Коли автооновлення увімкнено, місцезнаходження пристрою оновлюється під час надсилання оголошень. Це не надсилає ваше місцезнаходження через mesh-мережу, якщо не увімкнено опцію «Ділитися місцезнаходженням публічно».";
+
+/* Toggle label for auto-update location */
+"location.autoUpdate" = "Автооновлення місцезнаходження";
+
+/* Label for GPS source picker */
+"location.gpsSource" = "Джерело GPS";
+
+/* GPS source option: phone GPS */
+"location.gpsSource.phone" = "GPS телефону";
+
+/* GPS source option: device GPS */
+"location.gpsSource.device" = "GPS пристрою";

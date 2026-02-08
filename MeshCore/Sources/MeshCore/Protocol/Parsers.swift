@@ -41,6 +41,8 @@ enum PacketSize {
     static let packetStatsMinimum = 24
     /// Minimum size for channel configuration info.
     static let channelInfoMinimum = 49
+    /// Size of the public key in contact deleted notifications.
+    static let contactDeletedPublicKey = 32
     /// Minimum size for status response push notification.
     /// Format: `reserved(1) + pubkey(6) + fields(51) = 58 bytes`
     static let statusResponseMinimum = 58
@@ -75,7 +77,7 @@ private let parserLogger = Logger(subsystem: "MeshCore", category: "Parsers")
 /// This enum contains specialized parsers for various mesh protocol data structures.
 /// Each sub-parser is responsible for validating the input data size and correctly
 /// interpreting multi-byte fields (mostly little-endian).
-enum Parsers {
+public enum Parsers {
 
     // MARK: - Contact Parsing Helper
 
@@ -482,6 +484,33 @@ enum Parsers {
             }
             let publicKey = Data(data.prefix(32))
             return .pathUpdate(publicKey: publicKey)
+        }
+    }
+
+    // MARK: - ContactDeleted
+
+    /// Parser for contact deletion notifications.
+    enum ContactDeleted {
+        /// Parses a contact deletion notification containing the 32-byte public key.
+        static func parse(_ data: Data) -> MeshEvent {
+            guard data.count >= PacketSize.contactDeletedPublicKey else {
+                return .parseFailure(
+                    data: data,
+                    reason: "ContactDeleted too short: \(data.count) < \(PacketSize.contactDeletedPublicKey)"
+                )
+            }
+            let publicKey = Data(data.prefix(PacketSize.contactDeletedPublicKey))
+            return .contactDeleted(publicKey: publicKey)
+        }
+    }
+
+    // MARK: - ContactsFull
+
+    /// Parser for contacts full notifications.
+    enum ContactsFull {
+        /// Parses a contacts full notification (no payload required).
+        static func parse(_ data: Data) -> MeshEvent {
+            return .contactsFull
         }
     }
 
@@ -940,7 +969,7 @@ enum Parsers {
             // Find first null byte - firmware uses strcpy which leaves garbage after the null
             let nullIndex = nameData.firstIndex(of: 0) ?? nameData.endIndex
             let validNameData = nameData[nameData.startIndex..<nullIndex]
-            let name = String(data: validNameData, encoding: .utf8) ?? ""
+            let name = String(decoding: validNameData, as: UTF8.self)
 
             let secret = Data(data[33..<49])
 
@@ -983,7 +1012,7 @@ enum Parsers {
     // MARK: - TraceData
 
     /// Parser for full trace route results.
-    enum TraceData {
+    public enum TraceData {
         /// Parses trace route data.
         ///
         /// ### Binary Format

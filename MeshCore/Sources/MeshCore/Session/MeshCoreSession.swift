@@ -889,6 +889,32 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         return try await requestStatus(from: publicKey)
     }
 
+    // MARK: - Keep-Alive
+
+    /// Sends a keep-alive request to a room server with the client's sync watermark.
+    ///
+    /// The companion radio passes the payload through to the mesh layer, producing:
+    /// `[tag(4)][REQ_TYPE_KEEP_ALIVE(1)][sync_since(4)]` — 9 bytes total.
+    ///
+    /// The room server uses `sync_since` as a force-resync hint to update the client's
+    /// message watermark. The normal push-and-ACK cycle also advances `sync_since`
+    /// independently, so this serves as a correction mechanism.
+    ///
+    /// - Parameters:
+    ///   - publicKey: The full 32-byte public key of the room server.
+    ///   - syncSince: The client's last-received message timestamp (little-endian on wire).
+    /// - Returns: Information about the sent message.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    public func sendKeepAlive(to publicKey: Data, syncSince: UInt32) async throws -> MessageSentInfo {
+        var syncSinceLE = syncSince.littleEndian
+        let payload = withUnsafeBytes(of: &syncSinceLE) { Data($0) }
+        let data = PacketBuilder.binaryRequest(to: publicKey, type: .keepAlive, payload: payload)
+        return try await sendAndWait(data) { event in
+            if case .messageSent(let info) = event { return info }
+            return nil
+        }
+    }
+
     // MARK: - Device Configuration Commands
 
     /// Gets the current device time.
@@ -1073,6 +1099,29 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         var config = try await currentOtherParams()
         config.advertisementLocationPolicy = policy
         try await applyOtherParams(config)
+    }
+
+    /// Gets the current auto-add configuration from the device.
+    ///
+    /// - Returns: The auto-add config bitmask.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    public func getAutoAddConfig() async throws -> UInt8 {
+        try await sendAndWait(PacketBuilder.getAutoAddConfig()) { event in
+            if case .autoAddConfig(let config) = event { return config }
+            return nil
+        }
+    }
+
+    /// Sets the auto-add configuration on the device.
+    ///
+    /// - Parameter config: The bitmask (0x01=overwrite, 0x02=contacts, 0x04=repeaters, 0x08=rooms).
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
+    public func setAutoAddConfig(_ config: UInt8) async throws {
+        try await sendAndWaitWithError(PacketBuilder.setAutoAddConfig(config)) { event in
+            if case .ok = event { return () }
+            return nil
+        }
     }
 
     /// Returns the current device configuration from selfInfo.
@@ -2210,7 +2259,12 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Handles raw data received from the device.
+    ///
+    /// Per the MeshCore Companion Radio Protocol, each BLE notification is a complete frame.
+    /// No reassembly or buffering is needed - we parse each packet directly.
     private func handleReceivedData(_ data: Data) async {
+        guard !data.isEmpty else { return }
+
         var event = PacketParser.parse(data)
 
         if case .parseFailure(_, let reason) = event {

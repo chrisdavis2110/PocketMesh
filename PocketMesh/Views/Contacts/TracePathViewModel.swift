@@ -401,29 +401,21 @@ final class TracePathViewModel {
 
     // MARK: - Hash Resolution
 
-    /// Resolve a hash byte to contact name (single match only)
+    /// Resolve a hash byte to the best matching repeater name
     func resolveHashToName(_ hashByte: UInt8) -> String? {
-        let matches = allContacts.filter { $0.publicKey.first == hashByte }
-        return matches.count == 1 ? matches[0].displayName : nil
+        bestRepeaterMatch(for: hashByte)?.displayName
     }
 
-    /// Resolve a hash byte to contact location (single match only)
-    func resolveHashToLocation(_ hashByte: UInt8) -> (latitude: Double, longitude: Double)? {
-        let matches = allContacts.filter { $0.publicKey.first == hashByte }
+    private var currentUserLocation: CLLocation? {
+        appState?.locationService.currentLocation
+    }
 
-        guard matches.count == 1 else {
-            if matches.count > 1 {
-                logger.debug("Ambiguous hash 0x\(hashByte.hexString): \(matches.count) contacts match")
-            }
-            return nil
-        }
+    private func bestRepeaterMatch(for hop: PathHop) -> ContactDTO? {
+        RepeaterResolver.bestMatch(for: hop, in: availableRepeaters, userLocation: currentUserLocation)
+    }
 
-        let contact = matches[0]
-        guard contact.hasLocation else {
-            logger.debug("Contact \(contact.displayName) has no location set")
-            return nil
-        }
-        return (contact.latitude, contact.longitude)
+    private func bestRepeaterMatch(for hashByte: UInt8) -> ContactDTO? {
+        RepeaterResolver.bestMatch(for: hashByte, in: availableRepeaters, userLocation: currentUserLocation)
     }
 
     // MARK: - Data Loading
@@ -449,7 +441,7 @@ final class TracePathViewModel {
     func addRepeater(_ repeater: ContactDTO) {
         clearError()
         let hashByte = repeater.publicKey[0]
-        let hop = PathHop(hashByte: hashByte, resolvedName: repeater.displayName)
+        let hop = PathHop(hashByte: hashByte, publicKey: repeater.publicKey, resolvedName: repeater.displayName)
         outboundPath.append(hop)
         activeSavedPath = nil
         pendingPathHash = nil
@@ -485,9 +477,9 @@ final class TracePathViewModel {
                 continue
             }
 
-            // Find matching repeater
-            if let repeater = availableRepeaters.first(where: { $0.publicKey.first == byte }) {
-                let hop = PathHop(hashByte: byte, resolvedName: repeater.displayName)
+            // Find matching repeater (prefer closer or more recent on collisions)
+            if let repeater = bestRepeaterMatch(for: byte) {
+                let hop = PathHop(hashByte: byte, publicKey: repeater.publicKey, resolvedName: repeater.displayName)
                 outboundPath.append(hop)
                 result.added.append(code)
             } else {
@@ -653,8 +645,12 @@ final class TracePathViewModel {
         let outboundBytes = Array(fullPath.prefix(outboundCount))
 
         for hashByte in outboundBytes {
-            let name = resolveHashToName(hashByte)
-            outboundPath.append(PathHop(hashByte: hashByte, resolvedName: name))
+            let matchedRepeater = bestRepeaterMatch(for: hashByte)
+            outboundPath.append(PathHop(
+                hashByte: hashByte,
+                publicKey: matchedRepeater?.publicKey,
+                resolvedName: matchedRepeater?.displayName
+            ))
         }
 
         activeSavedPath = savedPath
@@ -1074,29 +1070,18 @@ final class TracePathViewModel {
             var longitude: Double?
 
             if let bytes = node.hashBytes, let firstByte = bytes.first {
-                // Look up from outboundPath first (user's selected repeaters, avoids hash collisions)
-                if let matchingHop = outboundPath.first(where: { $0.hashByte == firstByte }) {
-                    resolvedName = matchingHop.resolvedName
-                    // Get location from availableRepeaters
-                    if let matchingRepeater = availableRepeaters.first(where: { $0.publicKey.first == firstByte }),
-                       matchingRepeater.hasLocation {
-                        latitude = matchingRepeater.latitude
-                        longitude = matchingRepeater.longitude
-                    }
-                } else if let matchingRepeater = availableRepeaters.first(where: { $0.publicKey.first == firstByte }) {
-                    // Fallback to availableRepeaters for unexpected hops not in outboundPath
-                    resolvedName = matchingRepeater.displayName
-                    if matchingRepeater.hasLocation {
-                        latitude = matchingRepeater.latitude
-                        longitude = matchingRepeater.longitude
-                    }
+                let matchingHop = outboundPath.first(where: { $0.hashByte == firstByte })
+                let bestMatch: ContactDTO?
+                if let hop = matchingHop {
+                    bestMatch = bestRepeaterMatch(for: hop)
                 } else {
-                    // Fallback for hops not in our contacts at all
-                    resolvedName = resolveHashToName(firstByte)
-                    if let location = resolveHashToLocation(firstByte) {
-                        latitude = location.latitude
-                        longitude = location.longitude
-                    }
+                    bestMatch = bestRepeaterMatch(for: firstByte)
+                }
+                resolvedName = bestMatch?.displayName ?? matchingHop?.resolvedName
+
+                if let bestMatch, bestMatch.hasLocation {
+                    latitude = bestMatch.latitude
+                    longitude = bestMatch.longitude
                 }
             } else {
                 resolvedName = nil
@@ -1205,6 +1190,7 @@ final class TracePathViewModel {
     /// Test helper to set contacts for hash resolution
     func setContactsForTesting(_ contacts: [ContactDTO]) {
         allContacts = contacts
+        availableRepeaters = contacts.filter { $0.type == .repeater }
     }
     #endif
 }

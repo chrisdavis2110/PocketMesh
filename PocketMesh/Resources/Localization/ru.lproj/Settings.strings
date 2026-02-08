@@ -213,6 +213,21 @@
 /* Description for empty state */
 "trustedContacts.noContactsDescription" = "Добавьте контакты, чтобы выбрать доверенных";
 
+/* Title for empty state when search returns no results */
+"trustedContacts.noResults" = "Нет результатов";
+
+/* Description for empty state when search returns no results */
+"trustedContacts.noResultsDescription" = "Нет контактов, соответствующих \"%@\"";
+
+/* Search prompt for trusted contacts list */
+"trustedContacts.searchPrompt" = "Поиск контактов";
+
+/* Toggle label for showing only favorite contacts */
+"trustedContacts.favoritesOnly" = "Только избранные";
+
+/* Apply button label */
+"trustedContacts.apply" = "Применить";
+
 
 // MARK: - About Section
 
@@ -359,6 +374,54 @@
 
 /* Description for auto-add nodes toggle */
 "contacts.autoAddDescription" = "Автоматически добавлять узлы из полученных объявлений";
+
+
+// MARK: - Nodes Settings Section
+
+/* Section header for nodes settings */
+"nodes.header" = "Nodes";
+
+/* Label for auto-add mode picker */
+"nodes.autoAddMode" = "Auto-Add Mode";
+
+/* Auto-add mode: manual */
+"nodes.autoAddMode.manual" = "Manual";
+
+/* Auto-add mode: manual description */
+"nodes.autoAddMode.manualDescription" = "Review all nodes in Discover before adding";
+
+/* Auto-add mode: selected types */
+"nodes.autoAddMode.selectedTypes" = "Selected Types";
+
+/* Auto-add mode: selected types description */
+"nodes.autoAddMode.selectedTypesDescription" = "Auto-add only the types enabled below";
+
+/* Auto-add mode: all */
+"nodes.autoAddMode.all" = "All";
+
+/* Auto-add mode: all description */
+"nodes.autoAddMode.allDescription" = "Auto-add every discovered node";
+
+/* Section header for auto-add types */
+"nodes.autoAddTypes.header" = "Auto-Add Types";
+
+/* Toggle label for auto-add contacts */
+"nodes.autoAddContacts" = "Contacts";
+
+/* Toggle label for auto-add repeaters */
+"nodes.autoAddRepeaters" = "Repeaters";
+
+/* Toggle label for auto-add room servers */
+"nodes.autoAddRoomServers" = "Room Servers";
+
+/* Section header for storage settings */
+"nodes.storage.header" = "Storage";
+
+/* Toggle label for overwrite oldest */
+"nodes.overwriteOldest" = "Overwrite Oldest";
+
+/* Description for overwrite oldest toggle */
+"nodes.overwriteOldestDescription" = "When storage is full, replace the oldest non-favorite node";
 
 
 // MARK: - Danger Zone Section
@@ -630,6 +693,9 @@
 /* Alert message when max retries exceeded */
 "alert.retry.ensureConnected" = "Пожалуйста, убедитесь, что ваше устройство подключено.";
 
+/* Fallback message for retry alerts when error description is unavailable */
+"alert.retry.fallbackMessage" = "Убедитесь, что устройство подключено, и попробуйте снова.";
+
 
 // MARK: - Battery Curve Chart
 
@@ -698,3 +764,24 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Распространяет объявление по всей сети mesh";
+
+
+// MARK: - Location Settings Section
+
+/* Section header for location settings */
+"location.header" = "Местоположение";
+
+/* Footer for location settings section */
+"location.footer" = "Когда автообновление включено, местоположение устройства обновляется при отправке объявлений. Это не отправляет ваше местоположение по mesh-сети, если не включена опция «Делиться местоположением публично».";
+
+/* Toggle label for auto-update location */
+"location.autoUpdate" = "Автообновление местоположения";
+
+/* Label for GPS source picker */
+"location.gpsSource" = "Источник GPS";
+
+/* GPS source option: phone GPS */
+"location.gpsSource.phone" = "GPS телефона";
+
+/* GPS source option: device GPS */
+"location.gpsSource.device" = "GPS устройства";

@@ -27,7 +27,6 @@ private func createTestContact(
         isBlocked: false,
         isMuted: false,
         isFavorite: false,
-        isDiscovered: false,
         lastMessageDate: Date(),
         unreadCount: 0
     )
@@ -49,7 +48,7 @@ private func createTestChannel(
         lastMessageDate: Date(),
         unreadCount: 0,
         unreadMentionCount: 0,
-        isMuted: false,
+        notificationLevel: .all,
         isFavorite: false
     )
 }
@@ -183,7 +182,7 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
         imageData: Data?,
         iconData: Data?,
         fetched: Bool
-    ) async throws {}
+    ) throws {}
 
     // MARK: - Contact Operations
 
@@ -227,11 +226,9 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
     func fetchUnseenMentionIDs(contactID: UUID) async throws -> [UUID] { [] }
     func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) async throws -> [UUID] { [] }
     func deleteMessagesForContact(contactID: UUID) async throws {}
-    func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] {
         blockedContacts.filter { $0.deviceID == deviceID }
     }
-    func confirmContact(id: UUID) async throws {}
 
     // MARK: - Channel Operations
 
@@ -250,7 +247,7 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
     @discardableResult func saveChannel(deviceID: UUID, from info: ChannelInfo) async throws -> UUID { UUID() }
     func saveChannel(_ dto: ChannelDTO) async throws { channels[dto.id] = dto }
     func deleteChannel(id: UUID) async throws { channels.removeValue(forKey: id) }
-    func updateChannelLastMessage(channelID: UUID, date: Date) async throws {}
+    func updateChannelLastMessage(channelID: UUID, date: Date?) async throws {}
     func incrementChannelUnreadCount(channelID: UUID) async throws {}
     func clearChannelUnreadCount(channelID: UUID) async throws {}
 
@@ -313,6 +310,41 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
         withinSeconds: Double,
         contactName: String?
     ) async throws -> RxLogEntryDTO? { nil }
+
+    // MARK: - Discovered Nodes
+
+    func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) async throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
+        fatalError("Not implemented")
+    }
+    func fetchDiscoveredNodes(deviceID: UUID) async throws -> [DiscoveredNodeDTO] { [] }
+    func deleteDiscoveredNode(id: UUID) async throws {}
+    func clearDiscoveredNodes(deviceID: UUID) async throws {}
+    func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data> { Set() }
+    func fetchReactions(for messageID: UUID, limit: Int) async throws -> [ReactionDTO] { [] }
+    func saveReaction(_ dto: ReactionDTO) async throws {}
+    func reactionExists(messageID: UUID, senderName: String, emoji: String) async throws -> Bool { false }
+    func updateMessageReactionSummary(messageID: UUID, summary: String?) async throws {}
+    func deleteReactionsForMessage(messageID: UUID) async throws {}
+    func findChannelMessageForReaction(deviceID: UUID, channelIndex: UInt8, parsedReaction: ParsedReaction, localNodeName: String?, timestampWindow: ClosedRange<UInt32>, limit: Int) async throws -> MessageDTO? { nil }
+    func findDMMessageForReaction(deviceID: UUID, contactID: UUID, messageHash: String, timestampWindow: ClosedRange<UInt32>, limit: Int) async throws -> MessageDTO? { nil }
+
+    // MARK: - Notification Level
+
+    func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws {}
+    func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws {}
+
+    // MARK: - Channel Message Deletion
+
+    func deleteMessagesForChannel(deviceID: UUID, channelIndex: UInt8) async throws {}
+
+    // MARK: - Room Messages
+
+    func saveRoomMessage(_ dto: RoomMessageDTO) async throws {}
+    func fetchRoomMessage(id: UUID) async throws -> RoomMessageDTO? { nil }
+    func fetchRoomMessages(sessionID: UUID, limit: Int?, offset: Int?) async throws -> [RoomMessageDTO] { [] }
+    func isDuplicateRoomMessage(sessionID: UUID, deduplicationKey: String) async throws -> Bool { false }
+    func updateRoomMessageStatus(id: UUID, status: MessageStatus, ackCode: UInt32?, roundTripTime: UInt32?) async throws {}
+    func updateRoomMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
 }
 
 // MARK: - Mock Link Preview Cache

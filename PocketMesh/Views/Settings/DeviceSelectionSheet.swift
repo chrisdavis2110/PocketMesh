@@ -70,6 +70,7 @@ struct DeviceSelectionSheet: View {
                         guard let device = selectedDevice else { return }
                         dismiss()
                         Task {
+                            logger.info("[UI] User tapped Connect for device: \(device.id.uuidString.prefix(8)), name: \(device.name)")
                             do {
                                 if case .wifi(let host, let port, _) = device.primaryConnectionMethod {
                                     try await appState.connectViaWiFi(host: host, port: port, forceFullSync: true)

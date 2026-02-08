@@ -213,6 +213,21 @@
 /* Description for empty state */
 "trustedContacts.noContactsDescription" = "Voeg contacten toe om vertrouwde te selecteren";
 
+/* Title for empty state when search returns no results */
+"trustedContacts.noResults" = "Geen resultaten";
+
+/* Description for empty state when search returns no results */
+"trustedContacts.noResultsDescription" = "Geen contacten komen overeen met \"%@\"";
+
+/* Search prompt for trusted contacts list */
+"trustedContacts.searchPrompt" = "Zoek contacten";
+
+/* Toggle label for showing only favorite contacts */
+"trustedContacts.favoritesOnly" = "Alleen favorieten";
+
+/* Apply button label */
+"trustedContacts.apply" = "Toepassen";
+
 
 // MARK: - About Section
 
@@ -359,6 +374,54 @@
 
 /* Description for auto-add nodes toggle */
 "contacts.autoAddDescription" = "Voeg automatisch knooppunten toe van ontvangen advertenties";
+
+
+// MARK: - Nodes Settings Section
+
+/* Section header for nodes settings */
+"nodes.header" = "Nodes";
+
+/* Label for auto-add mode picker */
+"nodes.autoAddMode" = "Auto-Add Mode";
+
+/* Auto-add mode: manual */
+"nodes.autoAddMode.manual" = "Manual";
+
+/* Auto-add mode: manual description */
+"nodes.autoAddMode.manualDescription" = "Review all nodes in Discover before adding";
+
+/* Auto-add mode: selected types */
+"nodes.autoAddMode.selectedTypes" = "Selected Types";
+
+/* Auto-add mode: selected types description */
+"nodes.autoAddMode.selectedTypesDescription" = "Auto-add only the types enabled below";
+
+/* Auto-add mode: all */
+"nodes.autoAddMode.all" = "All";
+
+/* Auto-add mode: all description */
+"nodes.autoAddMode.allDescription" = "Auto-add every discovered node";
+
+/* Section header for auto-add types */
+"nodes.autoAddTypes.header" = "Auto-Add Types";
+
+/* Toggle label for auto-add contacts */
+"nodes.autoAddContacts" = "Contacts";
+
+/* Toggle label for auto-add repeaters */
+"nodes.autoAddRepeaters" = "Repeaters";
+
+/* Toggle label for auto-add room servers */
+"nodes.autoAddRoomServers" = "Room Servers";
+
+/* Section header for storage settings */
+"nodes.storage.header" = "Storage";
+
+/* Toggle label for overwrite oldest */
+"nodes.overwriteOldest" = "Overwrite Oldest";
+
+/* Description for overwrite oldest toggle */
+"nodes.overwriteOldestDescription" = "When storage is full, replace the oldest non-favorite node";
 
 
 // MARK: - Danger Zone Section
@@ -630,6 +693,9 @@
 /* Alert message when max retries exceeded */
 "alert.retry.ensureConnected" = "Zorg ervoor dat je apparaat is verbonden.";
 
+/* Fallback message for retry alerts when error description is unavailable */
+"alert.retry.fallbackMessage" = "Zorg ervoor dat het apparaat is verbonden en probeer het opnieuw.";
+
 
 // MARK: - Battery Curve Chart
 
@@ -698,3 +764,24 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Verspreidt advertentie over het hele mesh-netwerk";
+
+
+// MARK: - Location Settings Section
+
+/* Section header for location settings */
+"location.header" = "Locatie";
+
+/* Footer for location settings section */
+"location.footer" = "Wanneer automatisch bijwerken is ingeschakeld, wordt de apparaatlocatie vernieuwd bij het verzenden van adverts. Dit stuurt je locatie niet over het mesh-netwerk tenzij Locatie openbaar delen is ingeschakeld.";
+
+/* Toggle label for auto-update location */
+"location.autoUpdate" = "Locatie automatisch bijwerken";
+
+/* Label for GPS source picker */
+"location.gpsSource" = "GPS-bron";
+
+/* GPS source option: phone GPS */
+"location.gpsSource.phone" = "Telefoon GPS";
+
+/* GPS source option: device GPS */
+"location.gpsSource.device" = "Apparaat GPS";

@@ -90,6 +90,7 @@ struct CLICompletionEngineTests {
         #expect(suggestions.contains("radio"))
         #expect(suggestions.contains("flood.max"))
         #expect(suggestions.contains("bridge.enabled"))
+        #expect(suggestions.contains("prv.key"))
     }
 
     @Test("Clear subcommands complete")
@@ -242,5 +243,151 @@ struct CLICompletionEngineTests {
         let suggestions = engine.completions(for: "login ", isLocal: true)
 
         #expect(suggestions.isEmpty)
+    }
+
+    // MARK: - Command Arity Tests (no suggestions after command complete)
+
+    @Test("Login returns empty after node name complete")
+    func loginReturnsEmptyAfterNodeNameComplete() {
+        let engine = createEngine()
+        engine.updateNodeNames(["MyRepeater"])
+
+        let suggestions = engine.completions(for: "login MyRepeater ", isLocal: true)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    @Test("Session returns empty after subcommand complete")
+    func sessionReturnsEmptyAfterSubcommandComplete() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "session list ", isLocal: true)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    @Test("Get returns empty after parameter complete")
+    func getReturnsEmptyAfterParameterComplete() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "get name ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    @Test("GPS advert returns empty after value complete")
+    func gpsAdvertReturnsEmptyAfterValueComplete() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "gps advert share ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    @Test("GPS on returns empty after subcommand complete")
+    func gpsOnReturnsEmptyAfterSubcommandComplete() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "gps on ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    @Test("Clear returns empty after stats complete")
+    func clearReturnsEmptyAfterStatsComplete() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "clear stats ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    @Test("Log returns empty after subcommand complete")
+    func logReturnsEmptyAfterSubcommandComplete() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "log start ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    @Test("Powersaving returns empty after value complete")
+    func powersavingReturnsEmptyAfterValueComplete() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "powersaving on ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    @Test("Region returns empty after subcommand complete")
+    func regionReturnsEmptyAfterSubcommandComplete() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "region load ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    @Test("Clock subcommands complete after 'clock '")
+    func clockSubcommandsComplete() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "clock ", isLocal: false)
+
+        #expect(suggestions.contains("sync"))
+    }
+
+    @Test("Clock returns empty after subcommand complete")
+    func clockReturnsEmptyAfterSubcommandComplete() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "clock sync ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    // MARK: - Partial Input Still Completes
+
+    @Test("Login partial input still suggests")
+    func loginPartialInputStillSuggests() {
+        let engine = createEngine()
+        engine.updateNodeNames(["MyRepeater"])
+
+        let suggestions = engine.completions(for: "login MyRep", isLocal: true)
+
+        #expect(suggestions.contains("MyRepeater"))
+    }
+
+    @Test("GPS advert partial input still suggests")
+    func gpsAdvertPartialInputStillSuggests() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "gps advert sh", isLocal: false)
+
+        #expect(suggestions.contains("share"))
+    }
+
+    // MARK: - Case Sensitivity
+
+    @Test("Uppercase command still respects arity")
+    func uppercaseCommandRespectsArity() {
+        let engine = createEngine()
+        engine.updateNodeNames(["MyRepeater"])
+
+        let suggestions = engine.completions(for: "LOGIN MyRepeater ", isLocal: true)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    @Test("Uppercase GPS advert still suggests values")
+    func uppercaseGpsAdvertSuggestsValues() {
+        let engine = createEngine()
+
+        let suggestions = engine.completions(for: "GPS ADVERT ", isLocal: false)
+
+        #expect(suggestions.contains("none"))
+        #expect(suggestions.contains("prefs"))
+        #expect(suggestions.contains("share"))
     }
 }
