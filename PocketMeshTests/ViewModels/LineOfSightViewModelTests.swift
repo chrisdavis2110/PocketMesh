@@ -724,11 +724,11 @@ struct AnalysisTests {
         // Start analysis but don't wait for it
         viewModel.analyze()
 
-        // Should be loading (or already completed for mock)
-        let isLoadingOrResult = viewModel.analysisStatus == .loading
+        // Should be analyzing (or already completed for mock)
+        let isAnalyzingOrResult = viewModel.isAnalyzing
             || (viewModel.analysisStatus != .idle && viewModel.analysisStatus != .error(""))
 
-        #expect(isLoadingOrResult)
+        #expect(isAnalyzingOrResult)
     }
 
     @Test("analyze produces result on success")
@@ -819,8 +819,8 @@ struct AnalysisTests {
 
         if case .result = viewModel.analysisStatus {
             // Expected
-        } else if case .loading = viewModel.analysisStatus {
-            // Still loading is also acceptable
+        } else if viewModel.isAnalyzing {
+            // Still analyzing is also acceptable
         } else {
             Issue.record("Unexpected status: \(viewModel.analysisStatus)")
         }
@@ -892,11 +892,6 @@ struct AnalysisStatusEquatableTests {
         #expect(AnalysisStatus.idle == AnalysisStatus.idle)
     }
 
-    @Test("loading equals loading")
-    func loadingEqualsLoading() {
-        #expect(AnalysisStatus.loading == AnalysisStatus.loading)
-    }
-
     @Test("error with same message equals")
     func errorWithSameMessage() {
         #expect(AnalysisStatus.error("test") == AnalysisStatus.error("test"))
@@ -907,9 +902,9 @@ struct AnalysisStatusEquatableTests {
         #expect(AnalysisStatus.error("test1") != AnalysisStatus.error("test2"))
     }
 
-    @Test("idle does not equal loading")
-    func idleNotEqualLoading() {
-        #expect(AnalysisStatus.idle != AnalysisStatus.loading)
+    @Test("idle does not equal error")
+    func idleNotEqualError() {
+        #expect(AnalysisStatus.idle != AnalysisStatus.error("test"))
     }
 }
 
