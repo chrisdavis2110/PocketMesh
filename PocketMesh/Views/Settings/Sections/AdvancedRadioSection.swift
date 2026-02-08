@@ -10,6 +10,7 @@ struct AdvancedRadioSection: View {
     @State private var spreadingFactor: Int?
     @State private var codingRate: Int?
     @State private var txPower: Int?  // dBm
+    @State private var hasLoaded = false
     @State private var isApplying = false
     @State private var showSuccess = false
     @State private var showError: String?
@@ -19,10 +20,6 @@ struct AdvancedRadioSection: View {
     private enum RadioField: Hashable {
         case frequency
         case txPower
-    }
-
-    private var isLoaded: Bool {
-        frequency != nil && bandwidth != nil && spreadingFactor != nil && codingRate != nil && txPower != nil
     }
 
     private var settingsModified: Bool {
@@ -51,7 +48,7 @@ struct AdvancedRadioSection: View {
 
     var body: some View {
         Section {
-            if !isLoaded {
+            if !hasLoaded {
                 ProgressView()
                     .frame(maxWidth: .infinity)
             } else {
@@ -158,6 +155,7 @@ struct AdvancedRadioSection: View {
         spreadingFactor = Int(device.spreadingFactor)
         codingRate = Int(device.codingRate)
         txPower = Int(device.txPower)
+        hasLoaded = true
     }
 
     private func applySettings() {
