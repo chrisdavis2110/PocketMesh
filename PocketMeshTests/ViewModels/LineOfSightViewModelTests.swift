@@ -134,6 +134,7 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func fetchMessageRepeats(messageID: UUID) async throws -> [MessageRepeatDTO] { [] }
     func messageRepeatExists(rxLogEntryID: UUID) async throws -> Bool { false }
     func incrementMessageHeardRepeats(id: UUID) async throws -> Int { 0 }
+    func deleteMessageRepeats(messageID: UUID) async throws {}
     func incrementMessageSendCount(id: UUID) async throws -> Int { 0 }
     func updateMessageTimestamp(id: UUID, timestamp: UInt32) async throws {}
 
@@ -166,6 +167,7 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func isDuplicateRoomMessage(sessionID: UUID, deduplicationKey: String) async throws -> Bool { false }
     func updateRoomMessageStatus(id: UUID, status: MessageStatus, ackCode: UInt32?, roundTripTime: UInt32?) async throws {}
     func updateRoomMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
+    func updateRoomActivity(_ sessionID: UUID, syncTimestamp: UInt32?) async throws {}
 
     // MARK: - Discovered Nodes (stubs)
 
@@ -191,6 +193,8 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
 
     func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws {}
     func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws {}
+    func markSessionDisconnected(_ sessionID: UUID) async throws {}
+    func markRoomSessionConnected(_ sessionID: UUID) async throws -> Bool { false }
 
     // MARK: - Channel Message Deletion (stubs)
 
@@ -1206,20 +1210,21 @@ struct ContactToggleTests {
         #expect(viewModel.pointB == nil)
     }
 
-    @Test("isContactSelected returns correct state")
-    func isContactSelectedReturnsCorrectState() async throws {
+    @Test("toggleContact assigns contact to point A when empty")
+    func toggleContactAssignsToPointA() async throws {
         let mockService = MockElevationService()
         let viewModel = LineOfSightViewModel(elevationService: mockService)
         let contact = createTestContact(name: "Repeater", latitude: 37.8, longitude: -122.4, type: .repeater)
 
-        #expect(viewModel.isContactSelected(contact) == nil)
+        #expect(viewModel.pointA?.contact?.id != contact.id)
+        #expect(viewModel.pointB?.contact?.id != contact.id)
 
         viewModel.toggleContact(contact)
-        #expect(viewModel.isContactSelected(contact) == .pointA)
+        #expect(viewModel.pointA?.contact?.id == contact.id)
     }
 
-    @Test("isContactSelected returns pointB when contact is point B")
-    func isContactSelectedReturnsPointB() async throws {
+    @Test("toggleContact assigns second contact to point B")
+    func toggleContactAssignsToPointB() async throws {
         let mockService = MockElevationService()
         let viewModel = LineOfSightViewModel(elevationService: mockService)
         let contact1 = createTestContact(name: "Repeater 1", latitude: 37.8, longitude: -122.4, type: .repeater)
@@ -1228,12 +1233,12 @@ struct ContactToggleTests {
         viewModel.toggleContact(contact1)
         viewModel.toggleContact(contact2)
 
-        #expect(viewModel.isContactSelected(contact1) == .pointA)
-        #expect(viewModel.isContactSelected(contact2) == .pointB)
+        #expect(viewModel.pointA?.contact?.id == contact1.id)
+        #expect(viewModel.pointB?.contact?.id == contact2.id)
     }
 
-    @Test("isContactSelected returns nil for unselected contact")
-    func isContactSelectedReturnsNilForUnselected() async throws {
+    @Test("unselected contact is not assigned to either point")
+    func unselectedContactNotAssigned() async throws {
         let mockService = MockElevationService()
         let viewModel = LineOfSightViewModel(elevationService: mockService)
         let contact1 = createTestContact(name: "Repeater 1", latitude: 37.8, longitude: -122.4, type: .repeater)
@@ -1241,7 +1246,8 @@ struct ContactToggleTests {
 
         viewModel.toggleContact(contact1)
 
-        #expect(viewModel.isContactSelected(contact2) == nil)
+        #expect(viewModel.pointA?.contact?.id != contact2.id)
+        #expect(viewModel.pointB?.contact?.id != contact2.id)
     }
 }
 
