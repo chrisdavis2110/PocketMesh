@@ -836,6 +836,12 @@ extension BLEStateMachine {
             onBluetoothPoweredOn?()
 
         case .poweredOff:
+            let wasScanning = isCurrentlyScanning
+            isCurrentlyScanning = false
+            if wasScanning {
+                pendingScanRequest = true
+            }
+
             if case .waitingForBluetooth = phase {
                 // A freshly created CBCentralManager may briefly report poweredOff
                 // before settling on poweredOn. Start a grace period instead of
@@ -858,6 +864,8 @@ extension BLEStateMachine {
             }
 
         case .unauthorized:
+            isCurrentlyScanning = false
+            pendingScanRequest = false
             if case .waitingForBluetooth(let continuation) = phase {
                 transition(to: .idle)
                 continuation.resume(throwing: BLEError.bluetoothUnauthorized)
@@ -869,6 +877,8 @@ extension BLEStateMachine {
             }
 
         case .unsupported:
+            isCurrentlyScanning = false
+            pendingScanRequest = false
             if case .waitingForBluetooth(let continuation) = phase {
                 transition(to: .idle)
                 continuation.resume(throwing: BLEError.bluetoothUnavailable)
