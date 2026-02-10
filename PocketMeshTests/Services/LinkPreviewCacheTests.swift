@@ -311,6 +311,7 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func fetchMessageRepeats(messageID: UUID) async throws -> [MessageRepeatDTO] { [] }
     func messageRepeatExists(rxLogEntryID: UUID) async throws -> Bool { false }
     func incrementMessageHeardRepeats(id: UUID) async throws -> Int { 0 }
+    func deleteMessageRepeats(messageID: UUID) async throws {}
     func incrementMessageSendCount(id: UUID) async throws -> Int { 0 }
     func updateMessageTimestamp(id: UUID, timestamp: UInt32) async throws {}
 
@@ -334,6 +335,7 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func isDuplicateRoomMessage(sessionID: UUID, deduplicationKey: String) async throws -> Bool { false }
     func updateRoomMessageStatus(id: UUID, status: MessageStatus, ackCode: UInt32?, roundTripTime: UInt32?) async throws {}
     func updateRoomMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
+    func updateRoomActivity(_ sessionID: UUID, syncTimestamp: UInt32?) async throws {}
 
     // Discovered Nodes
     func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) async throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
@@ -356,6 +358,8 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     // Notification Level
     func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws {}
     func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws {}
+    func markSessionDisconnected(_ sessionID: UUID) async throws {}
+    func markRoomSessionConnected(_ sessionID: UUID) async throws -> Bool { false }
 
     // Channel Message Deletion
     func deleteMessagesForChannel(deviceID: UUID, channelIndex: UInt8) async throws {}
