@@ -261,6 +261,12 @@ public final class ConnectionManager {
     /// Interval between WiFi heartbeat probes (seconds)
     private static let wifiHeartbeatInterval: Duration = .seconds(30)
 
+    /// Task coordinating BLE scan startup to avoid start/stop races with stream termination.
+    private var bleScanTask: Task<Void, Never>?
+
+    /// Monotonic token used to invalidate stale BLE scan requests.
+    private var bleScanRequestID: UInt64 = 0
+
     // MARK: - Resync State
 
     /// Current resync attempt count (reset on success or disconnect)
@@ -427,16 +433,32 @@ public final class ConnectionManager {
     /// Cancel the consuming task to stop scanning automatically.
     public func startBLEScanning() -> AsyncStream<(UUID, Int)> {
         let (stream, continuation) = AsyncStream.makeStream(of: (UUID, Int).self)
+        bleScanTask?.cancel()
+        bleScanRequestID &+= 1
+        let requestID = bleScanRequestID
 
-        Task {
-            await stateMachine.setDeviceDiscoveredHandler { @Sendable deviceID, rssi in
-                continuation.yield((deviceID, rssi))
+        bleScanTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            guard !Task.isCancelled, requestID == self.bleScanRequestID else { return }
+
+            await self.stateMachine.setDeviceDiscoveredHandler { @Sendable deviceID, rssi in
+                _ = continuation.yield((deviceID, rssi))
             }
-            await stateMachine.startScanning()
+
+            guard !Task.isCancelled, requestID == self.bleScanRequestID else { return }
+            await self.stateMachine.startScanning()
         }
 
-        continuation.onTermination = { [stateMachine] _ in
-            Task { await stateMachine.stopScanning() }
+        continuation.onTermination = { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                guard self.bleScanRequestID == requestID else { return }
+                self.bleScanRequestID &+= 1
+                self.bleScanTask?.cancel()
+                self.bleScanTask = nil
+                await self.stateMachine.setDeviceDiscoveredHandler { _, _ in }
+                await self.stateMachine.stopScanning()
+            }
         }
 
         return stream
@@ -444,6 +466,10 @@ public final class ConnectionManager {
 
     /// Manually stops BLE scanning.
     public func stopBLEScanning() async {
+        bleScanRequestID &+= 1
+        bleScanTask?.cancel()
+        bleScanTask = nil
+        await stateMachine.setDeviceDiscoveredHandler { _, _ in }
         await stateMachine.stopScanning()
     }
 
@@ -742,6 +768,7 @@ public final class ConnectionManager {
         guard connectionIntent.wantsConnection else { return }
 
         await syncDeviceTimeIfNeeded()
+        guard connectionIntent.wantsConnection else { return }
 
         currentTransportType = .wifi
         connectionState = .ready
@@ -1512,6 +1539,7 @@ public final class ConnectionManager {
             guard connectionIntent.wantsConnection else { return }
 
             await syncDeviceTimeIfNeeded()
+            guard connectionIntent.wantsConnection else { return }
 
             // Wire disconnection handler for auto-reconnect
             await newWiFiTransport.setDisconnectionHandler { [weak self] error in
@@ -1621,6 +1649,7 @@ public final class ConnectionManager {
         guard connectionIntent.wantsConnection else { return }
 
         await syncDeviceTimeIfNeeded()
+        guard connectionIntent.wantsConnection else { return }
 
         currentTransportType = .bluetooth
         connectionState = .ready
@@ -1972,6 +2001,7 @@ public final class ConnectionManager {
         guard connectionIntent.wantsConnection else { return }
 
         await syncDeviceTimeIfNeeded()
+        guard connectionIntent.wantsConnection else { return }
 
         currentTransportType = .bluetooth
         connectionState = .ready
@@ -2222,6 +2252,7 @@ public final class ConnectionManager {
         guard connectionIntent.wantsConnection else { return }
 
         await syncDeviceTimeIfNeeded()
+        guard connectionIntent.wantsConnection else { return }
 
         // Re-authenticate room sessions that were connected before BLE loss
         let sessionIDs = sessionsAwaitingReauth
