@@ -66,6 +66,8 @@ enum PacketSize {
     static let binaryResponseStatusBase = 48
     /// Minimum size for binary response status payload with rxAirtime field (52 bytes).
     static let binaryResponseStatusWithRxAirtime = 52
+    /// Minimum size for binary response status payload with receiveErrors field (56 bytes).
+    static let binaryResponseStatusWithReceiveErrors = 56
 }
 
 // MARK: - Parser Logger
@@ -561,7 +563,8 @@ public enum Parsers {
             let lastSNR = Double(data.readInt16LE(at: offset)) / 4.0; offset += 2
             let directDups = Int(data.readUInt16LE(at: offset)); offset += 2
             let floodDups = Int(data.readUInt16LE(at: offset)); offset += 2
-            let rxAirtime = data.readUInt32LE(at: offset)
+            let rxAirtime = data.readUInt32LE(at: offset); offset += 4
+            let receiveErrors: UInt32 = data.count >= offset + 4 ? data.readUInt32LE(at: offset) : 0
 
             return .statusResponse(MeshCore.StatusResponse(
                 publicKeyPrefix: pubkeyPrefix,
@@ -581,7 +584,8 @@ public enum Parsers {
                 lastSNR: lastSNR,
                 directDuplicates: directDups,
                 floodDuplicates: floodDups,
-                rxAirtime: rxAirtime
+                rxAirtime: rxAirtime,
+                receiveErrors: receiveErrors
             ))
         }
 
@@ -606,16 +610,18 @@ public enum Parsers {
         /// - Offset 44 (2 bytes): Direct duplicates (UInt16 LE)
         /// - Offset 46 (2 bytes): Flood duplicates (UInt16 LE)
         /// - Offset 48 (4 bytes): Rx airtime (UInt32 LE, optional)
+        /// - Offset 52 (4 bytes): Receive errors (UInt32 LE, optional, v1.12+)
         ///
         /// - Parameters:
         ///   - data: Raw binary response payload (without the 4-byte tag).
         ///   - publicKeyPrefix: The 6-byte public key prefix from the pending request context.
         /// - Returns: A `StatusResponse` if parsing succeeds, `nil` otherwise.
         static func parseFromBinaryResponse(_ data: Data, publicKeyPrefix: Data) -> MeshCore.StatusResponse? {
-            // Accept exactly 48 bytes (no rxAirtime) or 52+ bytes (with rxAirtime)
-            // Reject malformed payloads with incomplete rxAirtime field
+            // Accept exactly 48 (no rxAirtime), 52 (with rxAirtime), or 56+ (with receiveErrors).
+            // Reject malformed payloads with incomplete fields (49-51, 53-55).
             guard data.count == PacketSize.binaryResponseStatusBase ||
-                  data.count >= PacketSize.binaryResponseStatusWithRxAirtime else { return nil }
+                  data.count == PacketSize.binaryResponseStatusWithRxAirtime ||
+                  data.count >= PacketSize.binaryResponseStatusWithReceiveErrors else { return nil }
 
             var offset = 0
             let battery = Int(data.readUInt16LE(at: offset)); offset += 2
@@ -634,7 +640,11 @@ public enum Parsers {
             let lastSNR = Double(data.readInt16LE(at: offset)) / 4.0; offset += 2
             let directDups = Int(data.readUInt16LE(at: offset)); offset += 2
             let floodDups = Int(data.readUInt16LE(at: offset)); offset += 2
-            let rxAirtime = data.count >= PacketSize.binaryResponseStatusWithRxAirtime ? data.readUInt32LE(at: offset) : 0
+            let rxAirtime: UInt32 = data.count >= PacketSize.binaryResponseStatusWithRxAirtime
+                ? data.readUInt32LE(at: offset) : 0
+            offset += 4
+            let receiveErrors: UInt32 = data.count >= PacketSize.binaryResponseStatusWithReceiveErrors
+                ? data.readUInt32LE(at: offset) : 0
 
             return MeshCore.StatusResponse(
                 publicKeyPrefix: publicKeyPrefix,
@@ -654,7 +664,8 @@ public enum Parsers {
                 lastSNR: lastSNR,
                 directDuplicates: directDups,
                 floodDuplicates: floodDups,
-                rxAirtime: rxAirtime
+                rxAirtime: rxAirtime,
+                receiveErrors: receiveErrors
             )
         }
     }

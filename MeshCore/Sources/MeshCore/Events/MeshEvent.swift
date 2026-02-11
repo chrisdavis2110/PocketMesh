@@ -539,6 +539,8 @@ public struct StatusResponse: Sendable, Equatable {
     public let floodDuplicates: Int
     /// Total receive airtime in seconds.
     public let rxAirtime: UInt32
+    /// Total receive errors (v1.12+, 0 for older firmware).
+    public let receiveErrors: UInt32
 
     /// Initializes a new status response object.
     public init(
@@ -559,7 +561,8 @@ public struct StatusResponse: Sendable, Equatable {
         lastSNR: Double,
         directDuplicates: Int,
         floodDuplicates: Int,
-        rxAirtime: UInt32
+        rxAirtime: UInt32,
+        receiveErrors: UInt32 = 0
     ) {
         self.publicKeyPrefix = publicKeyPrefix
         self.battery = battery
@@ -579,6 +582,7 @@ public struct StatusResponse: Sendable, Equatable {
         self.directDuplicates = directDuplicates
         self.floodDuplicates = floodDuplicates
         self.rxAirtime = rxAirtime
+        self.receiveErrors = receiveErrors
     }
 }
 

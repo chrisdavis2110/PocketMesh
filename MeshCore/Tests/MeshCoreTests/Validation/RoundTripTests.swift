@@ -252,6 +252,7 @@ final class RoundTripTests: XCTestCase {
         XCTAssertEqual(status.directDuplicates, Int(directDups))
         XCTAssertEqual(status.floodDuplicates, Int(floodDups))
         XCTAssertEqual(status.rxAirtime, rxAirtime)
+        XCTAssertEqual(status.receiveErrors, 0, "receiveErrors should default to 0 for legacy payload")
     }
 
     // MARK: - Stats Round-Trip
