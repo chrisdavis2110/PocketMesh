@@ -185,9 +185,8 @@ final class ProtocolBugFixTests: XCTestCase {
     }
 
     func test_statusResponse_parseFromBinaryResponse_handlesMinimalPayload() {
-        // Exactly 48 bytes (no rxAirtime field)
+        // Exactly 48 bytes (no rxAirtime, no receiveErrors)
         var payload = Data(repeating: 0, count: 48)
-        // Set battery to non-zero so we can verify parsing
         payload[0] = 0xE8
         payload[1] = 0x03  // Battery: 1000mV
 
@@ -202,10 +201,65 @@ final class ProtocolBugFixTests: XCTestCase {
 
         XCTAssertEqual(status.battery, 1000)
         XCTAssertEqual(status.rxAirtime, 0, "rxAirtime should default to 0 when not present")
+        XCTAssertEqual(status.receiveErrors, 0, "receiveErrors should default to 0 when not present")
+    }
+
+    func test_statusResponse_parseFromBinaryResponse_52bytes_parsesRxAirtime() {
+        // 52 bytes: has rxAirtime but no receiveErrors
+        var payload = Data(repeating: 0, count: 52)
+        payload[0] = 0xE8
+        payload[1] = 0x03  // Battery: 1000mV
+        // rxAirtime at offset 48: 5000 = 0x1388
+        payload[48] = 0x88
+        payload[49] = 0x13
+        payload[50] = 0x00
+        payload[51] = 0x00
+
+        let pubkeyPrefix = Data([0x11, 0x22, 0x33, 0x44, 0x55, 0x66])
+        let status = Parsers.StatusResponse.parseFromBinaryResponse(payload, publicKeyPrefix: pubkeyPrefix)
+
+        guard let status = status else {
+            XCTFail("Should parse 52-byte payload")
+            return
+        }
+
+        XCTAssertEqual(status.battery, 1000)
+        XCTAssertEqual(status.rxAirtime, 5000)
+        XCTAssertEqual(status.receiveErrors, 0, "receiveErrors should default to 0 for 52-byte payload")
+    }
+
+    func test_statusResponse_parseFromBinaryResponse_56bytes_parsesReceiveErrors() {
+        // 56 bytes: has rxAirtime and receiveErrors (v1.12+)
+        var payload = Data(repeating: 0, count: 56)
+        payload[0] = 0xE8
+        payload[1] = 0x03  // Battery: 1000mV
+        // rxAirtime at offset 48: 5000 = 0x1388
+        payload[48] = 0x88
+        payload[49] = 0x13
+        payload[50] = 0x00
+        payload[51] = 0x00
+        // receiveErrors at offset 52: 42 = 0x2A
+        payload[52] = 0x2A
+        payload[53] = 0x00
+        payload[54] = 0x00
+        payload[55] = 0x00
+
+        let pubkeyPrefix = Data([0x11, 0x22, 0x33, 0x44, 0x55, 0x66])
+        let status = Parsers.StatusResponse.parseFromBinaryResponse(payload, publicKeyPrefix: pubkeyPrefix)
+
+        guard let status = status else {
+            XCTFail("Should parse 56-byte payload")
+            return
+        }
+
+        XCTAssertEqual(status.battery, 1000)
+        XCTAssertEqual(status.rxAirtime, 5000)
+        XCTAssertEqual(status.receiveErrors, 42)
     }
 
     func test_statusResponse_parseFromBinaryResponse_rejectsIncompletePayload() {
-        for size in [49, 50, 51] {
+        // Reject sizes between valid field boundaries
+        for size in [49, 50, 51, 53, 54, 55] {
             let payload = Data(repeating: 0, count: size)
             let pubkeyPrefix = Data([0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])
             let status = Parsers.StatusResponse.parseFromBinaryResponse(payload, publicKeyPrefix: pubkeyPrefix)
@@ -214,13 +268,88 @@ final class ProtocolBugFixTests: XCTestCase {
     }
 
     func test_statusResponse_parseFromBinaryResponse_handlesExtraData() {
-        var payload = Data(repeating: 0, count: 56)  // 52 + 4 extra bytes
+        // 60 bytes: 56 + 4 extra bytes from future firmware
+        var payload = Data(repeating: 0, count: 60)
         payload[0] = 0xE8
         payload[1] = 0x03  // Battery: 1000mV
+        // receiveErrors at offset 52: 7
+        payload[52] = 0x07
         let pubkeyPrefix = Data([0x11, 0x22, 0x33, 0x44, 0x55, 0x66])
         let status = Parsers.StatusResponse.parseFromBinaryResponse(payload, publicKeyPrefix: pubkeyPrefix)
         XCTAssertNotNil(status, "Should parse payload with extra data")
         XCTAssertEqual(status?.battery, 1000)
+        XCTAssertEqual(status?.receiveErrors, 7)
+    }
+
+    // MARK: - Push Status Parse with receiveErrors
+
+    func test_statusResponse_parse_legacySize_defaultsReceiveErrors() {
+        // 59 bytes: legacy v1.11 format (no receiveErrors)
+        var payload = Data()
+        payload.append(0x00)  // Reserved byte
+        payload.append(contentsOf: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])  // Pubkey prefix
+        payload.append(contentsOf: [0xE8, 0x03])  // Battery: 1000mV
+        payload.append(contentsOf: [0x05, 0x00])  // txQueue: 5
+        payload.append(contentsOf: [0x92, 0xFF])  // noiseFloor: -110
+        payload.append(contentsOf: [0xAB, 0xFF])  // lastRSSI: -85
+        payload.append(Data(repeating: 0, count: 44))  // Remaining fields
+
+        XCTAssertEqual(payload.count, 59)
+
+        let event = Parsers.StatusResponse.parse(payload)
+
+        guard case .statusResponse(let status) = event else {
+            XCTFail("Expected statusResponse event, got \(event)")
+            return
+        }
+
+        XCTAssertEqual(status.battery, 1000)
+        XCTAssertEqual(status.receiveErrors, 0, "receiveErrors should default to 0 for legacy payload")
+    }
+
+    func test_statusResponse_parse_extendedSize_parsesReceiveErrors() {
+        // 63 bytes: v1.12 format with receiveErrors
+        var payload = Data()
+        payload.append(0x00)  // Reserved byte
+        payload.append(contentsOf: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])  // Pubkey prefix
+        payload.append(contentsOf: [0xE8, 0x03])  // Battery: 1000mV
+        payload.append(contentsOf: [0x05, 0x00])  // txQueue: 5
+        payload.append(contentsOf: [0x92, 0xFF])  // noiseFloor: -110
+        payload.append(contentsOf: [0xAB, 0xFF])  // lastRSSI: -85
+        // recv(4)+sent(4)+airtime(4)+uptime(4)+flood_tx(4)+direct_tx(4)+
+        // flood_rx(4)+direct_rx(4)+full_evts(2)+snr(2)+direct_dups(2)+flood_dups(2)+rx_air(4) = 44 bytes
+        payload.append(Data(repeating: 0, count: 44))
+        // receiveErrors: 99 = 0x63
+        payload.append(contentsOf: [0x63, 0x00, 0x00, 0x00])
+
+        XCTAssertEqual(payload.count, 63)
+
+        let event = Parsers.StatusResponse.parse(payload)
+
+        guard case .statusResponse(let status) = event else {
+            XCTFail("Expected statusResponse event, got \(event)")
+            return
+        }
+
+        XCTAssertEqual(status.battery, 1000)
+        XCTAssertEqual(status.receiveErrors, 99)
+    }
+
+    // MARK: - Telemetry Request Payload
+
+    func test_binaryRequest_telemetry_includesPermissionMaskPayload() {
+        let publicKey = Data(repeating: 0xAB, count: 32)
+        let payload = Data([0x00, 0x00, 0x00, 0x00])
+        let packet = PacketBuilder.binaryRequest(to: publicKey, type: .telemetry, payload: payload)
+
+        // Structure: [cmd:1][pubkey:32][type:1][payload:4] = 38 bytes
+        XCTAssertEqual(packet.count, 38, "Telemetry request should be 38 bytes with 4-byte payload")
+        XCTAssertEqual(packet[33], BinaryRequestType.telemetry.rawValue, "Byte 33 should be telemetry type")
+        // Payload bytes: permission mask + 3 reserved
+        XCTAssertEqual(packet[34], 0x00, "Permission mask byte should be 0x00 (inverts to 0xFF)")
+        XCTAssertEqual(packet[35], 0x00, "Reserved byte 1")
+        XCTAssertEqual(packet[36], 0x00, "Reserved byte 2")
+        XCTAssertEqual(packet[37], 0x00, "Reserved byte 3")
     }
 
     // MARK: - Bug B & D: Binary Response Routing & Neighbours Parser
