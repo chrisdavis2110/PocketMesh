@@ -933,3 +933,12 @@
 
 /* Contact count (param: integer) */
 "configImport.contactCount" = "%d kontaktów zostanie dodanych/zaktualizowanych na urządzeniu";
+
+/* Toggle label for inline images */
+"inlineImages.toggle" = "Obrazy w wiadomościach";
+
+/* Toggle label for auto-play GIFs */
+"inlineImages.autoPlayGifs" = "Automatyczne odtwarzanie GIF-ów";
+
+/* Footer explaining inline image privacy implications */
+"inlineImages.footer" = "Pobieranie obrazów z adresów URL może ujawnić Twój adres IP serwerowi hostującemu obraz.";

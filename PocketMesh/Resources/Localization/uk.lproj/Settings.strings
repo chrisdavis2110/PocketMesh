@@ -933,3 +933,12 @@
 
 /* Contact count (param: integer) */
 "configImport.contactCount" = "Буде додано/оновлено %d контактів на пристрої";
+
+/* Toggle label for inline images */
+"inlineImages.toggle" = "Вбудовані зображення";
+
+/* Toggle label for auto-play GIFs */
+"inlineImages.autoPlayGifs" = "Автовідтворення GIF";
+
+/* Footer explaining inline image privacy implications */
+"inlineImages.footer" = "Завантаження зображень за URL-адресами може розкрити вашу IP-адресу серверу, який розміщує зображення.";

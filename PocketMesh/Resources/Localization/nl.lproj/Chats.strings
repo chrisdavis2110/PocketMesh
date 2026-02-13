@@ -875,3 +875,18 @@
 
 /* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
 "chats.tip.floodAdvert.message" = "Tik hier en verstuur een Flood Advert om apparaten in de buurt te laten weten dat je bent toegetreden.";
+
+/* Location: InlineImageView.swift - Accessibility label for static image */
+"chats.inlineImage.imageAccessibility" = "Afbeelding";
+
+/* Location: InlineImageView.swift - Accessibility label for animated image */
+"chats.inlineImage.animatedAccessibility" = "Geanimeerde afbeelding";
+
+/* Location: InlineImageView.swift - Accessibility hint for tap to view full screen */
+"chats.inlineImage.tapHint" = "Dubbeltik om op volledig scherm te bekijken";
+
+/* Location: FullScreenImageViewer.swift - Close button label */
+"chats.imageViewer.close" = "Sluiten";
+
+/* Location: FullScreenImageViewer.swift - Share button label */
+"chats.imageViewer.share" = "Afbeelding";

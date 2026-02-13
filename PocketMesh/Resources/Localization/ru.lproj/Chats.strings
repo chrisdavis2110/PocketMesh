@@ -866,3 +866,18 @@
 
 /* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
 "chats.tip.floodAdvert.message" = "Нажми здесь и отправь широковещательное объявление, чтобы ближайшие устройства узнали о твоём подключении.";
+
+/* Location: InlineImageView.swift - Accessibility label for static image */
+"chats.inlineImage.imageAccessibility" = "Изображение";
+
+/* Location: InlineImageView.swift - Accessibility label for animated image */
+"chats.inlineImage.animatedAccessibility" = "Анимированное изображение";
+
+/* Location: InlineImageView.swift - Accessibility hint for tap to view full screen */
+"chats.inlineImage.tapHint" = "Двойное нажатие для просмотра на весь экран";
+
+/* Location: FullScreenImageViewer.swift - Close button label */
+"chats.imageViewer.close" = "Закрыть";
+
+/* Location: FullScreenImageViewer.swift - Share button label */
+"chats.imageViewer.share" = "Изображение";
