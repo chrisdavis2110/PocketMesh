@@ -631,21 +631,6 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
-    /// Sets the favorite state for a contact
-    public func setContactFavorite(_ contactID: UUID, isFavorite: Bool) throws {
-        let targetID = contactID
-        let predicate = #Predicate<Contact> { $0.id == targetID }
-        var descriptor = FetchDescriptor<Contact>(predicate: predicate)
-        descriptor.fetchLimit = 1
-
-        guard let contact = try modelContext.fetch(descriptor).first else {
-            throw PersistenceStoreError.contactNotFound
-        }
-
-        contact.isFavorite = isFavorite
-        try modelContext.save()
-    }
-
     /// Delete all messages and reactions for a contact using batch delete
     public func deleteMessagesForContact(contactID: UUID) throws {
         let targetContactID: UUID? = contactID
