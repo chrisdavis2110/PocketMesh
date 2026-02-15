@@ -102,6 +102,8 @@ public enum CommandCode: UInt8, Sendable {
     case setAutoAddConfig = 0x3A
     /// Gets the current auto-add configuration bitmask.
     case getAutoAddConfig = 0x3B
+    /// Gets the allowed frequency ranges for client repeat mode (v9+).
+    case getRepeatFreq = 0x3C
 }
 
 /// Defines the response codes received from the mesh device.
@@ -158,6 +160,8 @@ public enum ResponseCode: UInt8, Sendable {
     case stats = 0x18
     /// Contains the auto-add configuration bitmask.
     case autoAddConfig = 0x19
+    /// Contains the allowed frequency ranges for client repeat mode (v9+).
+    case allowedRepeatFreq = 0x1A
 
     // Push notifications (0x80+)
     /// Indicates a node advertisement was received.
@@ -269,7 +273,7 @@ extension ResponseCode {
         case .ok, .error:
             return .simple
         case .selfInfo, .deviceInfo, .battery, .currentTime, .privateKey, .disabled, .advertPath, .tuningParams,
-             .autoAddConfig:
+             .autoAddConfig, .allowedRepeatFreq:
             return .device
         case .contactStart, .contact, .contactEnd, .contactURI:
             return .contact

@@ -95,6 +95,8 @@ public struct DeviceCapabilities: Sendable, Equatable {
     public let model: String
     /// The semantic version string.
     public let version: String
+    /// Whether client repeat mode is enabled (v9+ firmware).
+    public let clientRepeat: Bool
 
     /// Initializes a new device capabilities structure.
     public init(
@@ -104,7 +106,8 @@ public struct DeviceCapabilities: Sendable, Equatable {
         blePin: UInt32,
         firmwareBuild: String,
         model: String,
-        version: String
+        version: String,
+        clientRepeat: Bool = false
     ) {
         self.firmwareVersion = firmwareVersion
         self.maxContacts = maxContacts
@@ -113,6 +116,7 @@ public struct DeviceCapabilities: Sendable, Equatable {
         self.firmwareBuild = firmwareBuild
         self.model = model
         self.version = version
+        self.clientRepeat = clientRepeat
     }
 }
 

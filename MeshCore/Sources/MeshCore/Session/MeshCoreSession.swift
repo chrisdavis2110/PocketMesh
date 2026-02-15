@@ -1011,19 +1011,29 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///   - bandwidth: Signal bandwidth in kHz (e.g., 125.0, 250.0, 500.0).
     ///   - spreadingFactor: LoRa spreading factor (7-12, higher = longer range but slower).
     ///   - codingRate: Error correction coding rate (5-8).
+    ///   - clientRepeat: Whether to enable client repeat mode (v9+ firmware, omitted if nil).
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func setRadio(
         frequency: Double,
         bandwidth: Double,
         spreadingFactor: UInt8,
-        codingRate: UInt8
+        codingRate: UInt8,
+        clientRepeat: Bool? = nil
     ) async throws {
         try await sendSimpleCommand(PacketBuilder.setRadio(
             frequency: frequency,
             bandwidth: bandwidth,
             spreadingFactor: spreadingFactor,
-            codingRate: codingRate
+            codingRate: codingRate,
+            clientRepeat: clientRepeat
         ))
+    }
+
+    /// Requests the allowed frequency ranges for client repeat mode (v9+ firmware).
+    ///
+    /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
+    public func getRepeatFreq() async throws {
+        try await sendSimpleCommand(PacketBuilder.getRepeatFreq())
     }
 
     /// Configures radio timing parameters for fine-tuning.

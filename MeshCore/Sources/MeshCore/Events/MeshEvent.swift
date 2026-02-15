@@ -110,6 +110,11 @@ public enum MeshEvent: Sendable {
     /// Emitted in response to ``MeshCoreSession/getAutoAddConfig()``.
     case autoAddConfig(UInt8)
 
+    /// Indicates that allowed repeat frequency ranges were received.
+    ///
+    /// Emitted in response to ``MeshCoreSession/getRepeatFreq()`` (v9+ firmware).
+    case allowedRepeatFreq([FrequencyRange])
+
     // MARK: - Contact Management
 
     /// Indicates that a contact list transfer has started.
@@ -1040,6 +1045,20 @@ public struct DiscoverResponse: Sendable, Equatable {
         self.pathLength = pathLength
         self.tag = tag
         self.publicKey = publicKey
+    }
+}
+
+/// Represents an allowed frequency range for client repeat mode.
+public struct FrequencyRange: Sendable, Equatable {
+    /// The lower bound of the frequency range in kHz.
+    public let lowerKHz: UInt32
+    /// The upper bound of the frequency range in kHz.
+    public let upperKHz: UInt32
+
+    /// Initializes a new frequency range.
+    public init(lowerKHz: UInt32, upperKHz: UInt32) {
+        self.lowerKHz = lowerKHz
+        self.upperKHz = upperKHz
     }
 }
 
