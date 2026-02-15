@@ -598,6 +598,16 @@ final class RoundTripTests: XCTestCase {
         XCTAssertEqual(packet.count, 11)
     }
 
+    func test_setTxPower_positivePower_packetFormat() {
+        let packet = PacketBuilder.setTxPower(20)
+        XCTAssertEqual(packet, Data([0x0C, 0x14]))
+    }
+
+    func test_setTxPower_negativePower_packetFormat() {
+        let packet = PacketBuilder.setTxPower(-5)
+        XCTAssertEqual(packet, Data([0x0C, 0xFB]))
+    }
+
     func test_getRepeatFreq_packetFormat() {
         let packet = PacketBuilder.getRepeatFreq()
         XCTAssertEqual(packet, Data([0x3C]))

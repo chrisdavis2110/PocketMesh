@@ -148,13 +148,10 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x08` (setTxPower)
-    /// - Offset 1 (4 bytes): Power value, Little-endian Int32
-    public static func setTxPower(_ power: Int) -> Data {
-        var data = Data([CommandCode.setTxPower.rawValue])
-        let powerValue = Int32(power)
-        data.append(contentsOf: withUnsafeBytes(of: powerValue.littleEndian) { Array($0) })
-        return data
+    /// - Offset 0 (1 byte): Command code `0x0C` (setTxPower)
+    /// - Offset 1 (1 byte): Power value, Int8
+    public static func setTxPower(_ power: Int8) -> Data {
+        Data([CommandCode.setTxPower.rawValue, UInt8(bitPattern: power)])
     }
 
     /// Builds a setRadio command to configure radio modulation parameters.

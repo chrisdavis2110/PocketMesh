@@ -998,9 +998,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
     /// Sets the radio transmission power level.
     ///
-    /// - Parameter power: Power level in dBm (device-specific range, typically 1-20).
+    /// - Parameter power: Power level in dBm (range: -9 to 30).
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
-    public func setTxPower(_ power: Int) async throws {
+    public func setTxPower(_ power: Int8) async throws {
         try await sendSimpleCommand(PacketBuilder.setTxPower(power))
     }
 

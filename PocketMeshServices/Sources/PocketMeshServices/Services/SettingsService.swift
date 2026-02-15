@@ -288,7 +288,7 @@ public actor SettingsService {
     /// Set transmit power
     public func setTxPower(_ power: Int8) async throws {
         do {
-            try await session.setTxPower(Int(power))
+            try await session.setTxPower(power)
         } catch let error as MeshCoreError {
             throw SettingsServiceError.sessionError(error)
         }
