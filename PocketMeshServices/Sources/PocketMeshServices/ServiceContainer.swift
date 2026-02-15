@@ -92,6 +92,9 @@ public final class ServiceContainer {
     /// Service for exporting/importing node configuration
     public let nodeConfigService: NodeConfigService
 
+    /// Service for node status history snapshots
+    public let nodeSnapshotService: NodeSnapshotService
+
     // MARK: - Remote Node Services
 
     /// Service for remote node session management
@@ -163,6 +166,7 @@ public final class ServiceContainer {
             channelService: channelService,
             dataStore: dataStore
         )
+        self.nodeSnapshotService = NodeSnapshotService(dataStore: dataStore)
 
         // Higher-level services (depend on other services)
         self.remoteNodeService = RemoteNodeService(
@@ -298,6 +302,12 @@ public final class ServiceContainer {
         // Prune debug logs on connection
         Task {
             try? await dataStore.pruneDebugLogEntries(keepCount: 1000)
+        }
+
+        // Prune node status snapshots older than 1 year
+        Task {
+            let oneYearAgo = Calendar.current.date(byAdding: .year, value: -1, to: .now)!
+            await nodeSnapshotService.pruneOldSnapshots(olderThan: oneYearAgo)
         }
 
         isMonitoringEvents = true
