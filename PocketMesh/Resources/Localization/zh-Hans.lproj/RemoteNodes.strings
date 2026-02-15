@@ -317,6 +317,9 @@
 /* Location: RepeaterStatusView.swift - Packets received label */
 "remoteNodes.status.packetsReceived" = "已接收数据包";
 
+/* Location: RepeaterStatusView.swift - Receive errors label */
+"remoteNodes.status.receiveErrors" = "已接收数据包错误";
+
 /* Location: RepeaterStatusView.swift - Neighbors section header */
 "remoteNodes.status.neighbors" = "邻居";
 

@@ -314,6 +314,9 @@
 /* Location: RepeaterStatusView.swift - Packets received label */
 "remoteNodes.status.packetsReceived" = "Pakiety odebrane";
 
+/* Location: RepeaterStatusView.swift - Receive errors label */
+"remoteNodes.status.receiveErrors" = "Błędy pakietów odebrane";
+
 /* Location: RepeaterStatusView.swift - Neighbors section label */
 "remoteNodes.status.neighbors" = "Sąsiedzi";
 

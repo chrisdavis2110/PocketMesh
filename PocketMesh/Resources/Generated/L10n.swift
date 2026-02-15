@@ -2577,6 +2577,8 @@ public enum L10n {
         public static let packetsReceived = L10n.tr("RemoteNodes", "remoteNodes.status.packetsReceived", fallback: "Packets Received")
         /// Location: RepeaterStatusView.swift - Packets sent label
         public static let packetsSent = L10n.tr("RemoteNodes", "remoteNodes.status.packetsSent", fallback: "Packets Sent")
+        /// Location: RepeaterStatusView.swift - Receive errors label
+        public static let receiveErrors = L10n.tr("RemoteNodes", "remoteNodes.status.receiveErrors", fallback: "Packet Errors Received")
         /// Location: RepeaterStatusViewModel.swift - Request timed out
         public static let requestTimedOut = L10n.tr("RemoteNodes", "remoteNodes.status.requestTimedOut", fallback: "Request timed out")
         /// Location: RepeaterStatusView.swift - Seconds ago format
