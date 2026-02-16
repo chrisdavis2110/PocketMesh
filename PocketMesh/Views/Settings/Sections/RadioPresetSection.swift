@@ -14,6 +14,12 @@ struct RadioPresetSection: View {
     @State private var isApplyingRepeat = false
     @State private var showRepeatConfirmation = false
 
+    private var startupTaskID: String {
+        let deviceID = appState.connectedDevice?.id.uuidString ?? "none"
+        let syncPhase = appState.connectionUI.currentSyncPhase.map { String(describing: $0) } ?? "none"
+        return "\(deviceID)-\(String(describing: appState.connectionState))-\(syncPhase)"
+    }
+
     private var presets: [RadioPreset] {
         RadioPresets.presetsForLocale()
     }
@@ -150,6 +156,11 @@ struct RadioPresetSection: View {
             Task { @MainActor in
                 hasInitialized = true
             }
+        }
+        .task(id: startupTaskID) {
+            guard appState.canRunSettingsStartupReads,
+                  let settingsService = appState.services?.settingsService else { return }
+            _ = try? await settingsService.getSelfInfo()
         }
         .onChange(of: currentPreset?.id) { _, newPresetID in
             // Sync picker when device settings change externally (e.g., from Advanced Settings)
