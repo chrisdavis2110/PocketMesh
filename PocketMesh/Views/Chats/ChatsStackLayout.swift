@@ -21,7 +21,7 @@ struct ChatsStackLayout<RootContent: View>: View {
                             .id(contact.id)
                             .onAppear {
                                 activeRoute = route
-                                appState.tabBarVisibility = .hidden
+                                appState.navigation.tabBarVisibility = .hidden
                             }
 
                     case .channel(let channel):
@@ -29,7 +29,7 @@ struct ChatsStackLayout<RootContent: View>: View {
                             .id(channel.id)
                             .onAppear {
                                 activeRoute = route
-                                appState.tabBarVisibility = .hidden
+                                appState.navigation.tabBarVisibility = .hidden
                             }
 
                     case .room(let session):
@@ -37,20 +37,20 @@ struct ChatsStackLayout<RootContent: View>: View {
                             .id(session.id)
                             .onAppear {
                                 activeRoute = route
-                                appState.tabBarVisibility = .hidden
+                                appState.navigation.tabBarVisibility = .hidden
                             }
                     }
                 }
                 .onChange(of: navigationPath) { _, newPath in
                     if newPath.isEmpty {
                         activeRoute = nil
-                        appState.tabBarVisibility = .visible
+                        appState.navigation.tabBarVisibility = .visible
                         Task {
                             await onLoadConversations()
                         }
                     }
                 }
-                .toolbarVisibility(appState.tabBarVisibility, for: .tabBar)
+                .toolbarVisibility(appState.navigation.tabBarVisibility, for: .tabBar)
         }
     }
 }

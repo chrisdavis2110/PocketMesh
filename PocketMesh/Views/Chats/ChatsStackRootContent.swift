@@ -134,13 +134,13 @@ struct ChatsStackRootContent: View {
             .task {
                 await onTaskStart()
             }
-            .onChange(of: appState.pendingChatContact) { _, _ in
+            .onChange(of: appState.navigation.pendingChatContact) { _, _ in
                 onHandlePendingNavigation()
             }
-            .onChange(of: appState.pendingChannel) { _, _ in
+            .onChange(of: appState.navigation.pendingChannel) { _, _ in
                 onHandlePendingChannelNavigation()
             }
-            .onChange(of: appState.pendingRoomSession) { _, _ in
+            .onChange(of: appState.navigation.pendingRoomSession) { _, _ in
                 onHandlePendingRoomNavigation()
             }
             .onChange(of: appState.servicesVersion) { _, _ in

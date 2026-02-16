@@ -62,10 +62,11 @@ struct BLEStatusIndicatorView: View {
                     }
                     VStack(alignment: .leading) {
                         Label(device.nodeName, systemImage: "antenna.radiowaves.left.and.right")
-                        if let battery = appState.deviceBattery {
+                        if let battery = appState.batteryMonitor.deviceBattery {
+                            let ocvArray = appState.batteryMonitor.activeBatteryOCVArray(for: appState.connectedDevice)
                             Label(
-                                "\(battery.percentage(using: appState.activeBatteryOCVArray))% (\(battery.voltage, format: .number.precision(.fractionLength(2)))v)",
-                                systemImage: battery.iconName(using: appState.activeBatteryOCVArray)
+                                "\(battery.percentage(using: ocvArray))% (\(battery.voltage, format: .number.precision(.fractionLength(2)))v)",
+                                systemImage: battery.iconName(using: ocvArray)
                             )
                             .font(.caption)
                             .foregroundStyle(.secondary)

@@ -54,7 +54,7 @@ struct PocketMeshApp: App {
     @MainActor
     private func setupScreenshotMode() async {
         // Bypass onboarding
-        appState.hasCompletedOnboarding = true
+        appState.onboarding.hasCompletedOnboarding = true
 
         // Persist simulator device ID for auto-reconnect
         UserDefaults.standard.set(

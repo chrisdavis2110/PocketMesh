@@ -91,10 +91,10 @@ struct DeviceSelectionSheet: View {
                                     try await appState.connectionManager.connect(to: device.id, forceFullSync: true, forceReconnect: true)
                                 }
                             } catch BLEError.deviceConnectedToOtherApp {
-                                appState.otherAppWarningDeviceID = device.id
+                                appState.connectionUI.otherAppWarningDeviceID = device.id
                             } catch {
-                                appState.connectionFailedMessage = error.localizedDescription
-                                appState.showingConnectionFailedAlert = true
+                                appState.connectionUI.connectionFailedMessage = error.localizedDescription
+                                appState.connectionUI.showingConnectionFailedAlert = true
                             }
                         }
                     }

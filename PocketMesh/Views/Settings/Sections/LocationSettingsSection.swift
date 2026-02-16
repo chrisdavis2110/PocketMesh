@@ -129,7 +129,7 @@ struct LocationSettingsSection: View {
 
     private var startupTaskID: String {
         let deviceID = appState.connectedDevice?.id.uuidString ?? "none"
-        let syncPhase = appState.currentSyncPhase.map { String(describing: $0) } ?? "none"
+        let syncPhase = appState.connectionUI.currentSyncPhase.map { String(describing: $0) } ?? "none"
         return "\(deviceID)-\(String(describing: appState.connectionState))-\(syncPhase)"
     }
 

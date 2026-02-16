@@ -183,13 +183,13 @@ struct ContactsSidebarContent: View {
                 await onLoadContacts()
             }
         }
-        .onChange(of: appState.pendingDiscoveryNavigation) { _, shouldNavigate in
+        .onChange(of: appState.navigation.pendingDiscoveryNavigation) { _, shouldNavigate in
             if shouldNavigate {
                 showDiscovery = true
-                appState.clearPendingDiscoveryNavigation()
+                appState.navigation.clearPendingDiscoveryNavigation()
             }
         }
-        .onChange(of: appState.pendingContactDetail) { _, contact in
+        .onChange(of: appState.navigation.pendingContactDetail) { _, contact in
             guard let contact else { return }
 
             if shouldUseSplitView {
@@ -199,7 +199,7 @@ struct ContactsSidebarContent: View {
                 navigationPath.append(contact)
             }
 
-            appState.clearPendingContactDetailNavigation()
+            appState.navigation.clearPendingContactDetailNavigation()
         }
         .onChange(of: appState.locationService.authorizationStatus) { _, status in
             if sortOrder == .distance {

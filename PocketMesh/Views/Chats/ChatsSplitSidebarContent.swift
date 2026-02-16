@@ -68,7 +68,7 @@ struct ChatsSplitSidebarContent: View {
             if case .room(let session) = newValue, !session.isConnected {
                 roomToAuthenticate = session
                 selectedRoute = nil
-                appState.chatsSelectedRoute = nil
+                appState.navigation.chatsSelectedRoute = nil
                 lastSelectedRoomIsConnected = nil
                 routeBeingDeleted = nil
                 return
@@ -82,7 +82,7 @@ struct ChatsSplitSidebarContent: View {
             // Sync sidebar selection to AppState for detail pane (non-nil only;
             // nil cases are handled explicitly by deletion methods and disconnected room path)
             if let newValue {
-                appState.chatsSelectedRoute = newValue
+                appState.navigation.chatsSelectedRoute = newValue
             }
         }
     }
@@ -166,13 +166,13 @@ struct ChatsSplitSidebarContent: View {
             .task {
                 await onTaskStart()
             }
-            .onChange(of: appState.pendingChatContact) { _, _ in
+            .onChange(of: appState.navigation.pendingChatContact) { _, _ in
                 onHandlePendingNavigation()
             }
-            .onChange(of: appState.pendingChannel) { _, _ in
+            .onChange(of: appState.navigation.pendingChannel) { _, _ in
                 onHandlePendingChannelNavigation()
             }
-            .onChange(of: appState.pendingRoomSession) { _, _ in
+            .onChange(of: appState.navigation.pendingRoomSession) { _, _ in
                 onHandlePendingRoomNavigation()
             }
             .onChange(of: appState.servicesVersion) { _, _ in

@@ -246,7 +246,7 @@ struct ChatsView: View {
     private func navigate(to route: ChatRoute) {
         if shouldUseSplitView {
             selectedRoute = route
-            appState.chatsSelectedRoute = route
+            appState.navigation.chatsSelectedRoute = route
             return
         }
 
@@ -255,7 +255,7 @@ struct ChatsView: View {
             return
         }
 
-        appState.tabBarVisibility = .hidden
+        appState.navigation.tabBarVisibility = .hidden
         navigationPath.removeLast(navigationPath.count)
         navigationPath.append(route)
     }
@@ -279,7 +279,7 @@ struct ChatsView: View {
     private func deleteDirectConversation(_ contact: ContactDTO) {
         if shouldUseSplitView && selectedRoute == .direct(contact) {
             selectedRoute = nil
-            appState.chatsSelectedRoute = nil
+            appState.navigation.chatsSelectedRoute = nil
         }
 
         viewModel.removeConversation(.direct(contact))
@@ -288,7 +288,7 @@ struct ChatsView: View {
         if !shouldUseSplitView && activeRoute == .direct(contact) {
             navigationPath.removeLast(navigationPath.count)
             activeRoute = nil
-            appState.tabBarVisibility = .visible
+            appState.navigation.tabBarVisibility = .visible
         }
 
         Task {
@@ -300,7 +300,7 @@ struct ChatsView: View {
     private func deleteChannelConversation(_ channel: ChannelDTO) {
         if shouldUseSplitView && selectedRoute == .channel(channel) {
             selectedRoute = nil
-            appState.chatsSelectedRoute = nil
+            appState.navigation.chatsSelectedRoute = nil
         }
 
         viewModel.removeConversation(.channel(channel))
@@ -309,7 +309,7 @@ struct ChatsView: View {
         if !shouldUseSplitView && activeRoute == .channel(channel) {
             navigationPath.removeLast(navigationPath.count)
             activeRoute = nil
-            appState.tabBarVisibility = .visible
+            appState.navigation.tabBarVisibility = .visible
         }
 
         Task {
@@ -335,7 +335,7 @@ struct ChatsView: View {
             await MainActor.run {
                 if shouldUseSplitView && selectedRoute == .room(session) {
                     selectedRoute = nil
-                    appState.chatsSelectedRoute = nil
+                    appState.navigation.chatsSelectedRoute = nil
                 }
 
                 viewModel.removeConversation(.room(session))
@@ -344,7 +344,7 @@ struct ChatsView: View {
                 if !shouldUseSplitView && activeRoute == .room(session) {
                     navigationPath.removeLast(navigationPath.count)
                     activeRoute = nil
-                    appState.tabBarVisibility = .visible
+                    appState.navigation.tabBarVisibility = .visible
                 }
             }
         } catch {
@@ -372,21 +372,21 @@ struct ChatsView: View {
     }
 
     private func handlePendingNavigation() {
-        guard let contact = appState.pendingChatContact else { return }
+        guard let contact = appState.navigation.pendingChatContact else { return }
         navigate(to: .direct(contact))
-        appState.clearPendingNavigation()
+        appState.navigation.clearPendingNavigation()
     }
 
     private func handlePendingChannelNavigation() {
-        guard let channel = appState.pendingChannel else { return }
+        guard let channel = appState.navigation.pendingChannel else { return }
         navigate(to: .channel(channel))
-        appState.clearPendingChannelNavigation()
+        appState.navigation.clearPendingChannelNavigation()
     }
 
     private func handlePendingRoomNavigation() {
-        guard let session = appState.pendingRoomSession else { return }
+        guard let session = appState.navigation.pendingRoomSession else { return }
         navigate(to: .room(session))
-        appState.clearPendingRoomNavigation()
+        appState.navigation.clearPendingRoomNavigation()
     }
 
     private func handleHashtagTap(name: String) {

@@ -17,8 +17,8 @@ struct ConnectionUIStateTests {
     @Test("Failed state takes priority over syncing")
     func failedOverSyncing() {
         let appState = AppState()
-        appState.simulateSyncStarted()
-        appState.showSyncFailedPill()
+        appState.connectionUI.simulateSyncStarted()
+        appState.connectionUI.showSyncFailedPill()
 
         #expect(appState.statusPillState == .failed(message: "Sync Failed"))
     }
@@ -26,8 +26,8 @@ struct ConnectionUIStateTests {
     @Test("Syncing takes priority over ready toast")
     func syncingOverReady() {
         let appState = AppState()
-        appState.showReadyToastBriefly()
-        appState.simulateSyncStarted()
+        appState.connectionUI.showReadyToastBriefly()
+        appState.connectionUI.simulateSyncStarted()
 
         #expect(appState.statusPillState == .syncing)
     }
@@ -35,7 +35,7 @@ struct ConnectionUIStateTests {
     @Test("Ready toast takes priority over disconnected")
     func readyOverDisconnected() {
         let appState = AppState()
-        appState.showReadyToastBriefly()
+        appState.connectionUI.showReadyToastBriefly()
 
         // Even if disconnectedPillVisible were true, ready should win
         #expect(appState.statusPillState == .ready)
@@ -45,14 +45,14 @@ struct ConnectionUIStateTests {
     func multipleSyncActivities() {
         let appState = AppState()
 
-        appState.simulateSyncStarted()
-        appState.simulateSyncStarted()
+        appState.connectionUI.simulateSyncStarted()
+        appState.connectionUI.simulateSyncStarted()
         #expect(appState.statusPillState == .syncing)
 
-        appState.simulateSyncEnded()
+        appState.connectionUI.simulateSyncEnded()
         #expect(appState.statusPillState == .syncing)
 
-        appState.simulateSyncEnded()
+        appState.connectionUI.simulateSyncEnded()
         // After all sync activity ends, should not be syncing
         #expect(appState.statusPillState != .syncing)
     }
@@ -63,21 +63,21 @@ struct ConnectionUIStateTests {
     func showReadyToast() {
         let appState = AppState()
 
-        appState.showReadyToastBriefly()
+        appState.connectionUI.showReadyToastBriefly()
 
-        #expect(appState.showReadyToast == true)
+        #expect(appState.connectionUI.showReadyToast == true)
         #expect(appState.statusPillState == .ready)
     }
 
     @Test("hideReadyToast immediately clears toast")
     func hideReadyToast() {
         let appState = AppState()
-        appState.showReadyToastBriefly()
-        #expect(appState.showReadyToast == true)
+        appState.connectionUI.showReadyToastBriefly()
+        #expect(appState.connectionUI.showReadyToast == true)
 
-        appState.hideReadyToast()
+        appState.connectionUI.hideReadyToast()
 
-        #expect(appState.showReadyToast == false)
+        #expect(appState.connectionUI.showReadyToast == false)
         #expect(appState.statusPillState == .hidden)
     }
 
@@ -85,29 +85,29 @@ struct ConnectionUIStateTests {
     func readyToastAutoHides() async throws {
         let appState = AppState()
 
-        appState.showReadyToastBriefly()
-        #expect(appState.showReadyToast == true)
+        appState.connectionUI.showReadyToastBriefly()
+        #expect(appState.connectionUI.showReadyToast == true)
 
         // Wait for the 2-second auto-hide plus margin
         try await Task.sleep(for: .seconds(2.3))
 
-        #expect(appState.showReadyToast == false)
+        #expect(appState.connectionUI.showReadyToast == false)
     }
 
     @Test("Calling showReadyToastBriefly again resets the timer")
     func readyToastTimerReset() async throws {
         let appState = AppState()
 
-        appState.showReadyToastBriefly()
+        appState.connectionUI.showReadyToastBriefly()
         try await Task.sleep(for: .seconds(1.5))
 
         // Call again to reset
-        appState.showReadyToastBriefly()
-        #expect(appState.showReadyToast == true)
+        appState.connectionUI.showReadyToastBriefly()
+        #expect(appState.connectionUI.showReadyToast == true)
 
         // Wait past original timer but within new timer
         try await Task.sleep(for: .seconds(1.0))
-        #expect(appState.showReadyToast == true)
+        #expect(appState.connectionUI.showReadyToast == true)
     }
 
     // MARK: - Sync Failed Pill
@@ -116,33 +116,33 @@ struct ConnectionUIStateTests {
     func showSyncFailedPill() {
         let appState = AppState()
 
-        appState.showSyncFailedPill()
+        appState.connectionUI.showSyncFailedPill()
 
-        #expect(appState.syncFailedPillVisible == true)
+        #expect(appState.connectionUI.syncFailedPillVisible == true)
         #expect(appState.statusPillState == .failed(message: "Sync Failed"))
     }
 
     @Test("hideSyncFailedPill immediately clears pill")
     func hideSyncFailedPill() {
         let appState = AppState()
-        appState.showSyncFailedPill()
+        appState.connectionUI.showSyncFailedPill()
 
-        appState.hideSyncFailedPill()
+        appState.connectionUI.hideSyncFailedPill()
 
-        #expect(appState.syncFailedPillVisible == false)
+        #expect(appState.connectionUI.syncFailedPillVisible == false)
     }
 
     @Test("showSyncFailedPill auto-hides after delay")
     func syncFailedPillAutoHides() async throws {
         let appState = AppState()
 
-        appState.showSyncFailedPill()
-        #expect(appState.syncFailedPillVisible == true)
+        appState.connectionUI.showSyncFailedPill()
+        #expect(appState.connectionUI.syncFailedPillVisible == true)
 
         // Wait for the 7-second auto-hide plus margin
         try await Task.sleep(for: .seconds(7.3))
 
-        #expect(appState.syncFailedPillVisible == false)
+        #expect(appState.connectionUI.syncFailedPillVisible == false)
     }
 
     // MARK: - Disconnected Pill
@@ -150,16 +150,16 @@ struct ConnectionUIStateTests {
     @Test("disconnectedPillVisible is false by default")
     func disconnectedPillDefault() {
         let appState = AppState()
-        #expect(appState.disconnectedPillVisible == false)
+        #expect(appState.connectionUI.disconnectedPillVisible == false)
     }
 
     @Test("hideDisconnectedPill clears pill immediately")
     func hideDisconnectedPill() {
         let appState = AppState()
 
-        appState.hideDisconnectedPill()
+        appState.connectionUI.hideDisconnectedPill()
 
-        #expect(appState.disconnectedPillVisible == false)
+        #expect(appState.connectionUI.disconnectedPillVisible == false)
     }
 
     @Test("updateDisconnectedPillState without paired device stays hidden")
@@ -176,10 +176,14 @@ struct ConnectionUIStateTests {
 
         let appState = AppState()
 
-        appState.updateDisconnectedPillState()
+        appState.connectionUI.updateDisconnectedPillState(
+            connectionState: appState.connectionState,
+            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
+            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+        )
 
         try await Task.sleep(for: .seconds(1.3))
-        #expect(appState.disconnectedPillVisible == false)
+        #expect(appState.connectionUI.disconnectedPillVisible == false)
     }
 
     // MARK: - canRunSettingsStartupReads
@@ -196,7 +200,7 @@ struct ConnectionUIStateTests {
     func withSyncActivity() async {
         let appState = AppState()
 
-        await appState.withSyncActivity {
+        await appState.connectionUI.withSyncActivity {
             #expect(appState.statusPillState == .syncing)
         }
 
@@ -207,7 +211,7 @@ struct ConnectionUIStateTests {
     func withSyncActivityReturnValue() async {
         let appState = AppState()
 
-        let result = await appState.withSyncActivity {
+        let result = await appState.connectionUI.withSyncActivity {
             return 42
         }
 
@@ -219,28 +223,22 @@ struct ConnectionUIStateTests {
     @Test("Connection alert state defaults")
     func connectionAlertDefaults() {
         let appState = AppState()
-        #expect(appState.showingConnectionFailedAlert == false)
-        #expect(appState.connectionFailedMessage == nil)
-        #expect(appState.pendingReconnectDeviceID == nil)
-        #expect(appState.failedPairingDeviceID == nil)
-        #expect(appState.otherAppWarningDeviceID == nil)
-        #expect(appState.isPairing == false)
-        #expect(appState.isNodeStorageFull == false)
-    }
-
-    @Test("Derived isConnecting is false when disconnected")
-    func isConnectingDefault() {
-        let appState = AppState()
-        #expect(appState.isConnecting == false)
+        #expect(appState.connectionUI.showingConnectionFailedAlert == false)
+        #expect(appState.connectionUI.connectionFailedMessage == nil)
+        #expect(appState.connectionUI.pendingReconnectDeviceID == nil)
+        #expect(appState.connectionUI.failedPairingDeviceID == nil)
+        #expect(appState.connectionUI.otherAppWarningDeviceID == nil)
+        #expect(appState.connectionUI.isPairing == false)
+        #expect(appState.connectionUI.isNodeStorageFull == false)
     }
 
     @Test("cancelOtherAppWarning clears the device ID")
     func cancelOtherAppWarning() {
         let appState = AppState()
-        appState.otherAppWarningDeviceID = UUID()
+        appState.connectionUI.otherAppWarningDeviceID = UUID()
 
         appState.cancelOtherAppWarning()
 
-        #expect(appState.otherAppWarningDeviceID == nil)
+        #expect(appState.connectionUI.otherAppWarningDeviceID == nil)
     }
 }

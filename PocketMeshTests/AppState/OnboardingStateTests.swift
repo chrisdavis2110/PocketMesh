@@ -20,11 +20,11 @@ struct OnboardingStateTests {
         defer { cleanupUserDefaults() }
 
         let appState = AppState()
-        appState.hasCompletedOnboarding = false
+        appState.onboarding.hasCompletedOnboarding = false
 
         appState.completeOnboarding()
 
-        #expect(appState.hasCompletedOnboarding == true)
+        #expect(appState.onboarding.hasCompletedOnboarding == true)
     }
 
     @Test("completeOnboarding persists to UserDefaults")
@@ -33,7 +33,7 @@ struct OnboardingStateTests {
         defer { cleanupUserDefaults() }
 
         let appState = AppState()
-        appState.hasCompletedOnboarding = false
+        appState.onboarding.hasCompletedOnboarding = false
 
         appState.completeOnboarding()
 
@@ -48,11 +48,11 @@ struct OnboardingStateTests {
         defer { cleanupUserDefaults() }
 
         let appState = AppState()
-        appState.hasCompletedOnboarding = true
+        appState.onboarding.hasCompletedOnboarding = true
 
-        appState.resetOnboarding()
+        appState.onboarding.resetOnboarding()
 
-        #expect(appState.hasCompletedOnboarding == false)
+        #expect(appState.onboarding.hasCompletedOnboarding == false)
     }
 
     @Test("resetOnboarding clears onboarding path")
@@ -61,11 +61,11 @@ struct OnboardingStateTests {
         defer { cleanupUserDefaults() }
 
         let appState = AppState()
-        appState.onboardingPath = [.welcome, .permissions]
+        appState.onboarding.onboardingPath = [.welcome, .permissions]
 
-        appState.resetOnboarding()
+        appState.onboarding.resetOnboarding()
 
-        #expect(appState.onboardingPath.isEmpty)
+        #expect(appState.onboarding.onboardingPath.isEmpty)
     }
 
     @Test("resetOnboarding persists false to UserDefaults")
@@ -74,8 +74,8 @@ struct OnboardingStateTests {
         defer { cleanupUserDefaults() }
 
         let appState = AppState()
-        appState.hasCompletedOnboarding = true
-        appState.resetOnboarding()
+        appState.onboarding.hasCompletedOnboarding = true
+        appState.onboarding.resetOnboarding()
 
         #expect(UserDefaults.standard.bool(forKey: onboardingKey) == false)
     }
@@ -85,17 +85,17 @@ struct OnboardingStateTests {
     @Test("onboardingPath starts empty")
     func onboardingPathDefault() {
         let appState = AppState()
-        #expect(appState.onboardingPath.isEmpty)
+        #expect(appState.onboarding.onboardingPath.isEmpty)
     }
 
     @Test("onboardingPath can be appended to")
     func onboardingPathAppend() {
         let appState = AppState()
 
-        appState.onboardingPath.append(.welcome)
-        appState.onboardingPath.append(.permissions)
+        appState.onboarding.onboardingPath.append(.welcome)
+        appState.onboarding.onboardingPath.append(.permissions)
 
-        #expect(appState.onboardingPath == [.welcome, .permissions])
+        #expect(appState.onboarding.onboardingPath == [.welcome, .permissions])
     }
 
     // MARK: - donateFloodAdvertTipIfOnValidTab
@@ -103,56 +103,56 @@ struct OnboardingStateTests {
     @Test("donateFloodAdvertTipIfOnValidTab on Chats tab clears pending")
     func donateOnChatsTab() async {
         let appState = AppState()
-        appState.selectedTab = 0
-        appState.pendingFloodAdvertTipDonation = true
+        appState.navigation.selectedTab = 0
+        appState.navigation.pendingFloodAdvertTipDonation = true
 
         await appState.donateFloodAdvertTipIfOnValidTab()
 
-        #expect(appState.pendingFloodAdvertTipDonation == false)
+        #expect(appState.navigation.pendingFloodAdvertTipDonation == false)
     }
 
     @Test("donateFloodAdvertTipIfOnValidTab on Contacts tab clears pending")
     func donateOnContactsTab() async {
         let appState = AppState()
-        appState.selectedTab = 1
-        appState.pendingFloodAdvertTipDonation = true
+        appState.navigation.selectedTab = 1
+        appState.navigation.pendingFloodAdvertTipDonation = true
 
         await appState.donateFloodAdvertTipIfOnValidTab()
 
-        #expect(appState.pendingFloodAdvertTipDonation == false)
+        #expect(appState.navigation.pendingFloodAdvertTipDonation == false)
     }
 
     @Test("donateFloodAdvertTipIfOnValidTab on Map tab clears pending")
     func donateOnMapTab() async {
         let appState = AppState()
-        appState.selectedTab = 2
-        appState.pendingFloodAdvertTipDonation = true
+        appState.navigation.selectedTab = 2
+        appState.navigation.pendingFloodAdvertTipDonation = true
 
         await appState.donateFloodAdvertTipIfOnValidTab()
 
-        #expect(appState.pendingFloodAdvertTipDonation == false)
+        #expect(appState.navigation.pendingFloodAdvertTipDonation == false)
     }
 
     @Test("donateFloodAdvertTipIfOnValidTab on Settings tab sets pending")
     func donateOnSettingsTab() async {
         let appState = AppState()
-        appState.selectedTab = 3
-        appState.pendingFloodAdvertTipDonation = false
+        appState.navigation.selectedTab = 3
+        appState.navigation.pendingFloodAdvertTipDonation = false
 
         await appState.donateFloodAdvertTipIfOnValidTab()
 
-        #expect(appState.pendingFloodAdvertTipDonation == true)
+        #expect(appState.navigation.pendingFloodAdvertTipDonation == true)
     }
 
     @Test("donateFloodAdvertTipIfOnValidTab on Tools tab sets pending")
     func donateOnToolsTab() async {
         let appState = AppState()
-        appState.selectedTab = 4
-        appState.pendingFloodAdvertTipDonation = false
+        appState.navigation.selectedTab = 4
+        appState.navigation.pendingFloodAdvertTipDonation = false
 
         await appState.donateFloodAdvertTipIfOnValidTab()
 
-        #expect(appState.pendingFloodAdvertTipDonation == true)
+        #expect(appState.navigation.pendingFloodAdvertTipDonation == true)
     }
 
     // MARK: - hasCompletedOnboarding didSet
@@ -164,10 +164,10 @@ struct OnboardingStateTests {
 
         let appState = AppState()
 
-        appState.hasCompletedOnboarding = true
+        appState.onboarding.hasCompletedOnboarding = true
         #expect(UserDefaults.standard.bool(forKey: onboardingKey) == true)
 
-        appState.hasCompletedOnboarding = false
+        appState.onboarding.hasCompletedOnboarding = false
         #expect(UserDefaults.standard.bool(forKey: onboardingKey) == false)
     }
 }

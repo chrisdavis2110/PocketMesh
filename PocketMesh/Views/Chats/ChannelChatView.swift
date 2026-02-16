@@ -129,9 +129,9 @@ struct ChannelChatView: View {
         }
         .task(id: appState.servicesVersion) {
             // Capture pending scroll target before loading
-            let pendingTarget = appState.pendingScrollToMessageID
+            let pendingTarget = appState.navigation.pendingScrollToMessageID
             if pendingTarget != nil {
-                appState.clearPendingScrollToMessage()
+                appState.navigation.clearPendingScrollToMessage()
             }
 
             viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)

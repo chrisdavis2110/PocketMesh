@@ -42,16 +42,17 @@ struct DeviceInfoView: View {
 
                 // Battery and storage
                 Section {
-                    if let battery = appState.deviceBattery {
+                    if let battery = appState.batteryMonitor.deviceBattery {
+                        let ocvArray = appState.batteryMonitor.activeBatteryOCVArray(for: appState.connectedDevice)
                         HStack {
                             Label(
                             L10n.Settings.DeviceInfo.battery,
-                            systemImage: battery.iconName(using: appState.activeBatteryOCVArray)
+                            systemImage: battery.iconName(using: ocvArray)
                         )
                                 .symbolRenderingMode(.multicolor)
                             Spacer()
-                            Text("\(battery.percentage(using: appState.activeBatteryOCVArray))%")
-                                .foregroundStyle(battery.levelColor(using: appState.activeBatteryOCVArray))
+                            Text("\(battery.percentage(using: ocvArray))%")
+                                .foregroundStyle(battery.levelColor(using: ocvArray))
                             Text("(\(battery.voltage, format: .number.precision(.fractionLength(2)))V)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -167,11 +168,11 @@ struct DeviceInfoView: View {
         }
         .navigationTitle(L10n.Settings.DeviceInfo.title)
         .refreshable {
-            await appState.fetchDeviceBattery()
+            await appState.batteryMonitor.fetchDeviceBattery(services: appState.services, device: appState.connectedDevice)
         }
         .onAppear {
             deviceInfoLogger.info("DeviceInfoView: appeared, connectedDevice=\(appState.connectedDevice != nil)")
-            Task { await appState.fetchDeviceBattery() }
+            Task { await appState.batteryMonitor.fetchDeviceBattery(services: appState.services, device: appState.connectedDevice) }
         }
         .sheet(isPresented: $showShareSheet) {
             if let device = appState.connectedDevice {

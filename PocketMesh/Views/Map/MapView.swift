@@ -250,7 +250,7 @@ struct MapView: View {
 
     private func navigateToChat(with contact: ContactDTO) {
         clearSelection()
-        appState.navigateToChat(with: contact)
+        appState.navigation.navigateToChat(with: contact)
     }
 
     private func showContactDetail(_ contact: ContactDTO) {
@@ -475,7 +475,7 @@ private struct ContactDetailSheet: View {
                         NodeAuthenticationSheet(contact: contact, role: role) { session in
                             activeSheet = nil
                             dismiss()
-                            appState.navigateToRoom(with: session)
+                            appState.navigation.navigateToRoom(with: session)
                         }
                         .presentationSizing(.page)
                     }

@@ -7,7 +7,7 @@ struct ChatsSplitDetailContent: View {
     let viewModel: ChatViewModel
 
     var body: some View {
-        switch appState.chatsSelectedRoute {
+        switch appState.navigation.chatsSelectedRoute {
         case .direct(let contact):
             ChatView(contact: contact, parentViewModel: viewModel)
                 .id(contact.id)

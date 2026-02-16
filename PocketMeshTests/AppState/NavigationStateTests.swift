@@ -91,15 +91,15 @@ struct NavigationStateTests {
     @Test("Default navigation state is tab 0 with no pending navigation")
     func defaultState() {
         let appState = AppState()
-        #expect(appState.selectedTab == 0)
-        #expect(appState.pendingChatContact == nil)
-        #expect(appState.pendingChannel == nil)
-        #expect(appState.pendingRoomSession == nil)
-        #expect(appState.pendingDiscoveryNavigation == false)
-        #expect(appState.pendingContactDetail == nil)
-        #expect(appState.pendingScrollToMessageID == nil)
-        #expect(appState.chatsSelectedRoute == nil)
-        #expect(appState.tabBarVisibility == .visible)
+        #expect(appState.navigation.selectedTab == 0)
+        #expect(appState.navigation.pendingChatContact == nil)
+        #expect(appState.navigation.pendingChannel == nil)
+        #expect(appState.navigation.pendingRoomSession == nil)
+        #expect(appState.navigation.pendingDiscoveryNavigation == false)
+        #expect(appState.navigation.pendingContactDetail == nil)
+        #expect(appState.navigation.pendingScrollToMessageID == nil)
+        #expect(appState.navigation.chatsSelectedRoute == nil)
+        #expect(appState.navigation.tabBarVisibility == .visible)
     }
 
     // MARK: - navigateToChat
@@ -109,13 +109,13 @@ struct NavigationStateTests {
         let appState = AppState()
         let contact = Self.makeContact()
 
-        appState.navigateToChat(with: contact)
+        appState.navigation.navigateToChat(with: contact)
 
-        #expect(appState.pendingChatContact == contact)
-        #expect(appState.chatsSelectedRoute == .direct(contact))
-        #expect(appState.selectedTab == 0)
-        #expect(appState.tabBarVisibility == .hidden)
-        #expect(appState.pendingScrollToMessageID == nil)
+        #expect(appState.navigation.pendingChatContact == contact)
+        #expect(appState.navigation.chatsSelectedRoute == .direct(contact))
+        #expect(appState.navigation.selectedTab == 0)
+        #expect(appState.navigation.tabBarVisibility == .hidden)
+        #expect(appState.navigation.pendingScrollToMessageID == nil)
     }
 
     @Test("navigateToChat with scrollToMessageID sets message ID")
@@ -124,24 +124,24 @@ struct NavigationStateTests {
         let contact = Self.makeContact()
         let messageID = UUID()
 
-        appState.navigateToChat(with: contact, scrollToMessageID: messageID)
+        appState.navigation.navigateToChat(with: contact, scrollToMessageID: messageID)
 
-        #expect(appState.pendingChatContact == contact)
-        #expect(appState.pendingScrollToMessageID == messageID)
-        #expect(appState.chatsSelectedRoute == .direct(contact))
-        #expect(appState.selectedTab == 0)
+        #expect(appState.navigation.pendingChatContact == contact)
+        #expect(appState.navigation.pendingScrollToMessageID == messageID)
+        #expect(appState.navigation.chatsSelectedRoute == .direct(contact))
+        #expect(appState.navigation.selectedTab == 0)
     }
 
     @Test("navigateToChat switches to Chats tab from another tab")
     func navigateToChatFromOtherTab() {
         let appState = AppState()
-        appState.selectedTab = 3 // Settings tab
+        appState.navigation.selectedTab = 3 // Settings tab
         let contact = Self.makeContact()
 
-        appState.navigateToChat(with: contact)
+        appState.navigation.navigateToChat(with: contact)
 
-        #expect(appState.selectedTab == 0)
-        #expect(appState.pendingChatContact == contact)
+        #expect(appState.navigation.selectedTab == 0)
+        #expect(appState.navigation.pendingChatContact == contact)
     }
 
     // MARK: - navigateToRoom
@@ -151,12 +151,12 @@ struct NavigationStateTests {
         let appState = AppState()
         let session = Self.makeRoomSession()
 
-        appState.navigateToRoom(with: session)
+        appState.navigation.navigateToRoom(with: session)
 
-        #expect(appState.pendingRoomSession == session)
-        #expect(appState.chatsSelectedRoute == .room(session))
-        #expect(appState.selectedTab == 0)
-        #expect(appState.tabBarVisibility == .hidden)
+        #expect(appState.navigation.pendingRoomSession == session)
+        #expect(appState.navigation.chatsSelectedRoute == .room(session))
+        #expect(appState.navigation.selectedTab == 0)
+        #expect(appState.navigation.tabBarVisibility == .hidden)
     }
 
     // MARK: - navigateToChannel
@@ -166,13 +166,13 @@ struct NavigationStateTests {
         let appState = AppState()
         let channel = Self.makeChannel()
 
-        appState.navigateToChannel(with: channel)
+        appState.navigation.navigateToChannel(with: channel)
 
-        #expect(appState.pendingChannel == channel)
-        #expect(appState.chatsSelectedRoute == .channel(channel))
-        #expect(appState.selectedTab == 0)
-        #expect(appState.tabBarVisibility == .hidden)
-        #expect(appState.pendingScrollToMessageID == nil)
+        #expect(appState.navigation.pendingChannel == channel)
+        #expect(appState.navigation.chatsSelectedRoute == .channel(channel))
+        #expect(appState.navigation.selectedTab == 0)
+        #expect(appState.navigation.tabBarVisibility == .hidden)
+        #expect(appState.navigation.pendingScrollToMessageID == nil)
     }
 
     @Test("navigateToChannel with scrollToMessageID sets message ID")
@@ -181,10 +181,10 @@ struct NavigationStateTests {
         let channel = Self.makeChannel()
         let messageID = UUID()
 
-        appState.navigateToChannel(with: channel, scrollToMessageID: messageID)
+        appState.navigation.navigateToChannel(with: channel, scrollToMessageID: messageID)
 
-        #expect(appState.pendingChannel == channel)
-        #expect(appState.pendingScrollToMessageID == messageID)
+        #expect(appState.navigation.pendingChannel == channel)
+        #expect(appState.navigation.pendingScrollToMessageID == messageID)
     }
 
     // MARK: - navigateToDiscovery
@@ -193,19 +193,19 @@ struct NavigationStateTests {
     func navigateToDiscovery() {
         let appState = AppState()
 
-        appState.navigateToDiscovery()
+        appState.navigation.navigateToDiscovery()
 
-        #expect(appState.pendingDiscoveryNavigation == true)
-        #expect(appState.selectedTab == 1)
+        #expect(appState.navigation.pendingDiscoveryNavigation == true)
+        #expect(appState.navigation.selectedTab == 1)
     }
 
     @Test("navigateToDiscovery does not hide tab bar")
     func navigateToDiscoveryTabBarVisible() {
         let appState = AppState()
 
-        appState.navigateToDiscovery()
+        appState.navigation.navigateToDiscovery()
 
-        #expect(appState.tabBarVisibility == .visible)
+        #expect(appState.navigation.tabBarVisibility == .visible)
     }
 
     // MARK: - navigateToContacts
@@ -213,11 +213,11 @@ struct NavigationStateTests {
     @Test("navigateToContacts switches to contacts tab")
     func navigateToContacts() {
         let appState = AppState()
-        appState.selectedTab = 3
+        appState.navigation.selectedTab = 3
 
-        appState.navigateToContacts()
+        appState.navigation.navigateToContacts()
 
-        #expect(appState.selectedTab == 1)
+        #expect(appState.navigation.selectedTab == 1)
     }
 
     // MARK: - navigateToContactDetail
@@ -227,10 +227,10 @@ struct NavigationStateTests {
         let appState = AppState()
         let contact = Self.makeContact()
 
-        appState.navigateToContactDetail(contact)
+        appState.navigation.navigateToContactDetail(contact)
 
-        #expect(appState.pendingContactDetail == contact)
-        #expect(appState.selectedTab == 1)
+        #expect(appState.navigation.pendingContactDetail == contact)
+        #expect(appState.navigation.selectedTab == 1)
     }
 
     // MARK: - Clear Methods
@@ -238,61 +238,61 @@ struct NavigationStateTests {
     @Test("clearPendingNavigation clears chat contact")
     func clearPendingNavigation() {
         let appState = AppState()
-        appState.pendingChatContact = Self.makeContact()
+        appState.navigation.pendingChatContact = Self.makeContact()
 
-        appState.clearPendingNavigation()
+        appState.navigation.clearPendingNavigation()
 
-        #expect(appState.pendingChatContact == nil)
+        #expect(appState.navigation.pendingChatContact == nil)
     }
 
     @Test("clearPendingRoomNavigation clears room session")
     func clearPendingRoomNavigation() {
         let appState = AppState()
-        appState.pendingRoomSession = Self.makeRoomSession()
+        appState.navigation.pendingRoomSession = Self.makeRoomSession()
 
-        appState.clearPendingRoomNavigation()
+        appState.navigation.clearPendingRoomNavigation()
 
-        #expect(appState.pendingRoomSession == nil)
+        #expect(appState.navigation.pendingRoomSession == nil)
     }
 
     @Test("clearPendingChannelNavigation clears channel")
     func clearPendingChannelNavigation() {
         let appState = AppState()
-        appState.pendingChannel = Self.makeChannel()
+        appState.navigation.pendingChannel = Self.makeChannel()
 
-        appState.clearPendingChannelNavigation()
+        appState.navigation.clearPendingChannelNavigation()
 
-        #expect(appState.pendingChannel == nil)
+        #expect(appState.navigation.pendingChannel == nil)
     }
 
     @Test("clearPendingDiscoveryNavigation clears discovery flag")
     func clearPendingDiscoveryNavigation() {
         let appState = AppState()
-        appState.pendingDiscoveryNavigation = true
+        appState.navigation.pendingDiscoveryNavigation = true
 
-        appState.clearPendingDiscoveryNavigation()
+        appState.navigation.clearPendingDiscoveryNavigation()
 
-        #expect(appState.pendingDiscoveryNavigation == false)
+        #expect(appState.navigation.pendingDiscoveryNavigation == false)
     }
 
     @Test("clearPendingScrollToMessage clears message ID")
     func clearPendingScrollToMessage() {
         let appState = AppState()
-        appState.pendingScrollToMessageID = UUID()
+        appState.navigation.pendingScrollToMessageID = UUID()
 
-        appState.clearPendingScrollToMessage()
+        appState.navigation.clearPendingScrollToMessage()
 
-        #expect(appState.pendingScrollToMessageID == nil)
+        #expect(appState.navigation.pendingScrollToMessageID == nil)
     }
 
     @Test("clearPendingContactDetailNavigation clears contact detail")
     func clearPendingContactDetailNavigation() {
         let appState = AppState()
-        appState.pendingContactDetail = Self.makeContact()
+        appState.navigation.pendingContactDetail = Self.makeContact()
 
-        appState.clearPendingContactDetailNavigation()
+        appState.navigation.clearPendingContactDetailNavigation()
 
-        #expect(appState.pendingContactDetail == nil)
+        #expect(appState.navigation.pendingContactDetail == nil)
     }
 
     // MARK: - Cross-Tab Navigation
@@ -300,15 +300,15 @@ struct NavigationStateTests {
     @Test("navigateToChat from contacts tab hides tab bar and switches tab")
     func crossTabChatNavigation() {
         let appState = AppState()
-        appState.selectedTab = 1  // Contacts tab
+        appState.navigation.selectedTab = 1  // Contacts tab
         let contact = Self.makeContact()
 
-        appState.navigateToChat(with: contact)
+        appState.navigation.navigateToChat(with: contact)
 
-        #expect(appState.tabBarVisibility == .hidden)
-        #expect(appState.selectedTab == 0)
-        #expect(appState.pendingChatContact == contact)
-        #expect(appState.chatsSelectedRoute == .direct(contact))
+        #expect(appState.navigation.tabBarVisibility == .hidden)
+        #expect(appState.navigation.selectedTab == 0)
+        #expect(appState.navigation.pendingChatContact == contact)
+        #expect(appState.navigation.chatsSelectedRoute == .direct(contact))
     }
 
     @Test("Multiple navigation calls overwrite pending state")
@@ -317,16 +317,16 @@ struct NavigationStateTests {
         let contact1 = Self.makeContact(name: "First")
         let contact2 = Self.makeContact(name: "Second")
 
-        appState.navigateToChat(with: contact1)
-        appState.navigateToChat(with: contact2)
+        appState.navigation.navigateToChat(with: contact1)
+        appState.navigation.navigateToChat(with: contact2)
 
-        #expect(appState.pendingChatContact == contact2)
-        #expect(appState.chatsSelectedRoute == .direct(contact2))
+        #expect(appState.navigation.pendingChatContact == contact2)
+        #expect(appState.navigation.chatsSelectedRoute == .direct(contact2))
     }
 
     @Test("Flood advert tip donation is pending by default when false")
     func floodAdvertTipDonationDefault() {
         let appState = AppState()
-        #expect(appState.pendingFloodAdvertTipDonation == false)
+        #expect(appState.navigation.pendingFloodAdvertTipDonation == false)
     }
 }

@@ -13,13 +13,13 @@ struct BatteryMonitoringTests {
     @Test("deviceBattery is nil by default")
     func deviceBatteryDefault() {
         let appState = AppState()
-        #expect(appState.deviceBattery == nil)
+        #expect(appState.batteryMonitor.deviceBattery == nil)
     }
 
     @Test("activeBatteryOCVArray returns liIon default when no device connected")
     func activeBatteryOCVArrayDefault() {
         let appState = AppState()
-        #expect(appState.activeBatteryOCVArray == OCVPreset.liIon.ocvArray)
+        #expect(appState.batteryMonitor.activeBatteryOCVArray(for: appState.connectedDevice) == OCVPreset.liIon.ocvArray)
     }
 
     // MARK: - fetchDeviceBattery
@@ -28,9 +28,9 @@ struct BatteryMonitoringTests {
     func fetchDeviceBatteryNoServices() async {
         let appState = AppState()
 
-        await appState.fetchDeviceBattery()
+        await appState.batteryMonitor.fetchDeviceBattery(services: appState.services, device: appState.connectedDevice)
 
-        #expect(appState.deviceBattery == nil)
+        #expect(appState.batteryMonitor.deviceBattery == nil)
     }
 
     @Test("fetchDeviceBattery does not crash when called on fresh state")
@@ -39,8 +39,8 @@ struct BatteryMonitoringTests {
         #expect(appState.services == nil)
 
         // Should not throw or crash
-        await appState.fetchDeviceBattery()
-        #expect(appState.deviceBattery == nil)
+        await appState.batteryMonitor.fetchDeviceBattery(services: appState.services, device: appState.connectedDevice)
+        #expect(appState.batteryMonitor.deviceBattery == nil)
     }
 
     // MARK: - Battery State Observation
@@ -50,19 +50,19 @@ struct BatteryMonitoringTests {
         let appState = AppState()
         let battery = BatteryInfo(level: 3700)
 
-        appState.deviceBattery = battery
+        appState.batteryMonitor.deviceBattery = battery
 
-        #expect(appState.deviceBattery == battery)
-        #expect(appState.deviceBattery?.level == 3700)
+        #expect(appState.batteryMonitor.deviceBattery == battery)
+        #expect(appState.batteryMonitor.deviceBattery?.level == 3700)
     }
 
     @Test("deviceBattery can be cleared")
     func deviceBatteryClearable() {
         let appState = AppState()
-        appState.deviceBattery = BatteryInfo(level: 3700)
+        appState.batteryMonitor.deviceBattery = BatteryInfo(level: 3700)
 
-        appState.deviceBattery = nil
+        appState.batteryMonitor.deviceBattery = nil
 
-        #expect(appState.deviceBattery == nil)
+        #expect(appState.batteryMonitor.deviceBattery == nil)
     }
 }

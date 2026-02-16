@@ -100,7 +100,7 @@ struct SettingsView: View {
             #if DEBUG
             Section {
                 Button {
-                    appState.resetOnboarding()
+                    appState.onboarding.resetOnboarding()
                 } label: {
                     Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
                 }

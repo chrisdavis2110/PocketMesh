@@ -30,7 +30,7 @@ enum LogExportService {
         }
 
         // Battery info
-        if let battery = appState.deviceBattery {
+        if let battery = appState.batteryMonitor.deviceBattery {
             sections.append(generateBatterySection(battery: battery))
         }
 
