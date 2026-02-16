@@ -230,6 +230,12 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
         blockedContacts.filter { $0.deviceID == deviceID }
     }
 
+    // MARK: - Blocked Channel Senders
+
+    func saveBlockedChannelSender(_ dto: BlockedChannelSenderDTO) async throws {}
+    func deleteBlockedChannelSender(deviceID: UUID, name: String) async throws {}
+    func fetchBlockedChannelSenders(deviceID: UUID) async throws -> [BlockedChannelSenderDTO] { [] }
+
     // MARK: - Channel Operations
 
     func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] {

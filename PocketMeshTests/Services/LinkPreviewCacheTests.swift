@@ -284,6 +284,11 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func deleteMessagesForContact(contactID: UUID) async throws {}
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
 
+    // Blocked Channel Senders
+    func saveBlockedChannelSender(_ dto: BlockedChannelSenderDTO) async throws {}
+    func deleteBlockedChannelSender(deviceID: UUID, name: String) async throws {}
+    func fetchBlockedChannelSenders(deviceID: UUID) async throws -> [BlockedChannelSenderDTO] { [] }
+
     // Channel Operations
     func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] { [] }
     func fetchChannel(deviceID: UUID, index: UInt8) async throws -> ChannelDTO? { nil }
