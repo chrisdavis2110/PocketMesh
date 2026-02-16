@@ -1,0 +1,173 @@
+import Foundation
+import PocketMeshServices
+import MeshCore
+import OSLog
+
+/// Manages device battery polling, threshold checks, and low-battery notifications.
+/// Extracted from AppState to reduce its responsibility surface.
+@Observable
+@MainActor
+public final class BatteryMonitor {
+
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "BatteryMonitor")
+
+    /// Current device battery info (nil if not fetched or disconnected)
+    var deviceBattery: BatteryInfo?
+
+    /// Task for periodic battery refresh (cancelled on disconnect/background)
+    private var batteryRefreshTask: Task<Void, Never>?
+
+    /// Thresholds that have already triggered a notification this session
+    private var notifiedBatteryThresholds: Set<Int> = []
+
+    /// Battery warning threshold levels (percentage)
+    private let batteryWarningThresholds = [20, 10, 5]
+
+    /// The active OCV array for the connected device
+    func activeBatteryOCVArray(for device: DeviceDTO?) -> [Int] {
+        device?.activeOCVArray ?? OCVPreset.liIon.ocvArray
+    }
+
+    // MARK: - Public API
+
+    /// Fetch device battery level on demand
+    func fetchDeviceBattery(services: ServiceContainer?, device: DeviceDTO?) async {
+        guard let settingsService = services?.settingsService else { return }
+
+        do {
+            deviceBattery = try await settingsService.getBattery()
+            await checkBatteryThresholds(device: device, services: services)
+        } catch {
+            deviceBattery = nil
+        }
+    }
+
+    /// Start battery monitoring for a newly connected device.
+    /// Defers bootstrap so connection setup is not blocked by device request timeouts.
+    func start(services: ServiceContainer, device: DeviceDTO?) {
+        let capturedServices = services
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+
+            do {
+                self.deviceBattery = try await capturedServices.settingsService.getBattery()
+            } catch {
+                self.logger.debug("Deferred battery bootstrap failed: \(error.localizedDescription, privacy: .public)")
+                self.deviceBattery = nil
+            }
+
+            await self.initializeBatteryThresholds(device: device, services: capturedServices)
+            self.startBatteryRefreshLoop(services: capturedServices, device: device)
+        }
+    }
+
+    /// Stop battery monitoring (disconnect or background)
+    func stop() {
+        batteryRefreshTask?.cancel()
+        batteryRefreshTask = nil
+    }
+
+    /// Clear notification thresholds for a fresh connection
+    func clearThresholds() {
+        notifiedBatteryThresholds = []
+    }
+
+    /// Check for battery thresholds crossed while app was backgrounded.
+    /// Posts a single notification if any thresholds were missed.
+    func checkMissedBatteryThreshold(device: DeviceDTO?, services: ServiceContainer?) async {
+        guard let device,
+              let settingsService = services?.settingsService,
+              let notificationService = services?.notificationService else { return }
+
+        do {
+            deviceBattery = try await settingsService.getBattery()
+        } catch {
+            return
+        }
+
+        guard let battery = deviceBattery else { return }
+        let percentage = battery.percentage(using: device.activeOCVArray)
+
+        let missedThresholds = batteryWarningThresholds.filter { threshold in
+            percentage <= threshold && !notifiedBatteryThresholds.contains(threshold)
+        }
+
+        guard !missedThresholds.isEmpty else { return }
+
+        for threshold in missedThresholds {
+            notifiedBatteryThresholds.insert(threshold)
+        }
+
+        await notificationService.postLowBatteryNotification(
+            deviceName: device.nodeName,
+            batteryPercentage: percentage
+        )
+    }
+
+    /// Restart the battery refresh loop (e.g., returning to foreground)
+    func startRefreshLoop(services: ServiceContainer?, device: DeviceDTO?) {
+        guard services != nil else { return }
+        startBatteryRefreshLoop(services: services, device: device)
+    }
+
+    // MARK: - Private
+
+    private func startBatteryRefreshLoop(services: ServiceContainer?, device: DeviceDTO?) {
+        batteryRefreshTask?.cancel()
+        batteryRefreshTask = Task { [weak self] in
+            while true {
+                do {
+                    try await Task.sleep(for: .seconds(120))
+                } catch {
+                    break
+                }
+                guard let self else { break }
+                await self.fetchDeviceBattery(services: services, device: device)
+            }
+        }
+    }
+
+    /// Initialize battery thresholds based on current level and notify if already below a threshold
+    private func initializeBatteryThresholds(device: DeviceDTO?, services: ServiceContainer) async {
+        guard let battery = deviceBattery,
+              let device else {
+            notifiedBatteryThresholds = []
+            return
+        }
+
+        let percentage = battery.percentage(using: device.activeOCVArray)
+
+        let crossedThresholds = batteryWarningThresholds.filter { percentage <= $0 }
+
+        notifiedBatteryThresholds = Set(crossedThresholds)
+
+        if !crossedThresholds.isEmpty {
+            await services.notificationService.postLowBatteryNotification(
+                deviceName: device.nodeName,
+                batteryPercentage: percentage
+            )
+        }
+    }
+
+    /// Check battery level against thresholds and send notifications
+    private func checkBatteryThresholds(device: DeviceDTO?, services: ServiceContainer?) async {
+        guard let battery = deviceBattery,
+              let device,
+              let notificationService = services?.notificationService else { return }
+
+        let percentage = battery.percentage(using: device.activeOCVArray)
+
+        for threshold in batteryWarningThresholds {
+            if percentage <= threshold && !notifiedBatteryThresholds.contains(threshold) {
+                notifiedBatteryThresholds.insert(threshold)
+                await notificationService.postLowBatteryNotification(
+                    deviceName: device.nodeName,
+                    batteryPercentage: percentage
+                )
+                break
+            } else if percentage > threshold && notifiedBatteryThresholds.contains(threshold) {
+                notifiedBatteryThresholds.remove(threshold)
+            }
+        }
+    }
+}

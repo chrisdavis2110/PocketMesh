@@ -89,34 +89,54 @@ public final class AppState {
     /// Incremented when conversations data changes. Views observe this to reload chat lists.
     public private(set) var conversationsVersion: Int = 0
 
-    // MARK: - UI State for Connection
+    // MARK: - Connection UI State
 
-    /// Whether to show connection failure alert
-    var showingConnectionFailedAlert = false
+    /// Connection UI state (status pills, sync activity, alerts, pairing)
+    let connectionUI = ConnectionUIState()
 
-    /// Message for connection failure alert
-    var connectionFailedMessage: String?
+    var showingConnectionFailedAlert: Bool {
+        get { connectionUI.showingConnectionFailedAlert }
+        set { connectionUI.showingConnectionFailedAlert = newValue }
+    }
 
-    /// Device ID pending retry
-    var pendingReconnectDeviceID: UUID?
+    var connectionFailedMessage: String? {
+        get { connectionUI.connectionFailedMessage }
+        set { connectionUI.connectionFailedMessage = newValue }
+    }
 
-    /// Device ID that failed pairing (wrong PIN) - for recovery UI
-    var failedPairingDeviceID: UUID?
+    var pendingReconnectDeviceID: UUID? {
+        get { connectionUI.pendingReconnectDeviceID }
+        set { connectionUI.pendingReconnectDeviceID = newValue }
+    }
 
-    /// Device ID that triggered "connected to other app" warning - alert shown when non-nil
-    var otherAppWarningDeviceID: UUID?
+    var failedPairingDeviceID: UUID? {
+        get { connectionUI.failedPairingDeviceID }
+        set { connectionUI.failedPairingDeviceID = newValue }
+    }
 
-    /// Whether device pairing is in progress (ASK picker or connecting after selection)
-    var isPairing = false
+    var otherAppWarningDeviceID: UUID? {
+        get { connectionUI.otherAppWarningDeviceID }
+        set { connectionUI.otherAppWarningDeviceID = newValue }
+    }
 
-    /// Whether the device's node storage is full (set by 0x90 push, cleared on delete/overwrite)
-    var isNodeStorageFull = false
+    var isPairing: Bool {
+        get { connectionUI.isPairing }
+        set { connectionUI.isPairing = newValue }
+    }
+
+    var isNodeStorageFull: Bool {
+        get { connectionUI.isNodeStorageFull }
+        set { connectionUI.isNodeStorageFull = newValue }
+    }
+
+    /// Battery monitoring (polling, thresholds, low-battery notifications)
+    let batteryMonitor = BatteryMonitor()
 
     /// Current device battery info (nil if not fetched)
-    var deviceBattery: BatteryInfo?
-
-    /// Task for periodic battery refresh (cancel on disconnect/background)
-    private var batteryRefreshTask: Task<Void, Never>?
+    var deviceBattery: BatteryInfo? {
+        get { batteryMonitor.deviceBattery }
+        set { batteryMonitor.deviceBattery = newValue }
+    }
 
     /// Task chain that serializes BLE lifecycle transitions across scene-phase changes.
     /// Do not cancel this task externally -- cancelling breaks the serialization
@@ -133,54 +153,76 @@ public final class AppState {
     private var bleBecomeActiveOverride: (@MainActor () async -> Void)?
 #endif
 
-    /// Thresholds that have already triggered a notification this session
-    private var notifiedBatteryThresholds: Set<Int> = []
-
-    /// Battery warning threshold levels (percentage)
-    private let batteryWarningThresholds = [20, 10, 5]
 
     // MARK: - Onboarding State
 
-    /// Whether onboarding is complete
-    var hasCompletedOnboarding: Bool = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
-        didSet {
-            UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding")
-        }
+    /// Onboarding state (completion flag, navigation path)
+    let onboarding = OnboardingState()
+
+    var hasCompletedOnboarding: Bool {
+        get { onboarding.hasCompletedOnboarding }
+        set { onboarding.hasCompletedOnboarding = newValue }
     }
 
-    /// Navigation path for onboarding flow
-    var onboardingPath: [OnboardingStep] = []
+    var onboardingPath: [OnboardingStep] {
+        get { onboarding.onboardingPath }
+        set { onboarding.onboardingPath = newValue }
+    }
 
     // MARK: - Navigation State
 
-    /// Selected tab index
-    var selectedTab: Int = 0
+    /// Navigation coordinator (tab selection, pending targets, cross-tab navigation)
+    let navigation = NavigationCoordinator()
 
-    var tabBarVisibility: Visibility = .visible
+    var selectedTab: Int {
+        get { navigation.selectedTab }
+        set { navigation.selectedTab = newValue }
+    }
 
-    /// Contact to navigate to
-    var pendingChatContact: ContactDTO?
+    var tabBarVisibility: Visibility {
+        get { navigation.tabBarVisibility }
+        set { navigation.tabBarVisibility = newValue }
+    }
 
-    /// The currently selected route in the Chats split view detail pane
-    var chatsSelectedRoute: ChatRoute?
+    var pendingChatContact: ContactDTO? {
+        get { navigation.pendingChatContact }
+        set { navigation.pendingChatContact = newValue }
+    }
 
-    /// Channel to navigate to
-    var pendingChannel: ChannelDTO?
+    var chatsSelectedRoute: ChatRoute? {
+        get { navigation.chatsSelectedRoute }
+        set { navigation.chatsSelectedRoute = newValue }
+    }
 
-    /// Room session to navigate to
-    var pendingRoomSession: RemoteNodeSessionDTO?
+    var pendingChannel: ChannelDTO? {
+        get { navigation.pendingChannel }
+        set { navigation.pendingChannel = newValue }
+    }
 
-    /// Whether to navigate to Discovery
-    var pendingDiscoveryNavigation = false
+    var pendingRoomSession: RemoteNodeSessionDTO? {
+        get { navigation.pendingRoomSession }
+        set { navigation.pendingRoomSession = newValue }
+    }
 
-    /// Contact to navigate to (for detail view on Contacts tab)
-    var pendingContactDetail: ContactDTO?
+    var pendingDiscoveryNavigation: Bool {
+        get { navigation.pendingDiscoveryNavigation }
+        set { navigation.pendingDiscoveryNavigation = newValue }
+    }
 
-    /// Message to scroll to after navigation (for reaction notifications)
-    var pendingScrollToMessageID: UUID?
+    var pendingContactDetail: ContactDTO? {
+        get { navigation.pendingContactDetail }
+        set { navigation.pendingContactDetail = newValue }
+    }
 
-    /// Whether flood advert tip donation is pending (waiting for valid tab)
-    var pendingFloodAdvertTipDonation = false
+    var pendingScrollToMessageID: UUID? {
+        get { navigation.pendingScrollToMessageID }
+        set { navigation.pendingScrollToMessageID = newValue }
+    }
+
+    var pendingFloodAdvertTipDonation: Bool {
+        get { navigation.pendingFloodAdvertTipDonation }
+        set { navigation.pendingFloodAdvertTipDonation = newValue }
+    }
 
     // MARK: - UI Coordination
 
@@ -195,137 +237,65 @@ public final class AppState {
     /// Tracks the device ID for CLI state - reset CLI when device changes
     private var lastConnectedDeviceIDForCLI: UUID?
 
-    // MARK: - Activity Tracking
+    // MARK: - Status Pill Forwarding
 
-    /// Counter for sync/settings operations (on-demand) - shows pill
-    private var syncActivityCount: Int = 0
-
-    /// Current sync phase reported by SyncCoordinator callbacks.
-    /// Used to defer non-essential settings reads during connect/sync.
-    private(set) var currentSyncPhase: SyncPhase?
-
-    // MARK: - Ready Toast
-
-    /// Whether the "Ready" toast pill is visible (shown briefly after connection completes)
-    private(set) var showReadyToast = false
-
-    /// Task managing the ready toast visibility timer
-    private var readyToastTask: Task<Void, Never>?
-
-    /// Shows "Ready" toast pill for 2 seconds
-    func showReadyToastBriefly() {
-        readyToastTask?.cancel()
-        showReadyToast = true
-
-        readyToastTask = Task {
-            try? await Task.sleep(for: .seconds(2))
-            guard !Task.isCancelled else { return }
-            showReadyToast = false
-        }
+    var syncActivityCount: Int {
+        get { connectionUI.syncActivityCount }
+        set { connectionUI.syncActivityCount = newValue }
     }
 
-    /// Hides the ready toast immediately (called on disconnect)
-    func hideReadyToast() {
-        readyToastTask?.cancel()
-        readyToastTask = nil
-        showReadyToast = false
+    var currentSyncPhase: SyncPhase? {
+        get { connectionUI.currentSyncPhase }
+        set { connectionUI.currentSyncPhase = newValue }
     }
 
-    // MARK: - Sync Failed Pill
+    var showReadyToast: Bool { connectionUI.showReadyToast }
 
-    /// Whether the "Sync Failed" pill is visible
-    private(set) var syncFailedPillVisible = false
+    func showReadyToastBriefly() { connectionUI.showReadyToastBriefly() }
+    func hideReadyToast() { connectionUI.hideReadyToast() }
 
-    /// Task managing the pill visibility timer
-    private var syncFailedPillTask: Task<Void, Never>?
+    var syncFailedPillVisible: Bool { connectionUI.syncFailedPillVisible }
 
-    // MARK: - Disconnected Pill
+    func showSyncFailedPill() { connectionUI.showSyncFailedPill() }
+    func hideSyncFailedPill() { connectionUI.hideSyncFailedPill() }
 
-    /// Whether the "Disconnected" pill is visible (shown after 1s delay)
-    private(set) var disconnectedPillVisible = false
+    var disconnectedPillVisible: Bool { connectionUI.disconnectedPillVisible }
 
-    /// Task managing the disconnected pill delay
-    private var disconnectedPillTask: Task<Void, Never>?
-
-    /// Shows "Sync Failed" pill for 7 seconds with VoiceOver announcement
-    func showSyncFailedPill() {
-        syncFailedPillTask?.cancel()
-        syncFailedPillVisible = true
-
-        // Announce for VoiceOver users
-        if UIAccessibility.isVoiceOverRunning {
-            announceConnectionState("Sync failed. Disconnecting.")
-        }
-
-        syncFailedPillTask = Task {
-            try? await Task.sleep(for: .seconds(7))
-            guard !Task.isCancelled else { return }
-            syncFailedPillVisible = false
-        }
-    }
-
-    /// Hides the sync failed pill immediately (called when resync succeeds)
-    func hideSyncFailedPill() {
-        syncFailedPillTask?.cancel()
-        syncFailedPillTask = nil
-        syncFailedPillVisible = false
-    }
-
-    /// Updates disconnected pill visibility based on connection state
-    /// Called when connectionState changes or on app launch
     func updateDisconnectedPillState() {
-        disconnectedPillTask?.cancel()
-
-        // Requires: disconnected + previously paired device + user didn't explicitly disconnect
-        guard connectionState == .disconnected,
-              connectionManager.lastConnectedDeviceID != nil,
-              !connectionManager.shouldSuppressDisconnectedPill else {
-            disconnectedPillVisible = false
-            return
-        }
-
-        // Show after 1 second delay to avoid flash during brief reconnects
-        disconnectedPillTask = Task {
-            try? await Task.sleep(for: .seconds(1))
-            guard !Task.isCancelled else { return }
-            disconnectedPillVisible = true
-        }
+        connectionUI.updateDisconnectedPillState(
+            connectionState: connectionState,
+            lastConnectedDeviceID: connectionManager.lastConnectedDeviceID,
+            shouldSuppressDisconnectedPill: connectionManager.shouldSuppressDisconnectedPill
+        )
     }
 
-    /// Hides disconnected pill immediately (called when connection starts)
-    func hideDisconnectedPill() {
-        disconnectedPillTask?.cancel()
-        disconnectedPillTask = nil
-        disconnectedPillVisible = false
-    }
+    func hideDisconnectedPill() { connectionUI.hideDisconnectedPill() }
 
     /// The current status pill state, computed from all relevant conditions
     /// Priority: failed > syncing > ready > connecting > disconnected > hidden
     var statusPillState: StatusPillState {
-        if syncFailedPillVisible {
+        if connectionUI.syncFailedPillVisible {
             return .failed(message: "Sync Failed")
         }
-        if syncActivityCount > 0 {
+        if connectionUI.syncActivityCount > 0 {
             return .syncing
         }
-        if showReadyToast {
+        if connectionUI.showReadyToast {
             return .ready
         }
         if connectionState == .connecting {
             return .connecting
         }
-        if disconnectedPillVisible {
+        if connectionUI.disconnectedPillVisible {
             return .disconnected
         }
         return .hidden
     }
 
     /// Whether Settings startup reads should run right now.
-    /// We allow reads once the device is ready, or during message-only sync where
-    /// the sync pill is already hidden and contacts/channels contention is finished.
     var canRunSettingsStartupReads: Bool {
         if connectionState == .ready { return true }
-        return connectionState == .connected && currentSyncPhase == .messages
+        return connectionState == .connected && connectionUI.currentSyncPhase == .messages
     }
 
     // MARK: - Derived State
@@ -335,7 +305,7 @@ public final class AppState {
 
     /// The active OCV array for the connected device
     var activeBatteryOCVArray: [Int] {
-        connectedDevice?.activeOCVArray ?? OCVPreset.liIon.ocvArray
+        batteryMonitor.activeBatteryOCVArray(for: connectedDevice)
     }
 
     // MARK: - Initialization
@@ -392,10 +362,9 @@ public final class AppState {
             cliToolViewModel?.reset()
             // Hide ready toast on disconnect
             hideReadyToast()
-            // Stop battery refresh loop on disconnect
-            stopBatteryRefreshLoop()
-            // Clear battery notification thresholds for next connection
-            notifiedBatteryThresholds = []
+            // Stop battery refresh and clear thresholds on disconnect
+            batteryMonitor.stop()
+            batteryMonitor.clearThresholds()
             // Reset node storage full flag (will be set again by 0x90 push if still full)
             isNodeStorageFull = false
             // Update disconnected pill state (may show after delay)
@@ -655,7 +624,7 @@ public final class AppState {
         configureNotificationHandlers()
 
         // Defer battery bootstrap so connection setup is not blocked by device request timeouts.
-        scheduleBatteryBootstrap(for: services)
+        batteryMonitor.start(services: services, device: connectedDevice)
     }
 
     // MARK: - Device Actions
@@ -697,8 +666,10 @@ public final class AppState {
         }
     }
 
-    /// Flag indicating ASK picker should be shown when app returns to foreground
-    var shouldShowPickerOnForeground = false
+    var shouldShowPickerOnForeground: Bool {
+        get { connectionUI.shouldShowPickerOnForeground }
+        set { connectionUI.shouldShowPickerOnForeground = newValue }
+    }
 
     /// Remove a device that failed pairing (wrong PIN) and automatically retry
     func removeFailedPairingAndRetry() {
@@ -753,141 +724,7 @@ public final class AppState {
 
     /// Fetch device battery level
     func fetchDeviceBattery() async {
-        guard let settingsService = services?.settingsService else { return }
-
-        do {
-            deviceBattery = try await settingsService.getBattery()
-            await checkBatteryThresholds()
-        } catch {
-            // Silently fail - battery info is optional
-            deviceBattery = nil
-        }
-    }
-
-    /// Starts battery bootstrap in the background so connection completion is not blocked.
-    private func scheduleBatteryBootstrap(for services: ServiceContainer) {
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            guard let activeServices = self.services, activeServices === services else { return }
-
-            do {
-                self.deviceBattery = try await services.settingsService.getBattery()
-            } catch {
-                self.logger.debug("Deferred battery bootstrap failed: \(error.localizedDescription, privacy: .public)")
-                self.deviceBattery = nil
-            }
-
-            guard let activeServices = self.services, activeServices === services else { return }
-            await self.initializeBatteryThresholds()
-            self.startBatteryRefreshLoop()
-        }
-    }
-
-    /// Start periodic battery refresh loop (2-minute interval)
-    private func startBatteryRefreshLoop() {
-        batteryRefreshTask?.cancel()
-        batteryRefreshTask = Task { [weak self] in
-            while true {
-                do {
-                    try await Task.sleep(for: .seconds(120))
-                } catch {
-                    break  // Cancelled, exit cleanly
-                }
-                guard let self, self.services != nil else { break }
-                await self.fetchDeviceBattery()
-            }
-        }
-    }
-
-    /// Stop periodic battery refresh
-    private func stopBatteryRefreshLoop() {
-        batteryRefreshTask?.cancel()
-        batteryRefreshTask = nil
-    }
-
-    /// Initialize battery thresholds based on current level and notify if already below a threshold
-    private func initializeBatteryThresholds() async {
-        guard let battery = deviceBattery,
-              let device = connectedDevice else {
-            notifiedBatteryThresholds = []
-            return
-        }
-
-        let percentage = battery.percentage(using: device.activeOCVArray)
-
-        // Find thresholds we're already below
-        let crossedThresholds = batteryWarningThresholds.filter { percentage <= $0 }
-
-        // Mark all crossed thresholds as notified
-        notifiedBatteryThresholds = Set(crossedThresholds)
-
-        // If below any threshold on connect, send a single catch-up notification
-        if !crossedThresholds.isEmpty,
-           let notificationService = services?.notificationService {
-            await notificationService.postLowBatteryNotification(
-                deviceName: device.nodeName,
-                batteryPercentage: percentage
-            )
-        }
-    }
-
-    /// Check battery level against thresholds and send notifications
-    private func checkBatteryThresholds() async {
-        guard let battery = deviceBattery,
-              let device = connectedDevice,
-              let notificationService = services?.notificationService else { return }
-
-        let percentage = battery.percentage(using: device.activeOCVArray)
-
-        for threshold in batteryWarningThresholds {
-            if percentage <= threshold && !notifiedBatteryThresholds.contains(threshold) {
-                // First time crossing below this threshold
-                notifiedBatteryThresholds.insert(threshold)
-                await notificationService.postLowBatteryNotification(
-                    deviceName: device.nodeName,
-                    batteryPercentage: percentage
-                )
-                break  // Only one notification per check
-            } else if percentage > threshold && notifiedBatteryThresholds.contains(threshold) {
-                // Charged back above threshold — reset it
-                notifiedBatteryThresholds.remove(threshold)
-            }
-        }
-    }
-
-    /// Check for battery thresholds crossed while app was backgrounded
-    /// Posts a single notification if any thresholds were missed, marking all as notified
-    private func checkMissedBatteryThreshold() async {
-        guard let device = connectedDevice,
-              let settingsService = services?.settingsService,
-              let notificationService = services?.notificationService else { return }
-
-        do {
-            deviceBattery = try await settingsService.getBattery()
-        } catch {
-            return
-        }
-
-        guard let battery = deviceBattery else { return }
-        let percentage = battery.percentage(using: device.activeOCVArray)
-
-        // Find thresholds crossed while backgrounded
-        let missedThresholds = batteryWarningThresholds.filter { threshold in
-            percentage <= threshold && !notifiedBatteryThresholds.contains(threshold)
-        }
-
-        guard !missedThresholds.isEmpty else { return }
-
-        // Mark all crossed thresholds as notified
-        for threshold in missedThresholds {
-            notifiedBatteryThresholds.insert(threshold)
-        }
-
-        // Post single notification with current percentage
-        await notificationService.postLowBatteryNotification(
-            deviceName: device.nodeName,
-            batteryPercentage: percentage
-        )
+        await batteryMonitor.fetchDeviceBattery(services: services, device: connectedDevice)
     }
 
     // MARK: - App Lifecycle
@@ -938,7 +775,7 @@ public final class AppState {
         activeRecoveryFallbackTask = nil
 
         // Stop battery refresh - don't poll while UI isn't visible
-        stopBatteryRefreshLoop()
+        batteryMonitor.stop()
 
         // Stop room keepalives to save battery/bandwidth
         Task {
@@ -959,8 +796,8 @@ public final class AppState {
 
         // Check for missed battery thresholds and restart polling if connected
         if services != nil {
-            await checkMissedBatteryThreshold()
-            startBatteryRefreshLoop()
+            await batteryMonitor.checkMissedBatteryThreshold(device: connectedDevice, services: services)
+            batteryMonitor.startRefreshLoop(services: services, device: connectedDevice)
         }
 
         // Check for expired ACKs
@@ -978,78 +815,64 @@ public final class AppState {
 
     // MARK: - Accessibility
 
-    /// Posts a VoiceOver announcement for connection state changes
     private func announceConnectionState(_ message: String) {
-        UIAccessibility.post(notification: .announcement, argument: message)
+        connectionUI.announceConnectionState(message)
     }
 
     // MARK: - Navigation
 
     func navigateToChat(with contact: ContactDTO, scrollToMessageID: UUID? = nil) {
-        tabBarVisibility = .hidden  // Hide tab bar BEFORE switching tabs
-        pendingChatContact = contact
-        pendingScrollToMessageID = scrollToMessageID
-        chatsSelectedRoute = .direct(contact)
-        selectedTab = 0
+        navigation.navigateToChat(with: contact, scrollToMessageID: scrollToMessageID)
     }
 
     func navigateToRoom(with session: RemoteNodeSessionDTO) {
-        tabBarVisibility = .hidden  // Hide tab bar BEFORE switching tabs
-        pendingRoomSession = session
-        chatsSelectedRoute = .room(session)
-        selectedTab = 0
+        navigation.navigateToRoom(with: session)
     }
 
     func navigateToChannel(with channel: ChannelDTO, scrollToMessageID: UUID? = nil) {
-        tabBarVisibility = .hidden
-        pendingChannel = channel
-        pendingScrollToMessageID = scrollToMessageID
-        chatsSelectedRoute = .channel(channel)
-        selectedTab = 0
+        navigation.navigateToChannel(with: channel, scrollToMessageID: scrollToMessageID)
     }
 
     func navigateToDiscovery() {
-        pendingDiscoveryNavigation = true
-        selectedTab = 1
+        navigation.navigateToDiscovery()
     }
 
     func navigateToContacts() {
-        selectedTab = 1
+        navigation.navigateToContacts()
     }
 
     func navigateToContactDetail(_ contact: ContactDTO) {
-        pendingContactDetail = contact
-        selectedTab = 1
+        navigation.navigateToContactDetail(contact)
     }
 
     func clearPendingNavigation() {
-        pendingChatContact = nil
+        navigation.clearPendingNavigation()
     }
 
     func clearPendingRoomNavigation() {
-        pendingRoomSession = nil
+        navigation.clearPendingRoomNavigation()
     }
 
     func clearPendingChannelNavigation() {
-        pendingChannel = nil
+        navigation.clearPendingChannelNavigation()
     }
 
     func clearPendingDiscoveryNavigation() {
-        pendingDiscoveryNavigation = false
+        navigation.clearPendingDiscoveryNavigation()
     }
 
     func clearPendingScrollToMessage() {
-        pendingScrollToMessageID = nil
+        navigation.clearPendingScrollToMessage()
     }
 
     func clearPendingContactDetailNavigation() {
-        pendingContactDetail = nil
+        navigation.clearPendingContactDetailNavigation()
     }
 
     // MARK: - Onboarding
 
     func completeOnboarding() {
-        hasCompletedOnboarding = true
+        onboarding.completeOnboarding()
         Task {
             try? await Task.sleep(for: .seconds(1.5))
             await donateFloodAdvertTipIfOnValidTab()
@@ -1061,7 +884,8 @@ public final class AppState {
         selectedTab == 0 || selectedTab == 1 || selectedTab == 2
     }
 
-    /// Donates the tip if on a valid tab, otherwise marks it pending
+    /// Donates the tip if on a valid tab, otherwise marks it pending.
+    /// Thin coordinator that reads from both navigation and onboarding concerns.
     func donateFloodAdvertTipIfOnValidTab() async {
         if isOnValidTabForFloodAdvertTip {
             pendingFloodAdvertTipDonation = false
@@ -1072,31 +896,19 @@ public final class AppState {
     }
 
     func resetOnboarding() {
-        hasCompletedOnboarding = false
-        onboardingPath = []
+        onboarding.resetOnboarding()
     }
 
     // MARK: - Activity Tracking Methods
 
     /// Execute an operation while tracking it as sync activity (shows pill)
-    /// Use for: settings changes, contact sync, channel sync, device initialization
     func withSyncActivity<T>(_ operation: () async throws -> T) async rethrows -> T {
-        syncActivityCount += 1
-        defer { syncActivityCount -= 1 }
-        return try await operation()
+        try await connectionUI.withSyncActivity(operation)
     }
 
 #if DEBUG
-    /// Test helper: Simulates sync activity started callback
-    func simulateSyncStarted() {
-        syncActivityCount += 1
-    }
-
-    /// Test helper: Simulates sync activity ended callback (mirrors actual callback guard logic)
-    func simulateSyncEnded() {
-        guard syncActivityCount > 0 else { return }
-        syncActivityCount -= 1
-    }
+    func simulateSyncStarted() { connectionUI.simulateSyncStarted() }
+    func simulateSyncEnded() { connectionUI.simulateSyncEnded() }
 
     /// Test helper: Overrides BLE lifecycle operations for deterministic ordering tests.
     func setBLELifecycleOverridesForTesting(
@@ -1335,15 +1147,6 @@ extension AppState {
         let container = try! ModelContainer(for: schema, configurations: [config])
         self.init(modelContainer: container)
     }
-}
-
-// MARK: - Onboarding Step
-
-enum OnboardingStep: Int, CaseIterable, Hashable {
-    case welcome
-    case permissions
-    case deviceScan
-    case radioPreset
 }
 
 // MARK: - Environment Key
