@@ -247,6 +247,7 @@ public enum SettingsEvent: Sendable {
     case deviceUpdated(MeshCore.SelfInfo)
     case autoAddConfigUpdated(UInt8)
     case clientRepeatUpdated(Bool)
+    case allowedRepeatFreqUpdated([MeshCore.FrequencyRange])
 }
 
 // MARK: - Settings Service
@@ -619,6 +620,23 @@ public actor SettingsService {
     public func refreshAutoAddConfig() async throws {
         let config = try await getAutoAddConfig()
         eventContinuation?.yield(.autoAddConfigUpdated(config))
+    }
+
+    // MARK: - Repeat Frequency Ranges
+
+    /// Get allowed repeat frequency ranges from device
+    private func getRepeatFreq() async throws -> [MeshCore.FrequencyRange] {
+        do {
+            return try await session.getRepeatFreq()
+        } catch let error as MeshCoreError {
+            throw SettingsServiceError.sessionError(error)
+        }
+    }
+
+    /// Refresh repeat frequency ranges from device and notify observers
+    public func refreshRepeatFreqRanges() async throws {
+        let ranges = try await getRepeatFreq()
+        eventContinuation?.yield(.allowedRepeatFreqUpdated(ranges))
     }
 
     /// Refresh device info from the device and notify observers.

@@ -1029,11 +1029,16 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         ))
     }
 
-    /// Requests the allowed frequency ranges for client repeat mode (v9+ firmware).
+    /// Gets the allowed frequency ranges for client repeat mode (v9+ firmware).
     ///
-    /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
-    public func getRepeatFreq() async throws {
-        try await sendSimpleCommand(PacketBuilder.getRepeatFreq())
+    /// - Returns: The allowed frequency ranges for repeat mode.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
+    public func getRepeatFreq() async throws -> [FrequencyRange] {
+        try await sendAndWaitWithError(PacketBuilder.getRepeatFreq()) { event in
+            if case .allowedRepeatFreq(let ranges) = event { return ranges }
+            return nil
+        }
     }
 
     /// Configures radio timing parameters for fine-tuning.

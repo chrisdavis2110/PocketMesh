@@ -196,6 +196,9 @@ public final class ConnectionManager {
     /// Connected device info (nil when disconnected)
     public private(set) var connectedDevice: DeviceDTO?
 
+    /// Allowed repeat frequency ranges from connected device (empty when disconnected or unsupported)
+    public var allowedRepeatFreqRanges: [MeshCore.FrequencyRange] = []
+
     /// Services container (nil when disconnected)
     public private(set) var services: ServiceContainer?
 
@@ -789,6 +792,10 @@ public final class ConnectionManager {
         let existingDevice = try? await existingDeviceResult
         let autoAddConfig = (try? await autoAddConfigResult) ?? 0
 
+        let repeatFreqRanges: [MeshCore.FrequencyRange] = capabilities.clientRepeat
+            ? (try? await session.getRepeatFreq()) ?? []
+            : []
+
         let device = createDevice(
             deviceID: deviceID,
             selfInfo: selfInfo,
@@ -799,6 +806,7 @@ public final class ConnectionManager {
 
         try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
         self.connectedDevice = DeviceDTO(from: device)
+        self.allowedRepeatFreqRanges = repeatFreqRanges
 
         // Wire disconnection handler on new transport
         await transport.setDisconnectionHandler { [weak self] error in
@@ -1718,6 +1726,10 @@ public final class ConnectionManager {
             let existingDevice = try? await existingDeviceResult
             let autoAddConfig = (try? await autoAddConfigResult) ?? 0
 
+            let repeatFreqRanges: [MeshCore.FrequencyRange] = deviceCapabilities.clientRepeat
+                ? (try? await newSession.getRepeatFreq()) ?? []
+                : []
+
             // Create WiFi connection method
             let wifiMethod = ConnectionMethod.wifi(host: host, port: port, displayName: nil)
 
@@ -1733,6 +1745,7 @@ public final class ConnectionManager {
 
             try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
             self.connectedDevice = DeviceDTO(from: device)
+            self.allowedRepeatFreqRanges = repeatFreqRanges
 
             // Persist connection for potential future use
             persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
@@ -1833,6 +1846,10 @@ public final class ConnectionManager {
         let existingDevice = try? await existingDeviceResult
         let autoAddConfig = (try? await autoAddConfigResult) ?? 0
 
+        let repeatFreqRanges: [MeshCore.FrequencyRange] = deviceCapabilities.clientRepeat
+            ? (try? await newSession.getRepeatFreq()) ?? []
+            : []
+
         // Create and save device
         let device = createDevice(
             deviceID: deviceID,
@@ -1844,6 +1861,7 @@ public final class ConnectionManager {
 
         try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
         self.connectedDevice = DeviceDTO(from: device)
+        self.allowedRepeatFreqRanges = repeatFreqRanges
 
         // Persist connection for auto-reconnect
         persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
@@ -2324,6 +2342,10 @@ public final class ConnectionManager {
         let existingDevice = try? await existingDeviceResult
         let autoAddConfig = (try? await autoAddConfigResult) ?? 0
 
+        let repeatFreqRanges: [MeshCore.FrequencyRange] = deviceCapabilities.clientRepeat
+            ? (try? await newSession.getRepeatFreq()) ?? []
+            : []
+
         // Create and save device
         let device = createDevice(
             deviceID: deviceID,
@@ -2335,6 +2357,7 @@ public final class ConnectionManager {
 
         try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
         self.connectedDevice = DeviceDTO(from: device)
+        self.allowedRepeatFreqRanges = repeatFreqRanges
 
         // Persist connection for auto-reconnect
         persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
@@ -2496,6 +2519,7 @@ public final class ConnectionManager {
         logger.warning("[BLE] State → .disconnected (connection loss for device: \(deviceID.uuidString.prefix(8)))")
         connectionState = .disconnected
         connectedDevice = nil
+        allowedRepeatFreqRanges = []
         services = nil
         session = nil
 
@@ -2653,9 +2677,14 @@ public final class ConnectionManager {
         let existingDevice = try? await existingDeviceResult
         let autoAddConfig = (try? await autoAddConfigResult) ?? 0
 
+        let repeatFreqRanges: [MeshCore.FrequencyRange] = capabilities.clientRepeat
+            ? (try? await newSession.getRepeatFreq()) ?? []
+            : []
+
         let device = createDevice(deviceID: deviceID, selfInfo: selfInfo, capabilities: capabilities, autoAddConfig: autoAddConfig, existingDevice: existingDevice)
         try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
         self.connectedDevice = DeviceDTO(from: device)
+        self.allowedRepeatFreqRanges = repeatFreqRanges
 
         // Notify observers BEFORE sync starts so they can wire callbacks
         await onConnectionReady?()
@@ -2699,6 +2728,7 @@ public final class ConnectionManager {
         await transport.disconnect()
         connectionState = .disconnected
         connectedDevice = nil
+        allowedRepeatFreqRanges = []
 
         // Start watchdog to periodically retry if user still wants connection
         if connectionIntent.wantsConnection {
@@ -2718,6 +2748,7 @@ public final class ConnectionManager {
         logger.info("[BLE] cleanupConnection: state → .disconnected")
         connectionState = .disconnected
         connectedDevice = nil
+        allowedRepeatFreqRanges = []
         await cleanupResources()
     }
 

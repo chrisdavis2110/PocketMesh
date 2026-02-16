@@ -483,6 +483,10 @@ public final class AppState {
                     await MainActor.run {
                         self.connectionManager.updateClientRepeat(enabled)
                     }
+                case .allowedRepeatFreqUpdated(let ranges):
+                    await MainActor.run {
+                        self.connectionManager.allowedRepeatFreqRanges = ranges
+                    }
                 }
             }
         }
