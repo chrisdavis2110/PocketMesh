@@ -143,7 +143,7 @@ struct RepeaterSettingsView: View {
                     TextField(L10n.RemoteNodes.RemoteNodes.Settings.mhz, value: Binding(
                         get: { frequency },
                         set: { viewModel.frequency = $0 }
-                    ), format: .number.precision(.fractionLength(3)))
+                    ), format: .number.precision(.fractionLength(3)).locale(.posix))
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                         .frame(width: 100)

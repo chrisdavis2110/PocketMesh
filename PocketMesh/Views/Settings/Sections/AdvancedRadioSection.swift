@@ -61,7 +61,7 @@ struct AdvancedRadioSection: View {
                 TextField(
                     L10n.Settings.AdvancedRadio.frequencyPlaceholder,
                     value: $frequency,
-                    format: .number.precision(.fractionLength(3))
+                    format: .number.precision(.fractionLength(3)).locale(.posix)
                 )
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)

@@ -280,8 +280,8 @@ private struct DiffRow: View {
 
 private enum RadioFormatter {
     static func format(_ radio: MeshCoreNodeConfig.RadioSettings) -> String {
-        let freqMHz = (Double(radio.frequency) / 1000).formatted(.number.precision(.fractionLength(0...3)))
-        let bwKHz = (Double(radio.bandwidth) / 1000).formatted(.number.precision(.fractionLength(0...1)))
+        let freqMHz = (Double(radio.frequency) / 1000).formatted(.number.precision(.fractionLength(0...3)).locale(.posix))
+        let bwKHz = (Double(radio.bandwidth) / 1000).formatted(.number.precision(.fractionLength(0...1)).locale(.posix))
         return "\(freqMHz) MHz, BW \(bwKHz) kHz, SF \(radio.spreadingFactor), CR \(radio.codingRate)"
     }
 }

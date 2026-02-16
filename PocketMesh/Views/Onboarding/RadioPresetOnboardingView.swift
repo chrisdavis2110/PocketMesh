@@ -166,10 +166,10 @@ private struct PresetDetailsView: View {
     var body: some View {
         if let preset = presets.first(where: { $0.id == selectedPresetID }) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(preset.frequencyMHz, format: .number.precision(.fractionLength(3)))
+                Text(preset.frequencyMHz, format: .number.precision(.fractionLength(3)).locale(.posix))
                     .font(.caption.monospacedDigit()) +
                 // swiftlint:disable:next line_length
-                Text(" MHz \u{2022} BW\(preset.bandwidthKHz, format: .number) kHz \u{2022} SF\(preset.spreadingFactor) \u{2022} CR\(preset.codingRate)")
+                Text(" MHz \u{2022} BW\(preset.bandwidthKHz, format: .number.locale(.posix)) kHz \u{2022} SF\(preset.spreadingFactor) \u{2022} CR\(preset.codingRate)")
                     .font(.caption)
             }
             .foregroundStyle(.secondary)
@@ -177,10 +177,10 @@ private struct PresetDetailsView: View {
             let freqMHz = Double(device.frequency) / 1000.0
             let bwKHz = Double(device.bandwidth) / 1000.0
             VStack(alignment: .leading, spacing: 4) {
-                Text(freqMHz, format: .number.precision(.fractionLength(3)))
+                Text(freqMHz, format: .number.precision(.fractionLength(3)).locale(.posix))
                     .font(.caption.monospacedDigit()) +
                 // swiftlint:disable:next line_length
-                Text(" MHz \u{2022} BW\(bwKHz, format: .number) kHz \u{2022} SF\(device.spreadingFactor) \u{2022} CR\(device.codingRate)")
+                Text(" MHz \u{2022} BW\(bwKHz, format: .number.locale(.posix)) kHz \u{2022} SF\(device.spreadingFactor) \u{2022} CR\(device.codingRate)")
                     .font(.caption)
             }
             .foregroundStyle(.secondary)
@@ -220,7 +220,7 @@ private struct PresetCard: View {
                 .lineLimit(1)
 
             // Frequency
-            Text(frequency, format: .number.precision(.fractionLength(3)))
+            Text(frequency, format: .number.precision(.fractionLength(3)).locale(.posix))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             + Text(" MHz")
