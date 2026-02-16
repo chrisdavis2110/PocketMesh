@@ -286,13 +286,15 @@ struct LineOfSightView: View {
             .padding(.bottom, mapOverlayBottomPadding)
 
             if showingMapStyleMenu {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation {
-                            showingMapStyleMenu = false
-                        }
+                Button {
+                    withAnimation {
+                        showingMapStyleMenu = false
                     }
+                } label: {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                }
+                .buttonStyle(.plain)
 
                 VStack {
                     Spacer()

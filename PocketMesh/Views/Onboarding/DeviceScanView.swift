@@ -27,12 +27,14 @@ struct DeviceScanView: View {
                     .foregroundStyle(.tint)
                     .frame(height: 120)
 
-                Text(L10n.Onboarding.DeviceScan.title)
-                    .font(.largeTitle)
-                    .bold()
-                    .onTapGesture {
-                        handleTitleTap()
-                    }
+                Button {
+                    handleTitleTap()
+                } label: {
+                    Text(L10n.Onboarding.DeviceScan.title)
+                        .font(.largeTitle)
+                        .bold()
+                }
+                .buttonStyle(.plain)
 
                 if !hasConnectedDevice {
                     Text(L10n.Onboarding.DeviceScan.subtitle)

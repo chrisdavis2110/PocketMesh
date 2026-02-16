@@ -118,18 +118,20 @@ struct DeviceSelectionSheet: View {
                 ForEach(devices) { device in
                     let tier = device.isWiFiOnly ? nil : deviceSignalTier[device.id]
                     let isDisabledByBLE = !device.isWiFiOnly && scanSettled && deviceRSSI[device.id] == nil
-                    DeviceRow(
-                        device: device,
-                        isSelected: selectedDevice?.id == device.id,
-                        isConnectedElsewhere: devicesConnectedElsewhere.contains(device.id),
-                        signalTier: tier,
-                        scanSettled: device.isWiFiOnly ? false : scanSettled
-                    )
+                    Button {
+                        selectedDevice = device
+                    } label: {
+                        DeviceRow(
+                            device: device,
+                            isSelected: selectedDevice?.id == device.id,
+                            isConnectedElsewhere: devicesConnectedElsewhere.contains(device.id),
+                            signalTier: tier,
+                            scanSettled: device.isWiFiOnly ? false : scanSettled
+                        )
                         .contentShape(.rect)
-                        .onTapGesture {
-                            guard !isDisabledByBLE else { return }
-                            selectedDevice = device
-                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isDisabledByBLE)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
                                 deleteDevice(device)

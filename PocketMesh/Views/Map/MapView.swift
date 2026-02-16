@@ -65,13 +65,15 @@ struct MapView: View {
 
             // Layers menu overlay
             if viewModel.showingLayersMenu {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation {
-                            viewModel.showingLayersMenu = false
-                        }
+                Button {
+                    withAnimation {
+                        viewModel.showingLayersMenu = false
                     }
+                } label: {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                }
+                .buttonStyle(.plain)
 
                 VStack {
                     Spacer()
