@@ -309,6 +309,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Invalid input values or device not connected";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "Repeat Mode";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "Creates a local repeater on a dedicated frequency. Useful for hiking and remote areas. Valid frequencies: 433, 869, 918 MHz.";
+
 
 // MARK: - Battery Curve Section
 
@@ -496,10 +502,37 @@
 "dangerZone.alert.reset.confirm" = "Reset";
 
 /* Alert message for factory reset */
-"dangerZone.alert.reset.message" = "This will erase ALL data on the device including contacts, messages, and settings. This cannot be undone.";
+"dangerZone.alert.reset.message" = "This will erase all device data including contacts, messages, and settings. Tap Remove when prompted to unpair the device.";
 
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Services not available";
+
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "Remove Non-Favorite Nodes";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "Removing...";
+
+/* Label shown after successful removal */
+"dangerZone.removed" = "Nodes Removed";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "Remove Non-Favorite Nodes";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "Remove Nodes";
+
+/* Alert title for removal result */
+"dangerZone.alert.removeUnfavorited.resultTitle" = "Removal Result";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "This will permanently delete %d nodes not marked as favorite from the device and the app, along with their messages.";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "Removed %d of %d nodes. The connection was interrupted — tap the button again to retry removing the remaining nodes.";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "No non-favorite nodes to remove.";
 
 
 // MARK: - Diagnostics Section
@@ -545,6 +578,18 @@
 
 /* Footer explaining link preview privacy implications */
 "linkPreviews.footer" = "Link previews fetch data from the web, which may reveal your IP address to the server hosting the link.";
+
+
+// MARK: - Inline Image Settings Section
+
+/* Toggle label for inline images */
+"inlineImages.toggle" = "Inline Images";
+
+/* Toggle label for auto-play GIFs */
+"inlineImages.autoPlayGifs" = "Auto-play GIFs";
+
+/* Footer explaining inline image privacy implications */
+"inlineImages.footer" = "Fetching images from URLs may reveal your IP address to the server hosting the image.";
 
 
 // MARK: - Node Settings Section
@@ -648,6 +693,24 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "Choose a preset matching your region. MeshCore devices must use the same radio settings in order to communicate.";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "Repeat Mode";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "Creates a local repeater on a dedicated frequency. Useful for hiking and remote areas.";
+
+/* Accessibility hint for repeat mode toggle */
+"radio.repeatMode.accessibilityHint" = "Enabling this will disconnect you from the main mesh network";
+
+/* Confirmation dialog title for enabling repeat mode */
+"radio.repeatMode.confirm.title" = "Enable Repeat Mode?";
+
+/* Confirmation dialog message for enabling repeat mode */
+"radio.repeatMode.confirm.message" = "You will be disconnected from the main mesh network. Only devices on the same Repeat Mode frequency will be reachable.";
+
+/* Confirmation dialog enable button */
+"radio.repeatMode.confirm.enable" = "Enable";
 
 
 // MARK: - Telemetry Settings Section
@@ -828,3 +891,139 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Floods advertisement across entire mesh";
+
+/* Label shown in BLE status menu when repeat mode is active */
+"bleStatus.repeatModeActive" = "Repeat Mode Active";
+
+// MARK: - Config Export/Import
+
+/* Section title for config export/import */
+"configExport.sectionTitle" = "Device Configuration";
+
+/* Section footer explaining config export/import */
+"configExport.sectionFooter" = "Export or import device settings, channels, and contacts as a JSON file.";
+
+/* Export navigation row label */
+"configExport.export" = "Export Config";
+
+/* Export screen navigation title */
+"configExport.title" = "Export Configuration";
+
+/* Export full config button */
+"configExport.exportFull" = "Export Full Config";
+
+/* Export selected sections button */
+"configExport.exportSelected" = "Export Selected Sections";
+
+/* Customize export disclosure label */
+"configExport.customize" = "Customize Export";
+
+/* Select all toggle label */
+"configExport.selectAll" = "Select All";
+
+/* Toggle labels for export sections */
+"configExport.nodeIdentity" = "Node Identity (Name & Keys)";
+"configExport.nodeIdentity.description" = "Device name, public key, and private key";
+"configExport.radioSettings" = "Radio Settings";
+"configExport.radioSettings.description" = "Frequency, bandwidth, spreading factor, coding rate, TX power";
+"configExport.positionSettings" = "Position";
+"configExport.positionSettings.description" = "Latitude and longitude";
+"configExport.otherSettings" = "Other Settings";
+"configExport.otherSettings.description" = "Contact permissions, location sharing";
+"configExport.channels" = "Channels";
+"configExport.channels.description" = "All channels and their encryption keys";
+"configExport.contacts" = "Contacts";
+"configExport.contacts.description" = "Names, keys, and last known positions";
+
+
+// MARK: - Config Import
+
+/* Import screen navigation title */
+"configImport.title" = "Import Configuration";
+
+/* Select file button */
+"configImport.selectFile" = "Select JSON File";
+
+/* Cannot access file error */
+"configImport.cannotAccess" = "Cannot access the selected file.";
+
+/* Confirmation alert title */
+"configImport.confirmTitle" = "Apply Configuration?";
+
+/* Confirmation alert message (param: device name) */
+"configImport.confirmMessage" = "This will merge the selected settings into %@. Existing channels and contacts will be updated or added.";
+
+/* Apply button label */
+"configImport.applyButton" = "Apply to Device";
+
+/* Apply button label (additive only — channels/contacts) */
+"configImport.applyButtonAdd" = "Add to Device";
+
+/* Apply button label (overwrite settings) */
+"configImport.applyButtonOverwrite" = "Overwrite Settings";
+
+/* Confirmation alert title (additive only) */
+"configImport.confirmTitleAdd" = "Add to Device?";
+
+/* Confirmation alert title (overwrite settings) */
+"configImport.confirmTitleOverwrite" = "Overwrite Settings?";
+
+/* Confirmation alert message (additive only, param: device name) */
+"configImport.confirmMessageAdd" = "This will add channels and contacts to %@. Existing data will not be removed.";
+
+/* Confirmation alert message (overwrite only, param: device name) */
+"configImport.confirmMessageOverwrite" = "This will overwrite the selected settings on %@. Current values will be replaced.";
+
+/* Confirmation alert message (mixed, param: device name) */
+"configImport.confirmMessageMixed" = "This will overwrite settings and add channels/contacts on %@.";
+
+/* Proximity warning */
+"configImport.proximityWarning" = "Keep devices close together during import";
+
+/* Import cancelled */
+"configImport.cancelled" = "Import was cancelled.";
+
+/* Import success */
+"configImport.importSuccess" = "Configuration imported successfully";
+
+/* Private key warning */
+"configImport.privateKeyWarning" = "This will replace the node's cryptographic identity";
+
+"configImport.current" = "Current: %@";
+"configImport.new" = "New: %@";
+
+/* Channel count (param: integer) */
+"configImport.channelCount" = "Will add/update %d channels on device";
+
+/* Import navigation row label */
+"configImport.importConfig" = "Import Config";
+
+/* Radio settings change warning */
+"configImport.radioWarning" = "Changing radio settings will disconnect from the current mesh network";
+
+/* Contact count (param: integer) */
+"configImport.contactCount" = "Will add/update %d contacts on device";
+
+
+// MARK: - Blocking Section
+
+/* Location: BlockingSection.swift - Purpose: Section header */
+"blocking.header" = "Blocking";
+
+/* Location: BlockingSection.swift - Purpose: Channel senders row */
+"blocking.channelSenders" = "Channel Senders";
+
+/* Location: BlockingSection.swift - Purpose: Contacts row */
+"blocking.contacts" = "Contacts";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Navigation title */
+"blocking.channelSenders.title" = "Blocked Channel Senders";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state title */
+"blocking.channelSenders.empty.title" = "No Blocked Users";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state description */
+"blocking.channelSenders.empty.description" = "Channel sender names you block will appear here.";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Swipe action to unblock */
+"blocking.channelSenders.unblock" = "Unblock";

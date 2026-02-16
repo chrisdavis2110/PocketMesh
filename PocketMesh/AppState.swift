@@ -37,6 +37,7 @@ public final class AppState {
 
     /// The connection manager for device lifecycle
     public let connectionManager: ConnectionManager
+    private let bootstrapDebugLogBuffer: DebugLogBuffer
 
     // Convenience accessors
     public var connectionState: PocketMeshServices.ConnectionState { connectionManager.connectionState }
@@ -121,6 +122,10 @@ public final class AppState {
     /// Do not cancel this task externally -- cancelling breaks the serialization
     /// guarantee because Task<Void, Never>.value returns immediately on cancellation.
     private var bleLifecycleTransitionTask: Task<Void, Never>?
+
+    /// Fallback task that re-runs foreground recovery shortly after activation when the
+    /// app is still disconnected. Covers edge cases where scene-phase callbacks are missed.
+    private var activeRecoveryFallbackTask: Task<Void, Never>?
 
 #if DEBUG
     /// Optional test-only hooks for deterministic lifecycle ordering tests.
@@ -336,6 +341,11 @@ public final class AppState {
     // MARK: - Initialization
 
     init(modelContainer: ModelContainer) {
+        let bootstrapStore = PersistenceStore(modelContainer: modelContainer)
+        let bootstrapBuffer = DebugLogBuffer(persistenceStore: bootstrapStore)
+        self.bootstrapDebugLogBuffer = bootstrapBuffer
+        DebugLogBuffer.shared = bootstrapBuffer
+
         self.connectionManager = ConnectionManager(modelContainer: modelContainer)
 
         // Wire app state provider for incremental sync support
@@ -476,6 +486,13 @@ public final class AppState {
                 if config & 0x01 != 0 {
                     self?.isNodeStorageFull = false
                 }
+            }
+        }
+
+        // Wire client repeat callback
+        await services.settingsService.setClientRepeatCallback { [weak self] enabled in
+            await MainActor.run {
+                self?.connectionManager.updateClientRepeat(enabled)
             }
         }
 
@@ -699,9 +716,22 @@ public final class AppState {
 
     /// Called by View when scenePhase becomes active and shouldShowPickerOnForeground is true
     func handleBecameActive() {
-        guard shouldShowPickerOnForeground else { return }
-        shouldShowPickerOnForeground = false
-        startDeviceScan()
+        if shouldShowPickerOnForeground {
+            shouldShowPickerOnForeground = false
+            startDeviceScan()
+        }
+
+        activeRecoveryFallbackTask?.cancel()
+        activeRecoveryFallbackTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            guard self.connectionState == .disconnected,
+                  self.connectionManager.lastConnectedDeviceID != nil else { return }
+
+            self.logger.info("[BLE] Active fallback: disconnected after activation, running foreground reconciliation")
+            await self.handleReturnToForeground()
+        }
     }
 
     /// Disconnect from device
@@ -901,6 +931,9 @@ public final class AppState {
 
     /// Called when app enters background
     func handleEnterBackground() {
+        activeRecoveryFallbackTask?.cancel()
+        activeRecoveryFallbackTask = nil
+
         // Stop battery refresh - don't poll while UI isn't visible
         stopBatteryRefreshLoop()
 

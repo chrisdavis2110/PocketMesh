@@ -609,6 +609,9 @@
 /* Location: UnifiedMessageBubble.swift - Context menu action to delete */
 "chats.message.action.delete" = "Usuń";
 
+/* Location: MessageActionsSheet.swift - Purpose: Block sender action */
+"chats.message.action.blockSender" = "Zablokuj nadawcę";
+
 /* Location: UnifiedMessageBubble.swift - Status row retry button */
 "chats.message.status.retry" = "Ponów";
 
@@ -867,3 +870,50 @@
 
 /* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
 "chats.tip.floodAdvert.message" = "Dotknij tutaj i wyślij ogłoszenie rozgłoszeniowe, aby pobliskie urządzenia dowiedziały się o Twoim dołączeniu.";
+
+/* Location: InlineImageView.swift - Accessibility label for static image */
+"chats.inlineImage.imageAccessibility" = "Obraz";
+
+/* Location: InlineImageView.swift - Accessibility label for animated image */
+"chats.inlineImage.animatedAccessibility" = "Animowany obraz";
+
+/* Location: InlineImageView.swift - Accessibility hint for tap to view full screen */
+"chats.inlineImage.tapHint" = "Stuknij dwukrotnie, aby wyświetlić na pełnym ekranie";
+
+/* Location: UnifiedMessageBubble.swift - Tap to retry loading failed image */
+"chats.inlineImage.tapToRetry" = "Tap to retry";
+
+/* Location: UnifiedMessageBubble.swift - Accessibility hint for retry button */
+"chats.inlineImage.retryHint" = "Double tap to retry loading image";
+
+/* Location: FullScreenImageViewer.swift - Close button label */
+"chats.imageViewer.close" = "Zamknij";
+
+/* Location: FullScreenImageViewer.swift - Share button label */
+"chats.imageViewer.share" = "Obraz";
+
+// MARK: - Block Sender Sheet
+
+/* Location: BlockSenderSheet.swift - Purpose: Sheet title with sender name */
+"chats.blockSender.title" = "Zablokować \"%@\"";
+
+/* Location: BlockSenderSheet.swift - Purpose: Explanation of name-based blocking limitation */
+"chats.blockSender.limitation" = "Wiadomości w kanałach nie zawierają tożsamości nadawcy. Ta blokada działa tylko na podstawie nazwy — nadawca może ją obejść, zmieniając swoją nazwę.";
+
+/* Location: BlockSenderSheet.swift - Purpose: Section header when matching contacts found */
+"chats.blockSender.matchingContacts" = "Następujące kontakty mają tę samą nazwę. Wybierz te, które chcesz również zablokować:";
+
+/* Location: BlockSenderSheet.swift - Purpose: Cancel button */
+"chats.blockSender.cancel" = "Anuluj";
+
+/* Location: BlockSenderSheet.swift - Purpose: Destructive block button */
+"chats.blockSender.blockAnyway" = "Zablokuj";
+
+/* Location: BlockSenderSheet.swift - Purpose: Accessibility value when contact is selected */
+"chats.blockSender.accessibility.selected" = "Zaznaczono";
+
+/* Location: BlockSenderSheet.swift - Purpose: Accessibility value when contact is not selected */
+"chats.blockSender.accessibility.notSelected" = "Nie zaznaczono";
+
+/* Location: BlockSenderSheet.swift - Purpose: Public key label */
+"chats.blockSender.key" = "Klucz: %@";

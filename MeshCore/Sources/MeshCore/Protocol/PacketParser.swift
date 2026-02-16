@@ -153,6 +153,9 @@ extension PacketParser {
             }
             return .autoAddConfig(payload[0])
 
+        case .allowedRepeatFreq:
+            return Parsers.AllowedRepeatFreq.parse(payload)
+
         default:
             return .parseFailure(data: payload, reason: "Unexpected code in device response: \(code)")
         }

@@ -309,6 +309,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Nieprawidłowe wartości wejściowe lub urządzenie niepołączone";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "Tryb Repeatera";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "Tworzy lokalny repeater na wydzielonej częstotliwości. Przydatny podczas pieszych wędrówek i w odległych obszarach. Prawidłowe częstotliwości: 433, 869, 918 MHz.";
+
 
 // MARK: - Battery Curve Section
 
@@ -496,10 +502,37 @@
 "dangerZone.alert.reset.confirm" = "Przywróć";
 
 /* Alert message for factory reset */
-"dangerZone.alert.reset.message" = "Spowoduje to usunięcie WSZYSTKICH danych z urządzenia, w tym kontaktów, wiadomości i ustawień. Tej operacji nie można cofnąć.";
+"dangerZone.alert.reset.message" = "Spowoduje to usunięcie wszystkich danych z urządzenia, w tym kontaktów, wiadomości i ustawień. Stuknij Usuń, gdy pojawi się monit o odparowanie urządzenia.";
 
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Usługi niedostępne";
+
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "Usuń niefaworyzowane węzły";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "Usuwanie…";
+
+/* Label shown after successful removal */
+"dangerZone.removed" = "Węzły usunięte";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "Usuń niefaworyzowane węzły";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "Usuń węzły";
+
+/* Alert title for removal result */
+"dangerZone.alert.removeUnfavorited.resultTitle" = "Wynik usuwania";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "Spowoduje to trwałe usunięcie %d węzłów nieoznaczonych jako ulubione z urządzenia i aplikacji, wraz z ich wiadomościami.";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "Usunięto %d z %d węzłów. Połączenie zostało przerwane — naciśnij przycisk ponownie, aby usunąć pozostałe węzły.";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "Brak niefaworyzowanych węzłów do usunięcia.";
 
 
 // MARK: - Diagnostics Section
@@ -623,6 +656,24 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "Wybierz preset odpowiadający Twojemu regionowi. Urządzenia MeshCore muszą używać tych samych ustawień radia, aby się komunikować.";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "Tryb Repeatera";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "Tworzy lokalny repeater na wydzielonej częstotliwości. Przydatny podczas pieszych wędrówek i w odległych obszarach.";
+
+/* Accessibility hint for repeat mode toggle */
+"radio.repeatMode.accessibilityHint" = "Włączenie odłączy Cię od głównej sieci mesh";
+
+/* Confirmation dialog title for enabling repeat mode */
+"radio.repeatMode.confirm.title" = "Włączyć tryb repeatera?";
+
+/* Confirmation dialog message for enabling repeat mode */
+"radio.repeatMode.confirm.message" = "Zostaniesz odłączony od głównej sieci mesh. Dostępne będą tylko urządzenia na tej samej częstotliwości trybu repeatera.";
+
+/* Confirmation dialog enable button */
+"radio.repeatMode.confirm.enable" = "Włącz";
 
 
 // MARK: - Telemetry Settings Section
@@ -804,6 +855,9 @@
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Rozprzestrzenia ogłoszenie po całej sieci mesh";
 
+/* Label shown in BLE status menu when repeat mode is active */
+"bleStatus.repeatModeActive" = "Tryb repeatera aktywny";
+
 
 // MARK: - Location Settings Section
 
@@ -824,3 +878,144 @@
 
 /* GPS source option: device GPS */
 "location.gpsSource.device" = "GPS urządzenia";
+
+// MARK: - Config Export/Import
+
+/* Section title for config export/import */
+"configExport.sectionTitle" = "Konfiguracja urządzenia";
+
+/* Section footer explaining config export/import */
+"configExport.sectionFooter" = "Eksportuj lub importuj ustawienia urządzenia, kanały i kontakty jako plik JSON.";
+
+/* Export navigation row label */
+"configExport.export" = "Eksportuj konfigurację";
+
+/* Export screen navigation title */
+"configExport.title" = "Eksport konfiguracji";
+
+/* Export full config button */
+"configExport.exportFull" = "Eksportuj pełną konfigurację";
+
+/* Export selected sections button */
+"configExport.exportSelected" = "Eksportuj wybrane sekcje";
+
+/* Customize export disclosure label */
+"configExport.customize" = "Dostosuj eksport";
+
+/* Select all toggle label */
+"configExport.selectAll" = "Zaznacz wszystko";
+
+/* Toggle labels for export sections */
+"configExport.nodeIdentity" = "Tożsamość węzła (Nazwa i klucze)";
+"configExport.nodeIdentity.description" = "Nazwa urządzenia, klucz publiczny i klucz prywatny";
+"configExport.radioSettings" = "Ustawienia radia";
+"configExport.radioSettings.description" = "Częstotliwość, szerokość pasma, współczynnik rozpraszania, szybkość kodowania, moc TX";
+"configExport.positionSettings" = "Pozycja";
+"configExport.positionSettings.description" = "Szerokość i długość geograficzna";
+"configExport.otherSettings" = "Inne ustawienia";
+"configExport.otherSettings.description" = "Uprawnienia kontaktów, udostępnianie lokalizacji";
+"configExport.channels" = "Kanały";
+"configExport.channels.description" = "Wszystkie kanały i ich klucze szyfrowania";
+"configExport.contacts" = "Kontakty";
+"configExport.contacts.description" = "Nazwy, klucze i ostatnie znane pozycje";
+
+
+// MARK: - Config Import
+
+/* Import screen navigation title */
+"configImport.title" = "Import konfiguracji";
+
+/* Select file button */
+"configImport.selectFile" = "Wybierz plik JSON";
+
+/* Cannot access file error */
+"configImport.cannotAccess" = "Nie można uzyskać dostępu do wybranego pliku.";
+
+/* Confirmation alert title */
+"configImport.confirmTitle" = "Zastosować konfigurację?";
+
+/* Confirmation alert message (param: device name) */
+"configImport.confirmMessage" = "Wybrane ustawienia zostaną scalone z %@. Istniejące kanały i kontakty zostaną zaktualizowane lub dodane.";
+
+/* Apply button label */
+"configImport.applyButton" = "Zastosuj na urządzeniu";
+
+/* Apply button label (additive only — channels/contacts) */
+"configImport.applyButtonAdd" = "Dodaj do urządzenia";
+
+/* Apply button label (overwrite settings) */
+"configImport.applyButtonOverwrite" = "Nadpisz ustawienia";
+
+/* Confirmation alert title (additive only) */
+"configImport.confirmTitleAdd" = "Dodać do urządzenia?";
+
+/* Confirmation alert title (overwrite settings) */
+"configImport.confirmTitleOverwrite" = "Nadpisać ustawienia?";
+
+/* Confirmation alert message (additive only, param: device name) */
+"configImport.confirmMessageAdd" = "Kanały i kontakty zostaną dodane do %@. Istniejące dane nie zostaną usunięte.";
+
+/* Confirmation alert message (overwrite only, param: device name) */
+"configImport.confirmMessageOverwrite" = "Wybrane ustawienia na %@ zostaną nadpisane. Bieżące wartości zostaną zastąpione.";
+
+/* Confirmation alert message (mixed, param: device name) */
+"configImport.confirmMessageMixed" = "Ustawienia zostaną nadpisane, a kanały/kontakty dodane na %@.";
+
+/* Proximity warning */
+"configImport.proximityWarning" = "Trzymaj urządzenia blisko siebie podczas importu";
+
+/* Import cancelled */
+"configImport.cancelled" = "Import został anulowany.";
+
+/* Import success */
+"configImport.importSuccess" = "Konfiguracja zaimportowana pomyślnie";
+
+/* Private key warning */
+"configImport.privateKeyWarning" = "Tożsamość kryptograficzna węzła zostanie zastąpiona";
+
+"configImport.current" = "Obecny: %@";
+"configImport.new" = "Nowy: %@";
+
+/* Channel count (param: integer) */
+"configImport.channelCount" = "%d kanałów zostanie dodanych/zaktualizowanych na urządzeniu";
+
+/* Import navigation row label */
+"configImport.importConfig" = "Importuj konfigurację";
+
+/* Radio settings change warning */
+"configImport.radioWarning" = "Zmiana ustawień radia spowoduje rozłączenie z bieżącą siecią mesh";
+
+/* Contact count (param: integer) */
+"configImport.contactCount" = "%d kontaktów zostanie dodanych/zaktualizowanych na urządzeniu";
+
+/* Toggle label for inline images */
+"inlineImages.toggle" = "Obrazy w wiadomościach";
+
+/* Toggle label for auto-play GIFs */
+"inlineImages.autoPlayGifs" = "Automatyczne odtwarzanie GIF-ów";
+
+/* Footer explaining inline image privacy implications */
+"inlineImages.footer" = "Pobieranie obrazów z adresów URL może ujawnić Twój adres IP serwerowi hostującemu obraz.";
+
+// MARK: - Blocking Section
+
+/* Location: BlockingSection.swift - Purpose: Section header */
+"blocking.header" = "Blokowanie";
+
+/* Location: BlockingSection.swift - Purpose: Channel senders row */
+"blocking.channelSenders" = "Nadawcy kanałów";
+
+/* Location: BlockingSection.swift - Purpose: Contacts row */
+"blocking.contacts" = "Kontakty";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Navigation title */
+"blocking.channelSenders.title" = "Zablokowani nadawcy kanałów";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state title */
+"blocking.channelSenders.empty.title" = "Brak zablokowanych użytkowników";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state description */
+"blocking.channelSenders.empty.description" = "Zablokowane nazwy nadawców kanałów pojawią się tutaj.";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Swipe action to unblock */
+"blocking.channelSenders.unblock" = "Odblokuj";

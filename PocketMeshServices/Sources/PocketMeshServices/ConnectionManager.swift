@@ -161,6 +161,12 @@ public enum DevicePlatform: Sendable {
     ]
 }
 
+/// Result of removing unfavorited nodes from the device
+public struct RemoveUnfavoritedResult: Sendable {
+    public let removed: Int
+    public let total: Int
+}
+
 /// Manages the connection lifecycle for mesh devices.
 ///
 /// `ConnectionManager` owns the transport, session, and services. It handles:
@@ -356,6 +362,7 @@ public final class ConnectionManager {
 
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
     private let lastDeviceNameKey = "com.pocketmesh.lastConnectedDeviceName"
+    private let lastDisconnectDiagnosticKey = "com.pocketmesh.lastDisconnectDiagnostic"
 
     // MARK: - Simulator Support
 
@@ -409,6 +416,40 @@ public final class ConnectionManager {
     /// Whether the disconnected pill should be suppressed (user explicitly disconnected)
     public var shouldSuppressDisconnectedPill: Bool {
         connectionIntent.isUserDisconnected
+    }
+
+    /// Most recent disconnect diagnostic summary persisted across app launches.
+    public var lastDisconnectDiagnostic: String? {
+        UserDefaults.standard.string(forKey: lastDisconnectDiagnosticKey)
+    }
+
+    /// Current high-level connection intent, exported for diagnostics.
+    public var connectionIntentSummary: String {
+        switch connectionIntent {
+        case .none:
+            return "none"
+        case .userDisconnected:
+            return "userDisconnected"
+        case .wantsConnection(let forceFullSync):
+            return forceFullSync ? "wantsConnection(forceFullSync: true)" : "wantsConnection"
+        }
+    }
+
+    /// Returns a best-effort snapshot of the BLE state machine for debug exports.
+    public func currentBLEDiagnosticsSummary() async -> String {
+        let bleState = await stateMachine.centralManagerStateName
+        let blePhase = await stateMachine.currentPhaseName
+        let blePeripheralState = await stateMachine.currentPeripheralState ?? "none"
+        let isConnected = await stateMachine.isConnected
+        let isAutoReconnecting = await stateMachine.isAutoReconnecting
+        let connectedDeviceShort = await stateMachine.connectedDeviceID?.uuidString.prefix(8) ?? "none"
+        return
+            "BLE: state=\(bleState), " +
+            "phase=\(blePhase), " +
+            "peripheralState=\(blePeripheralState), " +
+            "isConnected=\(isConnected), " +
+            "isAutoReconnecting=\(isAutoReconnecting), " +
+            "connectedDevice=\(connectedDeviceShort)"
     }
 
     /// Checks if a device is connected to the system by another app.
@@ -932,6 +973,21 @@ public final class ConnectionManager {
 
         // Don't reconnect if device is connected to another app
         if await isDeviceConnectedToOtherApp(deviceID) {
+            let blePeripheralState = await stateMachine.currentPeripheralState ?? "none"
+            persistDisconnectDiagnostic(
+                "source=checkBLEConnectionHealth.otherAppConnected, " +
+                "device=\(deviceID.uuidString.prefix(8)), " +
+                "bleState=\(bleState), " +
+                "blePhase=\(blePhase), " +
+                "blePeripheralState=\(blePeripheralState), " +
+                "intent=\(connectionIntent)"
+            )
+
+            // Ensure retries continue even when this method is called directly
+            // (outside appDidBecomeActive's watchdog re-arm path).
+            if reconnectionWatchdogTask == nil {
+                startReconnectionWatchdog()
+            }
             logger.info("[BLE] Skipping foreground reconnect: device connected to another app")
             return
         }
@@ -1084,9 +1140,30 @@ public final class ConnectionManager {
             }
 
             // Handle entering auto-reconnecting phase
-            await stateMachine.setAutoReconnectingHandler { [weak self] (deviceID: UUID) in
+            await stateMachine.setAutoReconnectingHandler { [weak self] (deviceID: UUID, errorInfo: String) in
                 Task { @MainActor in
                     guard let self else { return }
+                    let initialState = String(describing: self.connectionState)
+                    let transportName = switch self.currentTransportType {
+                    case .bluetooth: "bluetooth"
+                    case .wifi: "wifi"
+                    case nil: "none"
+                    }
+                    let bleState = await self.stateMachine.centralManagerStateName
+                    let blePhase = await self.stateMachine.currentPhaseName
+                    let blePeripheralState = await self.stateMachine.currentPeripheralState ?? "none"
+
+                    self.persistDisconnectDiagnostic(
+                        "source=bleStateMachine.autoReconnectingHandler, " +
+                        "device=\(deviceID.uuidString.prefix(8)), " +
+                        "transport=\(transportName), " +
+                        "initialState=\(initialState), " +
+                        "bleState=\(bleState), " +
+                        "blePhase=\(blePhase), " +
+                        "blePeripheralState=\(blePeripheralState), " +
+                        "error=\(errorInfo), " +
+                        "intent=\(self.connectionIntent)"
+                    )
                     await self.reconnectionCoordinator.handleEnteringAutoReconnect(deviceID: deviceID)
                 }
             }
@@ -1222,7 +1299,21 @@ public final class ConnectionManager {
             // Silently skip per HIG: minimize interruptions on app launch
             if await isDeviceConnectedToOtherApp(lastDeviceID) {
                 logger.info("Auto-reconnect skipped: device connected to another app")
-                connectionIntent = .none
+                let bleState = await stateMachine.centralManagerStateName
+                let blePhase = await stateMachine.currentPhaseName
+                let blePeripheralState = await stateMachine.currentPeripheralState ?? "none"
+                persistDisconnectDiagnostic(
+                    "source=activate.autoReconnectSkippedOtherApp, " +
+                    "device=\(lastDeviceID.uuidString.prefix(8)), " +
+                    "bleState=\(bleState), " +
+                    "blePhase=\(blePhase), " +
+                    "blePeripheralState=\(blePeripheralState), " +
+                    "intent=\(connectionIntent)"
+                )
+
+                // Keep intent so we can retry on foreground/watchdog, but avoid
+                // fighting another app's connection on launch.
+                startReconnectionWatchdog()
                 return
             }
 
@@ -1230,6 +1321,19 @@ public final class ConnectionManager {
                 try await connect(to: lastDeviceID)
             } catch {
                 logger.warning("Auto-reconnect failed: \(error.localizedDescription)")
+                let bleState = await stateMachine.centralManagerStateName
+                let blePhase = await stateMachine.currentPhaseName
+                let blePeripheralState = await stateMachine.currentPeripheralState ?? "none"
+                persistDisconnectDiagnostic(
+                    "source=activate.autoReconnectFailed, " +
+                    "device=\(lastDeviceID.uuidString.prefix(8)), " +
+                    "bleState=\(bleState), " +
+                    "blePhase=\(blePhase), " +
+                    "blePeripheralState=\(blePeripheralState), " +
+                    "error=\(error.localizedDescription), " +
+                    "intent=\(connectionIntent)"
+                )
+                startReconnectionWatchdog()
                 // Don't propagate - auto-reconnect failure is not fatal
             }
         } else {
@@ -1480,6 +1584,16 @@ public final class ConnectionManager {
 
         // Clear state
         await cleanupConnection()
+
+        persistDisconnectDiagnostic(
+            "source=disconnect(reason), " +
+            "reason=\(reason.rawValue), " +
+            "transport=\(transportName), " +
+            "device=\(activeDevice), " +
+            "initialState=\(initialState), " +
+            "finalState=\(String(describing: connectionState)), " +
+            "intent=\(connectionIntent)"
+        )
 
         logger.info(
             "Disconnected (" +
@@ -1782,6 +1896,105 @@ public final class ConnectionManager {
         logger.info("Device forgotten")
     }
 
+    /// Forgets a device by ID, removing it from paired accessories and local storage.
+    /// Best-effort cleanup — does not throw. Use after factory reset when the device
+    /// may have already disconnected.
+    public func forgetDevice(id: UUID) async {
+        logger.info("Forgetting device by ID: \(id)")
+
+        // Remove from paired accessories (most important — without this, re-pairing fails)
+        if let accessory = accessorySetupKit.accessory(for: id) {
+            do {
+                try await accessorySetupKit.removeAccessory(accessory)
+            } catch {
+                logger.warning("Failed to remove accessory from ASK: \(error.localizedDescription)")
+            }
+        }
+
+        // Always disconnect — even if BLE already dropped, this cancels any pending
+        // auto-reconnect, sets connectionIntent, and cleans up state.
+        await disconnect(reason: .factoryReset)
+
+        // Delete from SwiftData
+        let dataStore = PersistenceStore(modelContainer: modelContainer)
+        do {
+            try await dataStore.deleteDevice(id: id)
+        } catch {
+            logger.warning("Failed to delete device data from SwiftData: \(error.localizedDescription)")
+        }
+
+        logger.info("Device forgotten by ID: \(id)")
+    }
+
+    /// Returns the number of non-favorite contacts for the current device.
+    public func unfavoritedNodeCount() async throws -> Int {
+        guard let deviceID = connectedDevice?.id else {
+            throw ConnectionError.notConnected
+        }
+
+        let dataStore = PersistenceStore(modelContainer: modelContainer)
+        let allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+        return allContacts.filter { !$0.isFavorite }.count
+    }
+
+    /// Removes all non-favorite contacts from the device and app, along with their messages.
+    /// For room/repeater contacts, also removes the associated RemoteNodeSession.
+    /// - Returns: Count of removed vs total non-favorite contacts
+    /// - Throws: `ConnectionError.notConnected` if no device is connected
+    public func removeUnfavoritedNodes() async throws -> RemoveUnfavoritedResult {
+        guard let deviceID = connectedDevice?.id else {
+            throw ConnectionError.notConnected
+        }
+
+        guard let services else {
+            throw ConnectionError.notConnected
+        }
+
+        let dataStore = PersistenceStore(modelContainer: modelContainer)
+        let allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+        let unfavorited = allContacts.filter { !$0.isFavorite }
+
+        if unfavorited.isEmpty {
+            return RemoveUnfavoritedResult(removed: 0, total: 0)
+        }
+
+        var removedCount = 0
+
+        for contact in unfavorited {
+            try Task.checkCancellation()
+
+            do {
+                try await services.contactService.removeContact(
+                    deviceID: deviceID,
+                    publicKey: contact.publicKey
+                )
+                removedCount += 1
+            } catch ContactServiceError.contactNotFound {
+                // Contact exists locally but not on device — run full local cleanup
+                do {
+                    try await services.contactService.removeLocalContact(
+                        contactID: contact.id,
+                        publicKey: contact.publicKey
+                    )
+                    removedCount += 1
+                    logger.info("Contact not found on device, cleaned up locally: \(contact.name)")
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    logger.warning("Failed to clean up local data for \(contact.name): \(error.localizedDescription)")
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // Connection error — stop the loop, report partial progress
+                logger.warning("Failed to remove contact \(contact.name): \(error.localizedDescription)")
+                return RemoveUnfavoritedResult(removed: removedCount, total: unfavorited.count)
+            }
+        }
+
+        return RemoveUnfavoritedResult(removed: removedCount, total: unfavorited.count)
+    }
+
     /// Clears all stale pairings from AccessorySetupKit.
     /// Use when a device has been factory-reset but iOS still has the old pairing.
     public func clearStalePairings() async {
@@ -1826,6 +2039,44 @@ public final class ConnectionManager {
         guard var device = connectedDevice else { return }
         device = device.withAutoAddConfig(config)
         connectedDevice = device
+    }
+
+    /// Updates the connected device's client repeat state.
+    /// Called by SettingsService after client repeat is successfully changed.
+    public func updateClientRepeat(_ enabled: Bool) {
+        guard let device = connectedDevice else { return }
+        let updated = device.withClientRepeat(enabled)
+        connectedDevice = updated
+
+        Task {
+            do { try await services?.dataStore.saveDevice(updated) }
+            catch { logger.error("Failed to persist client repeat state: \(error)") }
+        }
+    }
+
+    /// Saves the connected device's current radio settings as pre-repeat settings.
+    /// Called before enabling repeat mode so settings can be restored later.
+    public func savePreRepeatSettings() {
+        guard let device = connectedDevice else { return }
+        let updated = device.savingPreRepeatSettings()
+        connectedDevice = updated
+
+        Task {
+            do { try await services?.dataStore.saveDevice(updated) }
+            catch { logger.error("Failed to persist pre-repeat settings: \(error)") }
+        }
+    }
+
+    /// Clears the connected device's pre-repeat settings after restoration.
+    public func clearPreRepeatSettings() {
+        guard let device = connectedDevice else { return }
+        let updated = device.clearingPreRepeatSettings()
+        connectedDevice = updated
+
+        Task {
+            do { try await services?.dataStore.saveDevice(updated) }
+            catch { logger.error("Failed to persist cleared pre-repeat settings: \(error)") }
+        }
     }
 
     /// Checks if an accessory is registered with AccessorySetupKit.
@@ -2154,7 +2405,7 @@ public final class ConnectionManager {
             mergedMethods.append(method)
         }
 
-        return Device(
+        let device = Device(
             id: deviceID,
             publicKey: selfInfo.publicKey,
             nodeName: selfInfo.name,
@@ -2173,6 +2424,11 @@ public final class ConnectionManager {
             latitude: selfInfo.latitude,
             longitude: selfInfo.longitude,
             blePin: capabilities.blePin,
+            clientRepeat: capabilities.clientRepeat,
+            preRepeatFrequency: existingDevice?.preRepeatFrequency,
+            preRepeatBandwidth: existingDevice?.preRepeatBandwidth,
+            preRepeatSpreadingFactor: existingDevice?.preRepeatSpreadingFactor,
+            preRepeatCodingRate: existingDevice?.preRepeatCodingRate,
             manualAddContacts: selfInfo.manualAddContacts,
             autoAddConfig: autoAddConfig,
             multiAcks: selfInfo.multiAcks,
@@ -2188,6 +2444,16 @@ public final class ConnectionManager {
             customOCVArrayString: existingDevice?.customOCVArrayString,
             connectionMethods: mergedMethods
         )
+
+        // If repeat mode was disabled externally, clear orphaned pre-repeat settings
+        if !capabilities.clientRepeat && existingDevice?.preRepeatFrequency != nil {
+            device.preRepeatFrequency = nil
+            device.preRepeatBandwidth = nil
+            device.preRepeatSpreadingFactor = nil
+            device.preRepeatCodingRate = nil
+        }
+
+        return device
     }
 
     /// Configures BLE write pacing based on detected device platform.
@@ -2205,6 +2471,7 @@ public final class ConnectionManager {
 
     /// Handles unexpected connection loss
     private func handleConnectionLoss(deviceID: UUID, error: Error?) async {
+        let stateBeforeLoss = connectionState
         var errorInfo = "none"
         if let error = error as NSError? {
             errorInfo = "domain=\(error.domain), code=\(error.code), desc=\(error.localizedDescription)"
@@ -2235,6 +2502,15 @@ public final class ConnectionManager {
         connectedDevice = nil
         services = nil
         session = nil
+
+        persistDisconnectDiagnostic(
+            "source=handleConnectionLoss, " +
+            "device=\(deviceID.uuidString.prefix(8)), " +
+            "stateBefore=\(String(describing: stateBeforeLoss)), " +
+            "error=\(errorInfo), " +
+            "intent=\(connectionIntent)"
+        )
+
         // Keep transport reference for iOS auto-reconnect to use
 
         // Notify UI layer of connection loss
@@ -2268,7 +2544,21 @@ public final class ConnectionManager {
     // MARK: - BLEReconnectionDelegate
 
     func setConnectionState(_ state: ConnectionState) {
+        let previousState = connectionState
         connectionState = state
+        if state == .disconnected, previousState != .disconnected {
+            let transportName = switch currentTransportType {
+            case .bluetooth: "bluetooth"
+            case .wifi: "wifi"
+            case nil: "none"
+            }
+            persistDisconnectDiagnostic(
+                "source=reconnectionCoordinator.setConnectionState, " +
+                "previousState=\(String(describing: previousState)), " +
+                "transport=\(transportName), " +
+                "intent=\(connectionIntent)"
+            )
+        }
     }
 
     func setConnectedDevice(_ device: DeviceDTO?) {
@@ -2433,6 +2723,11 @@ public final class ConnectionManager {
         connectionState = .disconnected
         connectedDevice = nil
         await cleanupResources()
+    }
+
+    private func persistDisconnectDiagnostic(_ summary: String) {
+        let timestamp = Date().ISO8601Format()
+        UserDefaults.standard.set("\(timestamp) \(summary)", forKey: lastDisconnectDiagnosticKey)
     }
 
     // MARK: - State Invariants

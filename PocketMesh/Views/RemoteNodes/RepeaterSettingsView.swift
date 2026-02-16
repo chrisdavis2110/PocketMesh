@@ -143,7 +143,7 @@ struct RepeaterSettingsView: View {
                     TextField(L10n.RemoteNodes.RemoteNodes.Settings.mhz, value: Binding(
                         get: { frequency },
                         set: { viewModel.frequency = $0 }
-                    ), format: .number.precision(.fractionLength(3)))
+                    ), format: .number.precision(.fractionLength(3)).locale(.posix))
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                         .frame(width: 100)
@@ -248,7 +248,7 @@ struct RepeaterSettingsView: View {
                         get: { txPower },
                         set: { viewModel.txPower = $0 }
                     ), format: .number)
-                        .keyboardType(.numberPad)
+                        .keyboardType(.numbersAndPunctuation)
                         .multilineTextAlignment(.trailing)
                         .frame(width: 60)
                         .focused($focusedField, equals: .txPower)

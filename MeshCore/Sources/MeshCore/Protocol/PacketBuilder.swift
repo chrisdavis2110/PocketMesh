@@ -144,17 +144,14 @@ public enum PacketBuilder: Sendable {
 
     /// Builds a setTxPower command to set the radio transmission power.
     ///
-    /// - Parameter power: Transmission power in dBm.
+    /// - Parameter power: Transmission power in dBm (range: -9 to 30).
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x08` (setTxPower)
-    /// - Offset 1 (4 bytes): Power value, Little-endian UInt32
-    public static func setTxPower(_ power: Int) -> Data {
-        var data = Data([CommandCode.setTxPower.rawValue])
-        let powerValue = UInt32(power)
-        data.append(contentsOf: withUnsafeBytes(of: powerValue.littleEndian) { Array($0) })
-        return data
+    /// - Offset 0 (1 byte): Command code `0x0C` (setTxPower)
+    /// - Offset 1 (1 byte): Power value, Int8
+    public static func setTxPower(_ power: Int8) -> Data {
+        Data([CommandCode.setTxPower.rawValue, UInt8(bitPattern: power)])
     }
 
     /// Builds a setRadio command to configure radio modulation parameters.
@@ -164,6 +161,7 @@ public enum PacketBuilder: Sendable {
     ///   - bandwidth: Bandwidth in kHz.
     ///   - spreadingFactor: LoRa spreading factor (6-12).
     ///   - codingRate: LoRa coding rate (5-8).
+    ///   - clientRepeat: Whether to enable client repeat mode (v9+ firmware, omitted if nil).
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
@@ -172,11 +170,13 @@ public enum PacketBuilder: Sendable {
     /// - Offset 5 (4 bytes): Bandwidth scaled by 1,000, Little-endian UInt32
     /// - Offset 9 (1 byte): Spreading Factor
     /// - Offset 10 (1 byte): Coding Rate
+    /// - Offset 11 (1 byte, optional): Client repeat flag (v9+)
     public static func setRadio(
         frequency: Double,
         bandwidth: Double,
         spreadingFactor: UInt8,
-        codingRate: UInt8
+        codingRate: UInt8,
+        clientRepeat: Bool? = nil
     ) -> Data {
         var data = Data([CommandCode.setRadio.rawValue])
         let freq = UInt32(frequency * 1000)
@@ -185,7 +185,20 @@ public enum PacketBuilder: Sendable {
         data.append(contentsOf: withUnsafeBytes(of: bw.littleEndian) { Array($0) })
         data.append(spreadingFactor)
         data.append(codingRate)
+        if let clientRepeat {
+            data.append(clientRepeat ? 1 : 0)
+        }
         return data
+    }
+
+    /// Builds a getRepeatFreq command to request allowed client repeat frequency ranges (v9+).
+    ///
+    /// - Returns: The command packet data.
+    ///
+    /// ### Binary Format
+    /// - Offset 0 (1 byte): Command code `0x3C` (getRepeatFreq)
+    public static func getRepeatFreq() -> Data {
+        Data([CommandCode.getRepeatFreq.rawValue])
     }
 
     /// Builds a sendAdvertisement command to broadcast device presence.

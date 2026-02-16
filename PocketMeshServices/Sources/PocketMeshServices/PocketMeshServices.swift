@@ -3,6 +3,12 @@
 
 @_exported import MeshCore
 
+extension Locale {
+    /// POSIX locale — always uses period as decimal separator.
+    /// Use for technical values like radio frequency and bandwidth.
+    public static let posix = Locale(identifier: "en_US_POSIX")
+}
+
 /// PocketMeshServices provides iOS-specific implementations on top of MeshCore:
 /// - SwiftData models (Device, Contact, Message, Channel)
 /// - PersistenceStore (@ModelActor for SwiftData operations)
@@ -101,6 +107,7 @@ public enum RadioOptions {
                 return "\(Int(khz))"
             } else {
                 let formatter = NumberFormatter()
+                formatter.locale = Locale(identifier: "en_US_POSIX")
                 formatter.minimumFractionDigits = 0
                 formatter.maximumFractionDigits = 2
                 return formatter.string(from: NSNumber(value: khz)) ?? "\(khz)"

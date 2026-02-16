@@ -58,6 +58,12 @@ struct WiFiEditSheet: View {
                             .textContentType(.none)
                             .autocorrectionDisabled()
                             .focused($focusedField, equals: .ipAddress)
+                            .onChange(of: ipAddress) { _, newValue in
+                                let replaced = newValue.replacing(",", with: ".")
+                                if replaced != newValue {
+                                    ipAddress = replaced
+                                }
+                            }
 
                         if !ipAddress.isEmpty {
                             Button {

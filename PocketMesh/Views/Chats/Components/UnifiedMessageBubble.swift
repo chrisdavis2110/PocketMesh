@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import PocketMeshServices
 
 /// Layout constants for message bubbles
@@ -77,6 +78,15 @@ struct UnifiedMessageBubble: View {
     let previewState: PreviewLoadState
     let loadedPreview: LinkPreviewDataDTO?
 
+    // Inline image state
+    let isImageURL: Bool
+    let decodedImage: UIImage?
+    let isGIF: Bool
+    let showInlineImages: Bool
+    let autoPlayGIFs: Bool
+    let onImageTap: (() -> Void)?
+    let onRetryImageFetch: (() -> Void)?
+
     // Callbacks for preview lifecycle
     let onRequestPreviewFetch: (() -> Void)?
     let onManualPreviewFetch: (() -> Void)?
@@ -102,9 +112,16 @@ struct UnifiedMessageBubble: View {
         showNewMessagesDivider: Bool = false,
         previewState: PreviewLoadState = .idle,
         loadedPreview: LinkPreviewDataDTO? = nil,
+        isImageURL: Bool = false,
+        decodedImage: UIImage? = nil,
+        isGIF: Bool = false,
+        showInlineImages: Bool = false,
+        autoPlayGIFs: Bool = true,
         onRetry: (() -> Void)? = nil,
         onReaction: ((String) -> Void)? = nil,
         onLongPress: (() -> Void)? = nil,
+        onImageTap: (() -> Void)? = nil,
+        onRetryImageFetch: (() -> Void)? = nil,
         onRequestPreviewFetch: (() -> Void)? = nil,
         onManualPreviewFetch: (() -> Void)? = nil
     ) {
@@ -119,9 +136,16 @@ struct UnifiedMessageBubble: View {
         self.showNewMessagesDivider = showNewMessagesDivider
         self.previewState = previewState
         self.loadedPreview = loadedPreview
+        self.isImageURL = isImageURL
+        self.decodedImage = decodedImage
+        self.isGIF = isGIF
+        self.showInlineImages = showInlineImages
+        self.autoPlayGIFs = autoPlayGIFs
         self.onRetry = onRetry
         self.onReaction = onReaction
         self.onLongPress = onLongPress
+        self.onImageTap = onImageTap
+        self.onRetryImageFetch = onRetryImageFetch
         self.onRequestPreviewFetch = onRequestPreviewFetch
         self.onManualPreviewFetch = onManualPreviewFetch
     }
@@ -176,8 +200,8 @@ struct UnifiedMessageBubble: View {
                         .padding(.bottom, -6)
                     }
 
-                    // Link preview (if applicable)
-                    if previewsEnabled {
+                    // Link preview (if applicable, skip for image URLs shown in bubble)
+                    if previewsEnabled && !(isImageURL && showInlineImages) {
                         linkPreviewContent
                     }
 
@@ -198,7 +222,7 @@ struct UnifiedMessageBubble: View {
         .padding(.top, showDirectionGap ? 12 : (showSenderName ? 8 : 2))
         .padding(.bottom, message.isOutgoing ? 4 : 2)
         .onAppear {
-            // Request preview fetch when cell becomes visible
+            // Request preview/image fetch when cell becomes visible
             // ViewModel handles deduplication and cancellation
             if previewState == .idle && detectedURL != nil && message.linkPreviewURL == nil {
                 onRequestPreviewFetch?()
@@ -206,6 +230,56 @@ struct UnifiedMessageBubble: View {
         }
         .sheet(isPresented: $showingReactionDetails) {
             ReactionDetailsSheet(messageID: message.id)
+        }
+    }
+
+    // MARK: - Embedded Image Content
+
+    @ViewBuilder
+    private var embeddedImageContent: some View {
+        switch previewState {
+        case .loaded:
+            if let image = decodedImage {
+                InlineImageView(
+                    image: image,
+                    isGIF: isGIF,
+                    autoPlayGIFs: autoPlayGIFs,
+                    isEmbedded: true,
+                    onTap: { onImageTap?() }
+                )
+                .frame(maxWidth: .infinity)
+            }
+
+        case .loading, .idle:
+            if detectedURL != nil {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(message.isOutgoing ? .white.opacity(0.7) : nil)
+                    Text(L10n.Chats.Chats.Preview.loading)
+                        .font(.subheadline)
+                        .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+
+        case .noPreview, .disabled:
+            if isImageURL && showInlineImages && previewState == .noPreview {
+                Button(action: { onRetryImageFetch?() }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.clockwise")
+                            .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
+                        Text(L10n.Chats.Chats.InlineImage.tapToRetry)
+                            .font(.subheadline)
+                            .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(L10n.Chats.Chats.InlineImage.retryHint)
+            }
         }
     }
 
@@ -271,22 +345,28 @@ struct UnifiedMessageBubble: View {
     // MARK: - Message Bubble Content
 
     private var messageBubbleContent: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            MessageText(message.text, baseColor: textColor, currentUserName: deviceName)
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
+                MessageText(message.text, baseColor: textColor, currentUserName: deviceName)
 
-            if !message.isOutgoing && (showIncomingHopCount && !isDirect || showIncomingPath) {
-                HStack(spacing: 4) {
-                    if showIncomingHopCount && !isDirect {
-                        hopCountFooter
-                    }
-                    if showIncomingPath {
-                        pathFooter
+                if !message.isOutgoing && (showIncomingHopCount && !isDirect || showIncomingPath) {
+                    HStack(spacing: 4) {
+                        if showIncomingHopCount && !isDirect {
+                            hopCountFooter
+                        }
+                        if showIncomingPath {
+                            pathFooter
+                        }
                     }
                 }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+
+            if isImageURL && showInlineImages {
+                embeddedImageContent
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
         .background(bubbleColor)
         .clipShape(.rect(cornerRadius: 16))
         .frame(maxWidth: MessageLayout.maxBubbleWidth, alignment: message.isOutgoing ? .trailing : .leading)

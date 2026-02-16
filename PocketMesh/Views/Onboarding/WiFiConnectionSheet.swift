@@ -99,6 +99,12 @@ struct WiFiConnectionSheet: View {
                             .textContentType(.none)
                             .autocorrectionDisabled()
                             .focused($focusedField, equals: .ip)
+                            .onChange(of: ipAddress) { _, newValue in
+                                let replaced = newValue.replacing(",", with: ".")
+                                if replaced != newValue {
+                                    ipAddress = replaced
+                                }
+                            }
 
                         if !ipAddress.isEmpty {
                             Button {

@@ -741,6 +741,26 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return Array(contacts.values.filter { $0.deviceID == deviceID && $0.isBlocked })
     }
 
+    // MARK: - Blocked Channel Senders
+
+    public var blockedChannelSenders: [String: BlockedChannelSenderDTO] = [:]
+    public private(set) var savedBlockedChannelSenders: [BlockedChannelSenderDTO] = []
+    public private(set) var deletedBlockedChannelSenderNames: [(deviceID: UUID, name: String)] = []
+
+    public func saveBlockedChannelSender(_ dto: BlockedChannelSenderDTO) async throws {
+        savedBlockedChannelSenders.append(dto)
+        blockedChannelSenders["\(dto.deviceID)-\(dto.name)"] = dto
+    }
+
+    public func deleteBlockedChannelSender(deviceID: UUID, name: String) async throws {
+        deletedBlockedChannelSenderNames.append((deviceID: deviceID, name: name))
+        blockedChannelSenders.removeValue(forKey: "\(deviceID)-\(name)")
+    }
+
+    public func fetchBlockedChannelSenders(deviceID: UUID) async throws -> [BlockedChannelSenderDTO] {
+        Array(blockedChannelSenders.values.filter { $0.deviceID == deviceID })
+    }
+
     // MARK: - Channel Operations
 
     public func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] {
@@ -1328,6 +1348,102 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         reactions.removeValue(forKey: messageID)
     }
 
+    // MARK: - Node Status Snapshots
+
+    public var nodeStatusSnapshots: [NodeStatusSnapshotDTO] = []
+
+    public func saveNodeStatusSnapshot(
+        nodePublicKey: Data,
+        batteryMillivolts: UInt16?,
+        lastSNR: Double?,
+        lastRSSI: Int16?,
+        noiseFloor: Int16?,
+        uptimeSeconds: UInt32?,
+        rxAirtimeSeconds: UInt32?,
+        packetsSent: UInt32?,
+        packetsReceived: UInt32?
+    ) async throws -> UUID {
+        let dto = NodeStatusSnapshotDTO(
+            nodePublicKey: nodePublicKey,
+            batteryMillivolts: batteryMillivolts,
+            lastSNR: lastSNR,
+            lastRSSI: lastRSSI,
+            noiseFloor: noiseFloor,
+            uptimeSeconds: uptimeSeconds,
+            rxAirtimeSeconds: rxAirtimeSeconds,
+            packetsSent: packetsSent,
+            packetsReceived: packetsReceived
+        )
+        nodeStatusSnapshots.append(dto)
+        return dto.id
+    }
+
+    public func fetchLatestNodeStatusSnapshot(nodePublicKey: Data) async throws -> NodeStatusSnapshotDTO? {
+        nodeStatusSnapshots
+            .filter { $0.nodePublicKey == nodePublicKey }
+            .sorted { $0.timestamp > $1.timestamp }
+            .first
+    }
+
+    public func fetchNodeStatusSnapshots(nodePublicKey: Data, since: Date?) async throws -> [NodeStatusSnapshotDTO] {
+        nodeStatusSnapshots
+            .filter { $0.nodePublicKey == nodePublicKey && (since == nil || $0.timestamp >= since!) }
+            .sorted { $0.timestamp < $1.timestamp }
+    }
+
+    public func fetchPreviousNodeStatusSnapshot(nodePublicKey: Data, before: Date) async throws -> NodeStatusSnapshotDTO? {
+        nodeStatusSnapshots
+            .filter { $0.nodePublicKey == nodePublicKey && $0.timestamp < before }
+            .sorted { $0.timestamp > $1.timestamp }
+            .first
+    }
+
+    public func updateSnapshotNeighbors(id: UUID, neighbors: [NeighborSnapshotEntry]) async throws {
+        if let index = nodeStatusSnapshots.firstIndex(where: { $0.id == id }) {
+            let existing = nodeStatusSnapshots[index]
+            nodeStatusSnapshots[index] = NodeStatusSnapshotDTO(
+                id: existing.id,
+                timestamp: existing.timestamp,
+                nodePublicKey: existing.nodePublicKey,
+                batteryMillivolts: existing.batteryMillivolts,
+                lastSNR: existing.lastSNR,
+                lastRSSI: existing.lastRSSI,
+                noiseFloor: existing.noiseFloor,
+                uptimeSeconds: existing.uptimeSeconds,
+                rxAirtimeSeconds: existing.rxAirtimeSeconds,
+                packetsSent: existing.packetsSent,
+                packetsReceived: existing.packetsReceived,
+                neighborSnapshots: neighbors,
+                telemetryEntries: existing.telemetryEntries
+            )
+        }
+    }
+
+    public func updateSnapshotTelemetry(id: UUID, telemetry: [TelemetrySnapshotEntry]) async throws {
+        if let index = nodeStatusSnapshots.firstIndex(where: { $0.id == id }) {
+            let existing = nodeStatusSnapshots[index]
+            nodeStatusSnapshots[index] = NodeStatusSnapshotDTO(
+                id: existing.id,
+                timestamp: existing.timestamp,
+                nodePublicKey: existing.nodePublicKey,
+                batteryMillivolts: existing.batteryMillivolts,
+                lastSNR: existing.lastSNR,
+                lastRSSI: existing.lastRSSI,
+                noiseFloor: existing.noiseFloor,
+                uptimeSeconds: existing.uptimeSeconds,
+                rxAirtimeSeconds: existing.rxAirtimeSeconds,
+                packetsSent: existing.packetsSent,
+                packetsReceived: existing.packetsReceived,
+                neighborSnapshots: existing.neighborSnapshots,
+                telemetryEntries: telemetry
+            )
+        }
+    }
+
+    public func deleteOldNodeStatusSnapshots(olderThan date: Date) async throws {
+        nodeStatusSnapshots.removeAll { $0.timestamp < date }
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all storage and recorded invocations
@@ -1341,6 +1457,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         roomMessages = [:]
         discoveredNodes = [:]
         reactions = [:]
+        nodeStatusSnapshots = []
         savedMessages = []
         savedContacts = []
         savedChannels = []

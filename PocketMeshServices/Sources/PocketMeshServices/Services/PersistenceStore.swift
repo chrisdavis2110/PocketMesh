@@ -38,7 +38,9 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         RxLogEntry.self,
         DebugLogEntry.self,
         LinkPreviewData.self,
-        DiscoveredNode.self
+        DiscoveredNode.self,
+        NodeStatusSnapshot.self,
+        BlockedChannelSender.self
     ])
 
     /// Creates a ModelContainer for the app
@@ -116,6 +118,11 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.latitude = dto.latitude
             existing.longitude = dto.longitude
             existing.blePin = dto.blePin
+            existing.clientRepeat = dto.clientRepeat
+            existing.preRepeatFrequency = dto.preRepeatFrequency
+            existing.preRepeatBandwidth = dto.preRepeatBandwidth
+            existing.preRepeatSpreadingFactor = dto.preRepeatSpreadingFactor
+            existing.preRepeatCodingRate = dto.preRepeatCodingRate
             existing.manualAddContacts = dto.manualAddContacts
             existing.autoAddConfig = dto.autoAddConfig
             existing.multiAcks = dto.multiAcks
@@ -150,6 +157,11 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 latitude: dto.latitude,
                 longitude: dto.longitude,
                 blePin: dto.blePin,
+                clientRepeat: dto.clientRepeat,
+                preRepeatFrequency: dto.preRepeatFrequency,
+                preRepeatBandwidth: dto.preRepeatBandwidth,
+                preRepeatSpreadingFactor: dto.preRepeatSpreadingFactor,
+                preRepeatCodingRate: dto.preRepeatCodingRate,
                 manualAddContacts: dto.manualAddContacts,
                 autoAddConfig: dto.autoAddConfig,
                 multiAcks: dto.multiAcks,
@@ -447,6 +459,57 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         return contacts.map { ContactDTO(from: $0) }
     }
 
+    // MARK: - Blocked Channel Senders
+
+    public func saveBlockedChannelSender(_ dto: BlockedChannelSenderDTO) throws {
+        let targetDeviceID = dto.deviceID
+        let targetName = dto.name
+        let predicate = #Predicate<BlockedChannelSender> { entry in
+            entry.deviceID == targetDeviceID && entry.name == targetName
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let existing = try modelContext.fetch(descriptor).first {
+            existing.dateBlocked = dto.dateBlocked
+        } else {
+            let entry = BlockedChannelSender(
+                id: dto.id,
+                name: targetName,
+                deviceID: dto.deviceID,
+                dateBlocked: dto.dateBlocked
+            )
+            modelContext.insert(entry)
+        }
+
+        try modelContext.save()
+    }
+
+    public func deleteBlockedChannelSender(deviceID: UUID, name: String) throws {
+        let targetDeviceID = deviceID
+        let targetName = name
+        let predicate = #Predicate<BlockedChannelSender> { entry in
+            entry.deviceID == targetDeviceID && entry.name == targetName
+        }
+        if let entry = try modelContext.fetch(FetchDescriptor(predicate: predicate)).first {
+            modelContext.delete(entry)
+            try modelContext.save()
+        }
+    }
+
+    public func fetchBlockedChannelSenders(deviceID: UUID) throws -> [BlockedChannelSenderDTO] {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<BlockedChannelSender> { entry in
+            entry.deviceID == targetDeviceID
+        }
+        let descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\.dateBlocked, order: .reverse)]
+        )
+        let entries = try modelContext.fetch(descriptor)
+        return entries.map { BlockedChannelSenderDTO(from: $0) }
+    }
+
     /// Update contact's last message info (nil clears the date, removing from conversations list)
     public func updateContactLastMessage(contactID: UUID, date: Date?) throws {
         let targetID = contactID
@@ -627,21 +690,6 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
 
         contact.isMuted = isMuted
-        try modelContext.save()
-    }
-
-    /// Sets the favorite state for a contact
-    public func setContactFavorite(_ contactID: UUID, isFavorite: Bool) throws {
-        let targetID = contactID
-        let predicate = #Predicate<Contact> { $0.id == targetID }
-        var descriptor = FetchDescriptor<Contact>(predicate: predicate)
-        descriptor.fetchLimit = 1
-
-        guard let contact = try modelContext.fetch(descriptor).first else {
-            throw PersistenceStoreError.contactNotFound
-        }
-
-        contact.isFavorite = isFavorite
         try modelContext.save()
     }
 
@@ -2575,6 +2623,97 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.delete(model: Reaction.self, where: #Predicate {
             $0.messageID == targetMessageID
         })
+        try modelContext.save()
+    }
+
+    // MARK: - Node Status Snapshots
+
+    public func saveNodeStatusSnapshot(
+        nodePublicKey: Data,
+        batteryMillivolts: UInt16?,
+        lastSNR: Double?,
+        lastRSSI: Int16?,
+        noiseFloor: Int16?,
+        uptimeSeconds: UInt32?,
+        rxAirtimeSeconds: UInt32?,
+        packetsSent: UInt32?,
+        packetsReceived: UInt32?
+    ) throws -> UUID {
+        let snapshot = NodeStatusSnapshot(
+            nodePublicKey: nodePublicKey,
+            batteryMillivolts: batteryMillivolts,
+            lastSNR: lastSNR,
+            lastRSSI: lastRSSI,
+            noiseFloor: noiseFloor,
+            uptimeSeconds: uptimeSeconds,
+            rxAirtimeSeconds: rxAirtimeSeconds,
+            packetsSent: packetsSent,
+            packetsReceived: packetsReceived
+        )
+        modelContext.insert(snapshot)
+        try modelContext.save()
+        return snapshot.id
+    }
+
+    public func fetchLatestNodeStatusSnapshot(nodePublicKey: Data) throws -> NodeStatusSnapshotDTO? {
+        var descriptor = FetchDescriptor<NodeStatusSnapshot>(
+            predicate: #Predicate { $0.nodePublicKey == nodePublicKey },
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first.map(NodeStatusSnapshotDTO.init)
+    }
+
+    public func fetchNodeStatusSnapshots(nodePublicKey: Data, since: Date?) throws -> [NodeStatusSnapshotDTO] {
+        let descriptor: FetchDescriptor<NodeStatusSnapshot>
+        if let since {
+            descriptor = FetchDescriptor<NodeStatusSnapshot>(
+                predicate: #Predicate { $0.nodePublicKey == nodePublicKey && $0.timestamp >= since },
+                sortBy: [SortDescriptor(\.timestamp)]
+            )
+        } else {
+            descriptor = FetchDescriptor<NodeStatusSnapshot>(
+                predicate: #Predicate { $0.nodePublicKey == nodePublicKey },
+                sortBy: [SortDescriptor(\.timestamp)]
+            )
+        }
+        return try modelContext.fetch(descriptor).map(NodeStatusSnapshotDTO.init)
+    }
+
+    public func fetchPreviousNodeStatusSnapshot(nodePublicKey: Data, before: Date) throws -> NodeStatusSnapshotDTO? {
+        var descriptor = FetchDescriptor<NodeStatusSnapshot>(
+            predicate: #Predicate { $0.nodePublicKey == nodePublicKey && $0.timestamp < before },
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first.map(NodeStatusSnapshotDTO.init)
+    }
+
+    public func updateSnapshotNeighbors(id: UUID, neighbors: [NeighborSnapshotEntry]) throws {
+        var descriptor = FetchDescriptor<NodeStatusSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+        descriptor.fetchLimit = 1
+        guard let snapshot = try modelContext.fetch(descriptor).first else { return }
+        snapshot.neighborSnapshots = neighbors
+        try modelContext.save()
+    }
+
+    public func updateSnapshotTelemetry(id: UUID, telemetry: [TelemetrySnapshotEntry]) throws {
+        var descriptor = FetchDescriptor<NodeStatusSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+        descriptor.fetchLimit = 1
+        guard let snapshot = try modelContext.fetch(descriptor).first else { return }
+        snapshot.telemetryEntries = telemetry
+        try modelContext.save()
+    }
+
+    public func deleteOldNodeStatusSnapshots(olderThan date: Date) throws {
+        try modelContext.delete(
+            model: NodeStatusSnapshot.self,
+            where: #Predicate { $0.timestamp < date }
+        )
         try modelContext.save()
     }
 }

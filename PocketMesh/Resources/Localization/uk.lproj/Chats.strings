@@ -608,6 +608,9 @@
 /* Location: UnifiedMessageBubble.swift - Context menu action to delete */
 "chats.message.action.delete" = "Видалити";
 
+/* Location: MessageActionsSheet.swift - Purpose: Block sender action */
+"chats.message.action.blockSender" = "Заблокувати відправника";
+
 /* Location: UnifiedMessageBubble.swift - Status row retry button */
 "chats.message.status.retry" = "Повторити";
 
@@ -866,3 +869,50 @@
 
 /* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
 "chats.tip.floodAdvert.message" = "Торкнись тут і надішли широкомовне оголошення, щоб пристрої поблизу дізналися про твоє приєднання.";
+
+/* Location: InlineImageView.swift - Accessibility label for static image */
+"chats.inlineImage.imageAccessibility" = "Зображення";
+
+/* Location: InlineImageView.swift - Accessibility label for animated image */
+"chats.inlineImage.animatedAccessibility" = "Анімоване зображення";
+
+/* Location: InlineImageView.swift - Accessibility hint for tap to view full screen */
+"chats.inlineImage.tapHint" = "Подвійне торкання для перегляду на весь екран";
+
+/* Location: UnifiedMessageBubble.swift - Tap to retry loading failed image */
+"chats.inlineImage.tapToRetry" = "Tap to retry";
+
+/* Location: UnifiedMessageBubble.swift - Accessibility hint for retry button */
+"chats.inlineImage.retryHint" = "Double tap to retry loading image";
+
+/* Location: FullScreenImageViewer.swift - Close button label */
+"chats.imageViewer.close" = "Закрити";
+
+/* Location: FullScreenImageViewer.swift - Share button label */
+"chats.imageViewer.share" = "Зображення";
+
+// MARK: - Block Sender Sheet
+
+/* Location: BlockSenderSheet.swift - Purpose: Sheet title with sender name */
+"chats.blockSender.title" = "Заблокувати \"%@\"";
+
+/* Location: BlockSenderSheet.swift - Purpose: Explanation of name-based blocking limitation */
+"chats.blockSender.limitation" = "Повідомлення в каналах не містять ідентифікатора відправника. Це блокування працює лише за іменем — відправник може обійти його, змінивши своє ім'я.";
+
+/* Location: BlockSenderSheet.swift - Purpose: Section header when matching contacts found */
+"chats.blockSender.matchingContacts" = "Наступні контакти мають таке саме ім'я. Виберіть тих, кого ви також хочете заблокувати:";
+
+/* Location: BlockSenderSheet.swift - Purpose: Cancel button */
+"chats.blockSender.cancel" = "Скасувати";
+
+/* Location: BlockSenderSheet.swift - Purpose: Destructive block button */
+"chats.blockSender.blockAnyway" = "Заблокувати";
+
+/* Location: BlockSenderSheet.swift - Purpose: Accessibility value when contact is selected */
+"chats.blockSender.accessibility.selected" = "Вибрано";
+
+/* Location: BlockSenderSheet.swift - Purpose: Accessibility value when contact is not selected */
+"chats.blockSender.accessibility.notSelected" = "Не вибрано";
+
+/* Location: BlockSenderSheet.swift - Purpose: Public key label */
+"chats.blockSender.key" = "Ключ: %@";

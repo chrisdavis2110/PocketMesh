@@ -9,9 +9,33 @@ struct DangerZoneSection: View {
     @State private var showingResetAlert = false
     @State private var isResetting = false
     @State private var showError: String?
+    @State private var showingRemoveUnfavoritedAlert = false
+    @State private var isRemovingUnfavorited = false
+    @State private var showRemoveSuccess = false
+    @State private var unfavoritedCount = 0
+    @State private var showRemoveResult = false
+    @State private var removeResult: String?
+    @State private var removeTask: Task<Void, Never>?
 
     var body: some View {
         Section {
+            Button(role: .destructive) {
+                fetchUnfavoritedCount()
+            } label: {
+                if isRemovingUnfavorited {
+                    HStack {
+                        ProgressView()
+                        Text(L10n.Settings.DangerZone.removing)
+                    }
+                } else if showRemoveSuccess {
+                    Label(L10n.Settings.DangerZone.removed, systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    Label(L10n.Settings.DangerZone.removeUnfavorited, systemImage: "person.2.slash")
+                }
+            }
+            .radioDisabled(for: appState.connectionState, or: isRemovingUnfavorited || showRemoveSuccess)
+
             Button(role: .destructive) {
                 showingForgetAlert = true
             } label: {
@@ -52,6 +76,20 @@ struct DangerZoneSection: View {
         } message: {
             Text(L10n.Settings.DangerZone.Alert.Reset.message)
         }
+        .alert(L10n.Settings.DangerZone.Alert.RemoveUnfavorited.title, isPresented: $showingRemoveUnfavoritedAlert) {
+            Button(L10n.Localizable.Common.cancel, role: .cancel) { }
+            Button(L10n.Settings.DangerZone.Alert.RemoveUnfavorited.confirm, role: .destructive) {
+                removeUnfavoritedNodes()
+            }
+        } message: {
+            Text(L10n.Settings.DangerZone.Alert.RemoveUnfavorited.message(unfavoritedCount))
+        }
+        .alert(L10n.Settings.DangerZone.Alert.RemoveUnfavorited.resultTitle, isPresented: $showRemoveResult) {
+            Button(L10n.Localizable.Common.ok) { }
+        } message: {
+            Text(removeResult ?? "")
+        }
+        .onDisappear { removeTask?.cancel() }
         .errorAlert($showError)
     }
 
@@ -72,19 +110,67 @@ struct DangerZoneSection: View {
             return
         }
 
+        guard let deviceID = appState.connectedDevice?.id else {
+            showError = L10n.Settings.DangerZone.Error.servicesUnavailable
+            return
+        }
+
         isResetting = true
         Task {
+            defer { isResetting = false }
+
+            // Send reset command. The device typically reboots before responding,
+            // so a timeout/connection error here is expected — not a failure.
             do {
                 try await settingsService.factoryReset()
-
-                // Wait briefly then disconnect
                 try await Task.sleep(for: .seconds(1))
-                await appState.disconnect(reason: .factoryReset)
-                dismiss()
+            } catch {
+                // Expected: device reboots before sending OK response
+            }
+
+            // Always clean up: remove from ASK, disconnect, delete from SwiftData
+            await appState.connectionManager.forgetDevice(id: deviceID)
+            dismiss()
+        }
+    }
+
+    private func fetchUnfavoritedCount() {
+        Task {
+            do {
+                unfavoritedCount = try await appState.connectionManager.unfavoritedNodeCount()
+                if unfavoritedCount == 0 {
+                    removeResult = L10n.Settings.DangerZone.Alert.RemoveUnfavorited.noneFound
+                    showRemoveResult = true
+                } else {
+                    showingRemoveUnfavoritedAlert = true
+                }
             } catch {
                 showError = error.localizedDescription
             }
-            isResetting = false
+        }
+    }
+
+    private func removeUnfavoritedNodes() {
+        isRemovingUnfavorited = true
+        removeTask = Task {
+            defer { isRemovingUnfavorited = false }
+            do {
+                let result = try await appState.connectionManager.removeUnfavoritedNodes()
+                isRemovingUnfavorited = false
+                if result.removed == result.total {
+                    withAnimation { showRemoveSuccess = true }
+                    try await Task.sleep(for: .seconds(1.5))
+                    withAnimation { showRemoveSuccess = false }
+                } else {
+                    removeResult = L10n.Settings.DangerZone.Alert.RemoveUnfavorited
+                        .partial(result.removed, result.total)
+                    showRemoveResult = true
+                }
+            } catch {
+                if !(error is CancellationError) {
+                    showError = error.localizedDescription
+                }
+            }
         }
     }
 }

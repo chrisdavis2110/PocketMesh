@@ -317,6 +317,9 @@
 /* Location: RepeaterStatusView.swift - Packets received label */
 "remoteNodes.status.packetsReceived" = "Empfangene Pakete";
 
+/* Location: RepeaterStatusView.swift - Receive errors label */
+"remoteNodes.status.receiveErrors" = "Empfangene Paketfehler";
+
 /* Location: RepeaterStatusView.swift - Neighbors section label */
 "remoteNodes.status.neighbors" = "Nachbarn";
 
@@ -378,6 +381,95 @@
 
 /* Location: RepeaterStatusView.swift - Channel header for grouped telemetry */
 "remoteNodes.status.channel" = "Kanal %d";
+
+/* Location: RepeaterStatusView.swift - Telemetry section footer */
+"remoteNodes.status.telemetryFooter" = "Sensormesswerte wie Temperatur, Luftfeuchtigkeit und Spannung.";
+
+/* Location: RepeaterStatusView.swift - Neighbors section footer */
+"remoteNodes.status.neighborsFooter" = "Andere von diesem Repeater entdeckte Knoten und ihre Signalqualität.";
+
+/* Location: RepeaterStatusView.swift - Battery curve section footer */
+"remoteNodes.status.batteryCurveFooter" = "Spannungs-Prozent-Zuordnung zur Schätzung des Batteriestands.";
+
+// MARK: - History
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (minutes ago) */
+"remoteNodes.history.vsMinutesAgo" = "Seit letztem Besuch (vor %d Min.)";
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (hours ago) */
+"remoteNodes.history.vsHoursAgo" = "Seit letztem Besuch (vor %d Std.)";
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (date) */
+"remoteNodes.history.vsDate" = "Seit %@";
+
+/* Location: NodeStatusHistoryView.swift - History navigation title */
+"remoteNodes.history.title" = "Verlauf";
+
+/* Location: NeighborRow - New neighbor badge */
+"remoteNodes.history.new" = "Neu";
+
+/* Location: NeighborRow - Not seen status */
+"remoteNodes.history.notSeen" = "Nicht gesehen";
+
+/* Location: NodeStatusHistoryView.swift - Empty state message */
+"remoteNodes.history.checkBack" = "Ein Snapshot wird höchstens alle 15 Minuten aufgezeichnet. Schau nach deinem nächsten Besuch vorbei, um Trends zu sehen.";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.week" = "1W";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.month" = "1M";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.threeMonths" = "3M";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.all" = "Alle";
+
+/* Location: NodeStatusHistoryView.swift - Battery chart title */
+"remoteNodes.history.battery" = "Akku";
+
+/* Location: NodeStatusHistoryView.swift - SNR chart title */
+"remoteNodes.history.snr" = "SNR";
+
+/* Location: NodeStatusHistoryView.swift - RSSI chart title */
+"remoteNodes.history.rssi" = "RSSI";
+
+/* Location: NodeStatusHistoryView.swift - Noise floor chart title */
+"remoteNodes.history.noiseFloor" = "Grundrauschen";
+
+/* Location: NodeStatusHistoryView.swift - Neighbor count chart title */
+"remoteNodes.history.neighborCount" = "Nachbaranzahl";
+
+/* Location: NeighborHistoryView.swift - Active status */
+"remoteNodes.history.active" = "Aktiv";
+
+/* Location: NeighborHistoryView.swift - Last seen status */
+"remoteNodes.history.lastSeen" = "Zuletzt gesehen %@";
+
+/* Location: NeighborHistoryView.swift - Neighbors section title */
+"remoteNodes.history.neighbors" = "Nachbarn";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric increased */
+"remoteNodes.history.a11y.increased" = "gestiegen";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric decreased */
+"remoteNodes.history.a11y.decreased" = "gesunken";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric improved */
+"remoteNodes.history.a11y.improved" = "verbessert";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric degraded */
+"remoteNodes.history.a11y.degraded" = "verschlechtert";
+
+/* Location: StatusDeltaView.swift - Accessibility: delta description format (quality, direction, value, unit) */
+"remoteNodes.history.a11y.deltaDescription" = "%1$@, %2$@ um %3$@%4$@";
+
+/* Location: HistoryTimeRangePicker.swift - Accessibility label for time range picker */
+"remoteNodes.history.timeRange" = "Zeitraum";
+
+/* Location: NodeStatusHistoryView.swift - Footer about data retention */
+"remoteNodes.history.retentionNotice" = "Verlaufsdaten, die älter als ein Jahr sind, werden automatisch entfernt.";
 
 // MARK: - Room Conversation
 

@@ -309,6 +309,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Valeurs d'entrée invalides ou appareil non connecté";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "Mode Répéteur";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "Crée un répéteur local sur une fréquence dédiée. Utile pour la randonnée et les zones isolées. Fréquences valides : 433, 869, 918 MHz.";
+
 
 /* Accessibility label for voltage text field - %d is the percentage level */
 "batteryCurve.accessibility.voltageLabel" = "Tension à %d pour cent";
@@ -496,10 +502,37 @@
 "dangerZone.alert.reset.confirm" = "Réinitialiser";
 
 /* Alert message for factory reset */
-"dangerZone.alert.reset.message" = "Cela effacera TOUTES les données de l'appareil, y compris les contacts, les messages et les réglages. Cette action est irréversible.";
+"dangerZone.alert.reset.message" = "Cela effacera toutes les données de l'appareil, y compris les contacts, les messages et les réglages. Touchez Supprimer lorsque vous y serez invité pour dissocier l'appareil.";
 
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Services non disponibles";
+
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "Supprimer les nœuds non favoris";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "Suppression…";
+
+/* Label shown after successful removal */
+"dangerZone.removed" = "Nœuds supprimés";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "Supprimer les nœuds non favoris";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "Supprimer les nœuds";
+
+/* Alert title for removal result */
+"dangerZone.alert.removeUnfavorited.resultTitle" = "Résultat de la suppression";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "Cela supprimera définitivement %d nœuds non marqués comme favoris de l'appareil et de l'app, ainsi que leurs messages.";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "%d nœuds sur %d supprimés. La connexion a été interrompue — appuyez à nouveau sur le bouton pour réessayer la suppression des nœuds restants.";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "Aucun nœud non favori à supprimer.";
 
 
 // MARK: - Diagnostics Section
@@ -623,6 +656,24 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "Choisissez un préréglage correspondant à votre région. Les appareils MeshCore doivent utiliser les mêmes réglages radio pour communiquer.";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "Mode Répéteur";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "Crée un répéteur local sur une fréquence dédiée. Utile pour la randonnée et les zones isolées.";
+
+/* Accessibility hint for repeat mode toggle */
+"radio.repeatMode.accessibilityHint" = "L'activation vous déconnectera du réseau mesh principal";
+
+/* Confirmation dialog title for enabling repeat mode */
+"radio.repeatMode.confirm.title" = "Activer le Mode Répéteur ?";
+
+/* Confirmation dialog message for enabling repeat mode */
+"radio.repeatMode.confirm.message" = "Vous serez déconnecté du réseau mesh principal. Seuls les appareils sur la même fréquence du Mode Répéteur seront joignables.";
+
+/* Confirmation dialog enable button */
+"radio.repeatMode.confirm.enable" = "Activer";
 
 
 // MARK: - Telemetry Settings Section
@@ -804,6 +855,9 @@
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Propage l'annonce sur tout le réseau mesh";
 
+/* Label shown in BLE status menu when repeat mode is active */
+"bleStatus.repeatModeActive" = "Mode Répéteur actif";
+
 
 // MARK: - Location Settings Section
 
@@ -824,3 +878,144 @@
 
 /* GPS source option: device GPS */
 "location.gpsSource.device" = "GPS de l'appareil";
+
+// MARK: - Config Export/Import
+
+/* Section title for config export/import */
+"configExport.sectionTitle" = "Configuration de l'appareil";
+
+/* Section footer explaining config export/import */
+"configExport.sectionFooter" = "Exporter ou importer les paramètres de l'appareil, canaux et contacts en fichier JSON.";
+
+/* Export navigation row label */
+"configExport.export" = "Exporter la configuration";
+
+/* Export screen navigation title */
+"configExport.title" = "Exporter la configuration";
+
+/* Export full config button */
+"configExport.exportFull" = "Exporter la configuration complète";
+
+/* Export selected sections button */
+"configExport.exportSelected" = "Exporter les sections sélectionnées";
+
+/* Customize export disclosure label */
+"configExport.customize" = "Personnaliser l'exportation";
+
+/* Select all toggle label */
+"configExport.selectAll" = "Tout sélectionner";
+
+/* Toggle labels for export sections */
+"configExport.nodeIdentity" = "Identité du nœud (Nom et clés)";
+"configExport.nodeIdentity.description" = "Nom de l'appareil, clé publique et clé privée";
+"configExport.radioSettings" = "Paramètres radio";
+"configExport.radioSettings.description" = "Fréquence, bande passante, facteur d'étalement, taux de codage, puissance TX";
+"configExport.positionSettings" = "Position";
+"configExport.positionSettings.description" = "Latitude et longitude";
+"configExport.otherSettings" = "Autres paramètres";
+"configExport.otherSettings.description" = "Autorisations des contacts, partage de position";
+"configExport.channels" = "Canaux";
+"configExport.channels.description" = "Tous les canaux et leurs clés de chiffrement";
+"configExport.contacts" = "Contacts";
+"configExport.contacts.description" = "Noms, clés et dernières positions connues";
+
+
+// MARK: - Config Import
+
+/* Import screen navigation title */
+"configImport.title" = "Importer la configuration";
+
+/* Select file button */
+"configImport.selectFile" = "Sélectionner un fichier JSON";
+
+/* Cannot access file error */
+"configImport.cannotAccess" = "Impossible d'accéder au fichier sélectionné.";
+
+/* Confirmation alert title */
+"configImport.confirmTitle" = "Appliquer la configuration ?";
+
+/* Confirmation alert message (param: device name) */
+"configImport.confirmMessage" = "Les paramètres sélectionnés seront fusionnés dans %@. Les canaux et contacts existants seront mis à jour ou ajoutés.";
+
+/* Apply button label */
+"configImport.applyButton" = "Appliquer à l'appareil";
+
+/* Apply button label (additive only — channels/contacts) */
+"configImport.applyButtonAdd" = "Ajouter à l'appareil";
+
+/* Apply button label (overwrite settings) */
+"configImport.applyButtonOverwrite" = "Écraser les paramètres";
+
+/* Confirmation alert title (additive only) */
+"configImport.confirmTitleAdd" = "Ajouter à l'appareil ?";
+
+/* Confirmation alert title (overwrite settings) */
+"configImport.confirmTitleOverwrite" = "Écraser les paramètres ?";
+
+/* Confirmation alert message (additive only, param: device name) */
+"configImport.confirmMessageAdd" = "Les canaux et contacts seront ajoutés à %@. Les données existantes ne seront pas supprimées.";
+
+/* Confirmation alert message (overwrite only, param: device name) */
+"configImport.confirmMessageOverwrite" = "Les paramètres sélectionnés sur %@ seront écrasés. Les valeurs actuelles seront remplacées.";
+
+/* Confirmation alert message (mixed, param: device name) */
+"configImport.confirmMessageMixed" = "Les paramètres seront écrasés et les canaux/contacts ajoutés sur %@.";
+
+/* Proximity warning */
+"configImport.proximityWarning" = "Garder les appareils proches pendant l'importation";
+
+/* Import cancelled */
+"configImport.cancelled" = "L'importation a été annulée.";
+
+/* Import success */
+"configImport.importSuccess" = "Configuration importée avec succès";
+
+/* Private key warning */
+"configImport.privateKeyWarning" = "L'identité cryptographique du nœud sera remplacée";
+
+"configImport.current" = "Actuel : %@";
+"configImport.new" = "Nouveau : %@";
+
+/* Channel count (param: integer) */
+"configImport.channelCount" = "%d canaux seront ajoutés/mis à jour sur l'appareil";
+
+/* Import navigation row label */
+"configImport.importConfig" = "Importer la configuration";
+
+/* Radio settings change warning */
+"configImport.radioWarning" = "Modifier les paramètres radio déconnectera du réseau mesh actuel";
+
+/* Contact count (param: integer) */
+"configImport.contactCount" = "%d contacts seront ajoutés/mis à jour sur l'appareil";
+
+/* Toggle label for inline images */
+"inlineImages.toggle" = "Images intégrées";
+
+/* Toggle label for auto-play GIFs */
+"inlineImages.autoPlayGifs" = "Lecture automatique des GIF";
+
+/* Footer explaining inline image privacy implications */
+"inlineImages.footer" = "Le chargement d'images à partir d'URL peut révéler votre adresse IP au serveur hébergeant l'image.";
+
+// MARK: - Blocking Section
+
+/* Location: BlockingSection.swift - Purpose: Section header */
+"blocking.header" = "Blocage";
+
+/* Location: BlockingSection.swift - Purpose: Channel senders row */
+"blocking.channelSenders" = "Expéditeurs de canal";
+
+/* Location: BlockingSection.swift - Purpose: Contacts row */
+"blocking.contacts" = "Contacts";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Navigation title */
+"blocking.channelSenders.title" = "Expéditeurs de canal bloqués";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state title */
+"blocking.channelSenders.empty.title" = "Aucun utilisateur bloqué";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state description */
+"blocking.channelSenders.empty.description" = "Les noms d'expéditeurs de canal que vous bloquez apparaîtront ici.";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Swipe action to unblock */
+"blocking.channelSenders.unblock" = "Débloquer";

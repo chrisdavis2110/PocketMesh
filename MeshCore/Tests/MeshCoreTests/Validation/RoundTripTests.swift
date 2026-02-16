@@ -61,8 +61,8 @@ final class RoundTripTests: XCTestCase {
     func test_selfInfo_roundTrip() {
         var data = Data()
         let advType: UInt8 = 1
-        let txPower: UInt8 = 20
-        let maxTxPower: UInt8 = 30
+        let txPower: Int8 = 20
+        let maxTxPower: Int8 = 30
         let publicKey = Data(repeating: 0xBB, count: 32)
         let lat: Int32 = 37_774_900
         let lon: Int32 = -122_419_400
@@ -78,8 +78,8 @@ final class RoundTripTests: XCTestCase {
         let name = "MyNode"
 
         data.append(advType)
-        data.append(txPower)
-        data.append(maxTxPower)
+        data.append(UInt8(bitPattern: txPower))
+        data.append(UInt8(bitPattern: maxTxPower))
         data.append(publicKey)
         data.append(contentsOf: withUnsafeBytes(of: lat.littleEndian) { Data($0) })
         data.append(contentsOf: withUnsafeBytes(of: lon.littleEndian) { Data($0) })
@@ -117,6 +117,52 @@ final class RoundTripTests: XCTestCase {
         XCTAssertEqual(info.radioSpreadingFactor, radioSF)
         XCTAssertEqual(info.radioCodingRate, radioCR)
         XCTAssertEqual(info.name, "MyNode")
+    }
+
+    func test_selfInfo_negativeTxPower_roundTrip() {
+        var data = Data()
+        let advType: UInt8 = 1
+        let txPower: Int8 = -5
+        let maxTxPower: Int8 = 30
+        let publicKey = Data(repeating: 0xCC, count: 32)
+        let lat: Int32 = 0
+        let lon: Int32 = 0
+        let multiAcks: UInt8 = 0
+        let advLocPolicy: UInt8 = 0
+        let telemetryMode: UInt8 = 0
+        let manualAdd: UInt8 = 0
+        let radioFreq: UInt32 = 915_000
+        let radioBW: UInt32 = 250_000
+        let radioSF: UInt8 = 10
+        let radioCR: UInt8 = 5
+        let name = "NegPwr"
+
+        data.append(advType)
+        data.append(UInt8(bitPattern: txPower))
+        data.append(UInt8(bitPattern: maxTxPower))
+        data.append(publicKey)
+        data.append(contentsOf: withUnsafeBytes(of: lat.littleEndian) { Data($0) })
+        data.append(contentsOf: withUnsafeBytes(of: lon.littleEndian) { Data($0) })
+        data.append(multiAcks)
+        data.append(advLocPolicy)
+        data.append(telemetryMode)
+        data.append(manualAdd)
+        data.append(contentsOf: withUnsafeBytes(of: radioFreq.littleEndian) { Data($0) })
+        data.append(contentsOf: withUnsafeBytes(of: radioBW.littleEndian) { Data($0) })
+        data.append(radioSF)
+        data.append(radioCR)
+        data.append(name.data(using: .utf8)!)
+
+        let event = Parsers.SelfInfo.parse(data)
+
+        guard case .selfInfo(let info) = event else {
+            XCTFail("Expected .selfInfo event, got \(event)")
+            return
+        }
+
+        XCTAssertEqual(info.txPower, -5, "Negative TX power should be preserved")
+        XCTAssertEqual(info.maxTxPower, 30)
+        XCTAssertEqual(info.name, "NegPwr")
     }
 
     // MARK: - Message Round-Trip
@@ -423,6 +469,148 @@ final class RoundTripTests: XCTestCase {
         XCTAssertEqual(info.name, expectedName)
         XCTAssertFalse(info.name.isEmpty)
         XCTAssertEqual(info.secret, secret)
+    }
+
+    // MARK: - DeviceInfo Round-Trip
+
+    func test_deviceInfo_v9_clientRepeat_roundTrip() {
+        // Build a v9 device info response (80 bytes: 79 v3 bytes + 1 client_repeat)
+        var data = Data()
+        let fwVer: UInt8 = 9
+        let maxContacts: UInt8 = 50  // stored as count/2
+        let maxChannels: UInt8 = 8
+        let blePin: UInt32 = 123456
+        let fwBuild = "15 Feb 2026"
+        let model = "T-Deck"
+        let version = "1.13.0"
+
+        data.append(fwVer)
+        data.append(maxContacts)
+        data.append(maxChannels)
+        data.append(contentsOf: withUnsafeBytes(of: blePin.littleEndian) { Data($0) })
+
+        let fwBuildPadded = fwBuild.data(using: .utf8)!.prefix(12)
+        data.append(fwBuildPadded)
+        data.append(Data(repeating: 0, count: 12 - fwBuildPadded.count))
+
+        let modelPadded = model.data(using: .utf8)!.prefix(40)
+        data.append(modelPadded)
+        data.append(Data(repeating: 0, count: 40 - modelPadded.count))
+
+        let versionPadded = version.data(using: .utf8)!.prefix(20)
+        data.append(versionPadded)
+        data.append(Data(repeating: 0, count: 20 - versionPadded.count))
+
+        data.append(1)  // client_repeat = enabled
+
+        XCTAssertEqual(data.count, 80, "v9 DeviceInfo should be 80 bytes")
+
+        let event = Parsers.DeviceInfo.parse(data)
+
+        guard case .deviceInfo(let caps) = event else {
+            XCTFail("Expected .deviceInfo event, got \(event)")
+            return
+        }
+
+        XCTAssertEqual(caps.firmwareVersion, 9)
+        XCTAssertEqual(caps.maxContacts, 100)  // 50 * 2
+        XCTAssertEqual(caps.maxChannels, 8)
+        XCTAssertEqual(caps.blePin, blePin)
+        XCTAssertTrue(caps.clientRepeat, "client_repeat should be true for v9 with byte=1")
+    }
+
+    func test_deviceInfo_v8_noClientRepeat_roundTrip() {
+        // Build a v8 device info response (79 bytes, no client_repeat)
+        var data = Data()
+        data.append(8)  // fwVer
+        data.append(25) // maxContacts (count/2)
+        data.append(4)  // maxChannels
+        let blePin: UInt32 = 0
+        data.append(contentsOf: withUnsafeBytes(of: blePin.littleEndian) { Data($0) })
+        data.append(Data(repeating: 0, count: 12))  // fwBuild
+        data.append(Data(repeating: 0, count: 40))  // model
+        data.append(Data(repeating: 0, count: 20))  // version
+
+        XCTAssertEqual(data.count, 79, "v8 DeviceInfo should be 79 bytes")
+
+        let event = Parsers.DeviceInfo.parse(data)
+
+        guard case .deviceInfo(let caps) = event else {
+            XCTFail("Expected .deviceInfo event, got \(event)")
+            return
+        }
+
+        XCTAssertEqual(caps.firmwareVersion, 8)
+        XCTAssertFalse(caps.clientRepeat, "client_repeat should be false for v8 firmware")
+    }
+
+    // MARK: - AllowedRepeatFreq Round-Trip
+
+    func test_allowedRepeatFreq_roundTrip() {
+        var data = Data()
+        let ranges: [(UInt32, UInt32)] = [
+            (433_000, 433_000),
+            (869_000, 869_000),
+            (918_000, 918_000),
+        ]
+        for (lower, upper) in ranges {
+            data.append(contentsOf: withUnsafeBytes(of: lower.littleEndian) { Data($0) })
+            data.append(contentsOf: withUnsafeBytes(of: upper.littleEndian) { Data($0) })
+        }
+
+        let event = Parsers.AllowedRepeatFreq.parse(data)
+
+        guard case .allowedRepeatFreq(let parsed) = event else {
+            XCTFail("Expected .allowedRepeatFreq event, got \(event)")
+            return
+        }
+
+        XCTAssertEqual(parsed.count, 3)
+        XCTAssertEqual(parsed[0].lowerKHz, 433_000)
+        XCTAssertEqual(parsed[0].upperKHz, 433_000)
+        XCTAssertEqual(parsed[1].lowerKHz, 869_000)
+        XCTAssertEqual(parsed[2].lowerKHz, 918_000)
+    }
+
+    // MARK: - SetRadio Client Repeat
+
+    func test_setRadio_withRepeat_appendsByte() {
+        let packet = PacketBuilder.setRadio(
+            frequency: 915.0,
+            bandwidth: 250.0,
+            spreadingFactor: 11,
+            codingRate: 8,
+            clientRepeat: true
+        )
+        // cmd(1) + freq(4) + bw(4) + sf(1) + cr(1) + repeat(1) = 12
+        XCTAssertEqual(packet.count, 12)
+        XCTAssertEqual(packet.last, 1, "Last byte should be repeat=1")
+    }
+
+    func test_setRadio_withoutRepeat_noExtraByte() {
+        let packet = PacketBuilder.setRadio(
+            frequency: 915.0,
+            bandwidth: 250.0,
+            spreadingFactor: 11,
+            codingRate: 8
+        )
+        // cmd(1) + freq(4) + bw(4) + sf(1) + cr(1) = 11
+        XCTAssertEqual(packet.count, 11)
+    }
+
+    func test_setTxPower_positivePower_packetFormat() {
+        let packet = PacketBuilder.setTxPower(20)
+        XCTAssertEqual(packet, Data([0x0C, 0x14]))
+    }
+
+    func test_setTxPower_negativePower_packetFormat() {
+        let packet = PacketBuilder.setTxPower(-5)
+        XCTAssertEqual(packet, Data([0x0C, 0xFB]))
+    }
+
+    func test_getRepeatFreq_packetFormat() {
+        let packet = PacketBuilder.getRepeatFreq()
+        XCTAssertEqual(packet, Data([0x3C]))
     }
 
     // MARK: - CustomVars Round-Trip

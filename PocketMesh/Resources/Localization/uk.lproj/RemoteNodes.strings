@@ -314,6 +314,9 @@
 /* Location: RepeaterStatusView.swift - Packets received label */
 "remoteNodes.status.packetsReceived" = "Пакетів отримано";
 
+/* Location: RepeaterStatusView.swift - Receive errors label */
+"remoteNodes.status.receiveErrors" = "Помилок пакетів отримано";
+
 /* Location: RepeaterStatusView.swift - Neighbors section label */
 "remoteNodes.status.neighbors" = "Сусіди";
 
@@ -375,6 +378,95 @@
 
 /* Location: RepeaterStatusView.swift - Channel header for grouped telemetry */
 "remoteNodes.status.channel" = "Канал %d";
+
+/* Location: RepeaterStatusView.swift - Telemetry section footer */
+"remoteNodes.status.telemetryFooter" = "Показники датчиків: температура, вологість та напруга.";
+
+/* Location: RepeaterStatusView.swift - Neighbors section footer */
+"remoteNodes.status.neighborsFooter" = "Інші вузли, виявлені цим ретранслятором, та якість їхнього сигналу.";
+
+/* Location: RepeaterStatusView.swift - Battery curve section footer */
+"remoteNodes.status.batteryCurveFooter" = "Відповідність напруги та відсотка для оцінки рівня заряду батареї.";
+
+// MARK: - History
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (minutes ago) */
+"remoteNodes.history.vsMinutesAgo" = "З останнього візиту (%d хв тому)";
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (hours ago) */
+"remoteNodes.history.vsHoursAgo" = "З останнього візиту (%d год тому)";
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (date) */
+"remoteNodes.history.vsDate" = "З %@";
+
+/* Location: NodeStatusHistoryView.swift - History navigation title */
+"remoteNodes.history.title" = "Історія";
+
+/* Location: NeighborRow - New neighbor badge */
+"remoteNodes.history.new" = "Новий";
+
+/* Location: NeighborRow - Not seen status */
+"remoteNodes.history.notSeen" = "Не бачено";
+
+/* Location: NodeStatusHistoryView.swift - Empty state message */
+"remoteNodes.history.checkBack" = "Знімок записується не частіше ніж раз на 15 хвилин. Поверніться після наступного візиту, щоб побачити тенденції.";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.week" = "1Т";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.month" = "1М";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.threeMonths" = "3М";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.all" = "Усі";
+
+/* Location: NodeStatusHistoryView.swift - Battery chart title */
+"remoteNodes.history.battery" = "Батарея";
+
+/* Location: NodeStatusHistoryView.swift - SNR chart title */
+"remoteNodes.history.snr" = "SNR";
+
+/* Location: NodeStatusHistoryView.swift - RSSI chart title */
+"remoteNodes.history.rssi" = "RSSI";
+
+/* Location: NodeStatusHistoryView.swift - Noise floor chart title */
+"remoteNodes.history.noiseFloor" = "Рівень шуму";
+
+/* Location: NodeStatusHistoryView.swift - Neighbor count chart title */
+"remoteNodes.history.neighborCount" = "Кількість сусідів";
+
+/* Location: NeighborHistoryView.swift - Active status */
+"remoteNodes.history.active" = "Активний";
+
+/* Location: NeighborHistoryView.swift - Last seen status */
+"remoteNodes.history.lastSeen" = "Востаннє бачено %@";
+
+/* Location: NeighborHistoryView.swift - Neighbors section title */
+"remoteNodes.history.neighbors" = "Сусіди";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric increased */
+"remoteNodes.history.a11y.increased" = "збільшилось";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric decreased */
+"remoteNodes.history.a11y.decreased" = "зменшилось";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric improved */
+"remoteNodes.history.a11y.improved" = "покращилось";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric degraded */
+"remoteNodes.history.a11y.degraded" = "погіршилось";
+
+/* Location: StatusDeltaView.swift - Accessibility: delta description format (quality, direction, value, unit) */
+"remoteNodes.history.a11y.deltaDescription" = "%1$@, %2$@ на %3$@%4$@";
+
+/* Location: HistoryTimeRangePicker.swift - Accessibility label for time range picker */
+"remoteNodes.history.timeRange" = "Період";
+
+/* Location: NodeStatusHistoryView.swift - Footer about data retention */
+"remoteNodes.history.retentionNotice" = "Дані історії старіші за один рік автоматично видаляються.";
 
 // MARK: - Room Conversation
 

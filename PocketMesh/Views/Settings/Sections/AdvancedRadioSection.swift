@@ -10,6 +10,7 @@ struct AdvancedRadioSection: View {
     @State private var spreadingFactor: Int?
     @State private var codingRate: Int?
     @State private var txPower: Int?  // dBm
+    @State private var clientRepeat: Bool?
     @State private var hasLoaded = false
     @State private var isApplying = false
     @State private var showSuccess = false
@@ -24,7 +25,8 @@ struct AdvancedRadioSection: View {
 
     private var settingsModified: Bool {
         guard let device = appState.connectedDevice else { return false }
-        return frequency != Double(device.frequency) / 1000.0 ||
+        return clientRepeat != appState.connectedDevice?.clientRepeat ||
+            frequency != Double(device.frequency) / 1000.0 ||
             bandwidth != RadioOptions.nearestBandwidth(to: device.bandwidth) ||
             spreadingFactor != Int(device.spreadingFactor) ||
             codingRate != Int(device.codingRate) ||
@@ -43,6 +45,7 @@ struct AdvancedRadioSection: View {
         hasher.combine(appState.connectedDevice?.spreadingFactor)
         hasher.combine(appState.connectedDevice?.codingRate)
         hasher.combine(appState.connectedDevice?.txPower)
+        hasher.combine(appState.connectedDevice?.clientRepeat)
         return hasher.finalize()
     }
 
@@ -58,7 +61,7 @@ struct AdvancedRadioSection: View {
                 TextField(
                     L10n.Settings.AdvancedRadio.frequencyPlaceholder,
                     value: $frequency,
-                    format: .number.precision(.fractionLength(3))
+                    format: .number.precision(.fractionLength(3)).locale(.posix)
                 )
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
@@ -103,10 +106,22 @@ struct AdvancedRadioSection: View {
                 Text(L10n.Settings.AdvancedRadio.txPower)
                 Spacer()
                 TextField(L10n.Settings.AdvancedRadio.txPowerPlaceholder, value: $txPower, format: .number)
-                    .keyboardType(.numberPad)
+                    .keyboardType(.numbersAndPunctuation)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 60)
                     .focused($focusedField, equals: .txPower)
+            }
+
+            if appState.connectedDevice?.supportsClientRepeat == true {
+                Toggle(isOn: Binding(
+                    get: { clientRepeat ?? false },
+                    set: { clientRepeat = $0 }
+                )) {
+                    Text(L10n.Settings.AdvancedRadio.repeatMode)
+                    Text(L10n.Settings.AdvancedRadio.RepeatMode.footer)
+                }
+                .accessibilityHint(L10n.Settings.Radio.RepeatMode.accessibilityHint)
+                .disabled(!hasLoaded)
             }
 
             Button {
@@ -155,6 +170,7 @@ struct AdvancedRadioSection: View {
         spreadingFactor = Int(device.spreadingFactor)
         codingRate = Int(device.codingRate)
         txPower = Int(device.txPower)
+        clientRepeat = device.clientRepeat
         hasLoaded = true
     }
 
@@ -174,6 +190,13 @@ struct AdvancedRadioSection: View {
         isApplying = true
         Task {
             do {
+                // Save pre-repeat settings when enabling repeat mode
+                let wasRepeat = appState.connectedDevice?.clientRepeat ?? false
+                let willRepeat = clientRepeat ?? false
+                if !wasRepeat && willRepeat {
+                    appState.connectionManager.savePreRepeatSettings()
+                }
+
                 // Set radio params first
                 _ = try await settingsService.setRadioParamsVerified(
                     frequencyKHz: UInt32((freqMHz * 1000).rounded()),
@@ -181,11 +204,17 @@ struct AdvancedRadioSection: View {
                     // bandwidthHz is already UInt32 Hz from the picker, pass directly.
                     bandwidthKHz: bandwidthHz,
                     spreadingFactor: UInt8(spreadFactor),
-                    codingRate: UInt8(codeRate)
+                    codingRate: UInt8(codeRate),
+                    clientRepeat: clientRepeat
                 )
 
+                // Clear pre-repeat settings when disabling repeat mode
+                if wasRepeat && !willRepeat {
+                    appState.connectionManager.clearPreRepeatSettings()
+                }
+
                 // Then set TX power
-                _ = try await settingsService.setTxPowerVerified(UInt8(power))
+                _ = try await settingsService.setTxPowerVerified(Int8(power))
 
                 focusedField = nil  // Dismiss keyboard on success
                 retryAlert.reset()

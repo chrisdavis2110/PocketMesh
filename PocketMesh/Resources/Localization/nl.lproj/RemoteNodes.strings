@@ -317,6 +317,9 @@
 /* Location: RepeaterStatusView.swift - Packets received label */
 "remoteNodes.status.packetsReceived" = "Pakketten ontvangen";
 
+/* Location: RepeaterStatusView.swift - Receive errors label */
+"remoteNodes.status.receiveErrors" = "Pakketfouten ontvangen";
+
 /* Location: RepeaterStatusView.swift - Neighbors section label */
 "remoteNodes.status.neighbors" = "Buren";
 
@@ -378,6 +381,95 @@
 
 /* Location: RepeaterStatusView.swift - Channel header for grouped telemetry */
 "remoteNodes.status.channel" = "Kanaal %d";
+
+/* Location: RepeaterStatusView.swift - Telemetry section footer */
+"remoteNodes.status.telemetryFooter" = "Sensormetingen zoals temperatuur, luchtvochtigheid en spanning.";
+
+/* Location: RepeaterStatusView.swift - Neighbors section footer */
+"remoteNodes.status.neighborsFooter" = "Andere knooppunten ontdekt door deze repeater en hun signaalkwaliteit.";
+
+/* Location: RepeaterStatusView.swift - Battery curve section footer */
+"remoteNodes.status.batteryCurveFooter" = "Spanning-naar-percentage-toewijzing voor schatting van het batterijniveau.";
+
+// MARK: - History
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (minutes ago) */
+"remoteNodes.history.vsMinutesAgo" = "Sinds laatste bezoek (%d min geleden)";
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (hours ago) */
+"remoteNodes.history.vsHoursAgo" = "Sinds laatste bezoek (%d u geleden)";
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (date) */
+"remoteNodes.history.vsDate" = "Sinds %@";
+
+/* Location: NodeStatusHistoryView.swift - History navigation title */
+"remoteNodes.history.title" = "Geschiedenis";
+
+/* Location: NeighborRow - New neighbor badge */
+"remoteNodes.history.new" = "Nieuw";
+
+/* Location: NeighborRow - Not seen status */
+"remoteNodes.history.notSeen" = "Niet gezien";
+
+/* Location: NodeStatusHistoryView.swift - Empty state message */
+"remoteNodes.history.checkBack" = "Er wordt maximaal elke 15 minuten een snapshot opgeslagen. Kom terug na je volgende bezoek om trends te zien.";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.week" = "1W";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.month" = "1M";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.threeMonths" = "3M";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.all" = "Alle";
+
+/* Location: NodeStatusHistoryView.swift - Battery chart title */
+"remoteNodes.history.battery" = "Batterij";
+
+/* Location: NodeStatusHistoryView.swift - SNR chart title */
+"remoteNodes.history.snr" = "SNR";
+
+/* Location: NodeStatusHistoryView.swift - RSSI chart title */
+"remoteNodes.history.rssi" = "RSSI";
+
+/* Location: NodeStatusHistoryView.swift - Noise floor chart title */
+"remoteNodes.history.noiseFloor" = "Ruisvloer";
+
+/* Location: NodeStatusHistoryView.swift - Neighbor count chart title */
+"remoteNodes.history.neighborCount" = "Aantal buren";
+
+/* Location: NeighborHistoryView.swift - Active status */
+"remoteNodes.history.active" = "Actief";
+
+/* Location: NeighborHistoryView.swift - Last seen status */
+"remoteNodes.history.lastSeen" = "Laatst gezien %@";
+
+/* Location: NeighborHistoryView.swift - Neighbors section title */
+"remoteNodes.history.neighbors" = "Buren";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric increased */
+"remoteNodes.history.a11y.increased" = "gestegen";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric decreased */
+"remoteNodes.history.a11y.decreased" = "gedaald";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric improved */
+"remoteNodes.history.a11y.improved" = "verbeterd";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric degraded */
+"remoteNodes.history.a11y.degraded" = "verslechterd";
+
+/* Location: StatusDeltaView.swift - Accessibility: delta description format (quality, direction, value, unit) */
+"remoteNodes.history.a11y.deltaDescription" = "%1$@, %2$@ met %3$@%4$@";
+
+/* Location: HistoryTimeRangePicker.swift - Accessibility label for time range picker */
+"remoteNodes.history.timeRange" = "Tijdsperiode";
+
+/* Location: NodeStatusHistoryView.swift - Footer about data retention */
+"remoteNodes.history.retentionNotice" = "Geschiedenisgegevens ouder dan een jaar worden automatisch verwijderd.";
 
 // MARK: - Room Conversation
 

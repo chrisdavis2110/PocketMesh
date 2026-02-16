@@ -309,6 +309,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Неверные значения или устройство не подключено";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "Режим ретранслятора";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "Создаёт локальный ретранслятор на выделенной частоте. Полезно для походов и удалённых районов. Допустимые частоты: 433, 869, 918 МГц.";
+
 
 /* Accessibility label for voltage text field - %d is the percentage level */
 "batteryCurve.accessibility.voltageLabel" = "Напряжение при %d процентах";
@@ -496,10 +502,37 @@
 "dangerZone.alert.reset.confirm" = "Сбросить";
 
 /* Alert message for factory reset */
-"dangerZone.alert.reset.message" = "Это удалит ВСЕ данные на устройстве, включая контакты, сообщения и настройки. Это действие нельзя отменить.";
+"dangerZone.alert.reset.message" = "Это удалит все данные на устройстве, включая контакты, сообщения и настройки. Нажмите «Удалить», когда появится запрос на отвязку устройства.";
 
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Сервисы недоступны";
+
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "Удалить неизбранные узлы";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "Удаление…";
+
+/* Label shown after successful removal */
+"dangerZone.removed" = "Узлы удалены";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "Удалить неизбранные узлы";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "Удалить узлы";
+
+/* Alert title for removal result */
+"dangerZone.alert.removeUnfavorited.resultTitle" = "Результат удаления";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "Это безвозвратно удалит %d узлов, не отмеченных как избранные, с устройства и из приложения, а также их сообщения.";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "Удалено %d из %d узлов. Соединение было прервано — нажмите кнопку ещё раз, чтобы удалить оставшиеся узлы.";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "Нет неизбранных узлов для удаления.";
 
 
 // MARK: - Diagnostics Section
@@ -623,6 +656,24 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "Выберите пресет, соответствующий вашему региону. Устройства MeshCore должны использовать одинаковые настройки радио для связи.";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "Режим ретранслятора";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "Создаёт локальный ретранслятор на выделенной частоте. Полезно для походов и удалённых районов.";
+
+/* Accessibility hint for repeat mode toggle */
+"radio.repeatMode.accessibilityHint" = "Включение отключит вас от основной mesh-сети";
+
+/* Confirmation dialog title for enabling repeat mode */
+"radio.repeatMode.confirm.title" = "Включить режим ретранслятора?";
+
+/* Confirmation dialog message for enabling repeat mode */
+"radio.repeatMode.confirm.message" = "Вы будете отключены от основной mesh-сети. Доступны будут только устройства на той же частоте режима ретранслятора.";
+
+/* Confirmation dialog enable button */
+"radio.repeatMode.confirm.enable" = "Включить";
 
 
 // MARK: - Telemetry Settings Section
@@ -804,6 +855,9 @@
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Распространяет объявление по всей сети mesh";
 
+/* Label shown in BLE status menu when repeat mode is active */
+"bleStatus.repeatModeActive" = "Режим ретранслятора активен";
+
 
 // MARK: - Location Settings Section
 
@@ -824,3 +878,144 @@
 
 /* GPS source option: device GPS */
 "location.gpsSource.device" = "GPS устройства";
+
+// MARK: - Config Export/Import
+
+/* Section title for config export/import */
+"configExport.sectionTitle" = "Конфигурация устройства";
+
+/* Section footer explaining config export/import */
+"configExport.sectionFooter" = "Экспорт или импорт настроек устройства, каналов и контактов в формате JSON.";
+
+/* Export navigation row label */
+"configExport.export" = "Экспорт конфигурации";
+
+/* Export screen navigation title */
+"configExport.title" = "Экспорт конфигурации";
+
+/* Export full config button */
+"configExport.exportFull" = "Экспортировать полную конфигурацию";
+
+/* Export selected sections button */
+"configExport.exportSelected" = "Экспортировать выбранные разделы";
+
+/* Customize export disclosure label */
+"configExport.customize" = "Настроить экспорт";
+
+/* Select all toggle label */
+"configExport.selectAll" = "Выбрать всё";
+
+/* Toggle labels for export sections */
+"configExport.nodeIdentity" = "Идентификация узла (Имя и ключи)";
+"configExport.nodeIdentity.description" = "Имя устройства, открытый ключ и закрытый ключ";
+"configExport.radioSettings" = "Настройки радио";
+"configExport.radioSettings.description" = "Частота, полоса пропускания, коэффициент расширения, скорость кодирования, мощность TX";
+"configExport.positionSettings" = "Позиция";
+"configExport.positionSettings.description" = "Широта и долгота";
+"configExport.otherSettings" = "Прочие настройки";
+"configExport.otherSettings.description" = "Разрешения контактов, обмен местоположением";
+"configExport.channels" = "Каналы";
+"configExport.channels.description" = "Все каналы и их ключи шифрования";
+"configExport.contacts" = "Контакты";
+"configExport.contacts.description" = "Имена, ключи и последние известные позиции";
+
+
+// MARK: - Config Import
+
+/* Import screen navigation title */
+"configImport.title" = "Импорт конфигурации";
+
+/* Select file button */
+"configImport.selectFile" = "Выбрать JSON-файл";
+
+/* Cannot access file error */
+"configImport.cannotAccess" = "Не удаётся открыть выбранный файл.";
+
+/* Confirmation alert title */
+"configImport.confirmTitle" = "Применить конфигурацию?";
+
+/* Confirmation alert message (param: device name) */
+"configImport.confirmMessage" = "Выбранные настройки будут объединены с %@. Существующие каналы и контакты будут обновлены или добавлены.";
+
+/* Apply button label */
+"configImport.applyButton" = "Применить к устройству";
+
+/* Apply button label (additive only — channels/contacts) */
+"configImport.applyButtonAdd" = "Добавить на устройство";
+
+/* Apply button label (overwrite settings) */
+"configImport.applyButtonOverwrite" = "Перезаписать настройки";
+
+/* Confirmation alert title (additive only) */
+"configImport.confirmTitleAdd" = "Добавить на устройство?";
+
+/* Confirmation alert title (overwrite settings) */
+"configImport.confirmTitleOverwrite" = "Перезаписать настройки?";
+
+/* Confirmation alert message (additive only, param: device name) */
+"configImport.confirmMessageAdd" = "Каналы и контакты будут добавлены в %@. Существующие данные не будут удалены.";
+
+/* Confirmation alert message (overwrite only, param: device name) */
+"configImport.confirmMessageOverwrite" = "Выбранные настройки на %@ будут перезаписаны. Текущие значения будут заменены.";
+
+/* Confirmation alert message (mixed, param: device name) */
+"configImport.confirmMessageMixed" = "Настройки будут перезаписаны, каналы и контакты добавлены на %@.";
+
+/* Proximity warning */
+"configImport.proximityWarning" = "Держите устройства рядом во время импорта";
+
+/* Import cancelled */
+"configImport.cancelled" = "Импорт был отменён.";
+
+/* Import success */
+"configImport.importSuccess" = "Конфигурация успешно импортирована";
+
+/* Private key warning */
+"configImport.privateKeyWarning" = "Криптографическая идентификация узла будет заменена";
+
+"configImport.current" = "Текущее: %@";
+"configImport.new" = "Новое: %@";
+
+/* Channel count (param: integer) */
+"configImport.channelCount" = "Будет добавлено/обновлено %d каналов на устройстве";
+
+/* Import navigation row label */
+"configImport.importConfig" = "Импорт конфигурации";
+
+/* Radio settings change warning */
+"configImport.radioWarning" = "Изменение настроек радио приведёт к отключению от текущей mesh-сети";
+
+/* Contact count (param: integer) */
+"configImport.contactCount" = "Будет добавлено/обновлено %d контактов на устройстве";
+
+/* Toggle label for inline images */
+"inlineImages.toggle" = "Встроенные изображения";
+
+/* Toggle label for auto-play GIFs */
+"inlineImages.autoPlayGifs" = "Автовоспроизведение GIF";
+
+/* Footer explaining inline image privacy implications */
+"inlineImages.footer" = "Загрузка изображений по URL-адресам может раскрыть ваш IP-адрес серверу, на котором размещено изображение.";
+
+// MARK: - Blocking Section
+
+/* Location: BlockingSection.swift - Purpose: Section header */
+"blocking.header" = "Блокировка";
+
+/* Location: BlockingSection.swift - Purpose: Channel senders row */
+"blocking.channelSenders" = "Отправители в каналах";
+
+/* Location: BlockingSection.swift - Purpose: Contacts row */
+"blocking.contacts" = "Контакты";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Navigation title */
+"blocking.channelSenders.title" = "Заблокированные отправители каналов";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state title */
+"blocking.channelSenders.empty.title" = "Нет заблокированных пользователей";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state description */
+"blocking.channelSenders.empty.description" = "Заблокированные имена отправителей каналов будут отображаться здесь.";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Swipe action to unblock */
+"blocking.channelSenders.unblock" = "Разблокировать";

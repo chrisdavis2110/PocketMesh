@@ -181,8 +181,8 @@ public enum Parsers {
 
             var offset = 0
             let advType = data[offset]; offset += 1
-            let txPower = data[offset]; offset += 1
-            let maxTxPower = data[offset]; offset += 1
+            let txPower = Int8(bitPattern: data[offset]); offset += 1
+            let maxTxPower = Int8(bitPattern: data[offset]); offset += 1
             let publicKey = Data(data[offset..<offset+32]); offset += 32
             let lat = Double(data.readInt32LE(at: offset)) / 1_000_000; offset += 4
             let lon = Double(data.readInt32LE(at: offset)) / 1_000_000; offset += 4
@@ -270,6 +270,13 @@ public enum Parsers {
                 let versionData = data[offset..<offset+20]
                 version = String(data: versionData, encoding: .utf8)?
                     .trimmingCharacters(in: .controlCharacters)
+                offset += 20
+            }
+
+            // v9+: client_repeat byte after version string
+            var clientRepeat = false
+            if fwVer >= 9 && data.count > offset {
+                clientRepeat = data[offset] != 0
             }
 
             return .deviceInfo(DeviceCapabilities(
@@ -279,7 +286,8 @@ public enum Parsers {
                 blePin: blePin ?? 0,
                 firmwareBuild: fwBuild ?? "",
                 model: model ?? "",
-                version: version ?? ""
+                version: version ?? "",
+                clientRepeat: clientRepeat
             ))
         }
     }
@@ -1293,6 +1301,28 @@ public enum Parsers {
                 rxDelayBase: Double(rxDelayRaw) / 1000.0,
                 airtimeFactor: Double(airtimeRaw) / 1000.0
             ))
+        }
+    }
+    // MARK: - AllowedRepeatFreq
+
+    /// Parser for allowed repeat frequency ranges (v9+).
+    ///
+    /// ### Binary Format
+    /// Sequence of 8-byte pairs:
+    /// - Offset N (4 bytes): Lower frequency in kHz (UInt32 LE)
+    /// - Offset N+4 (4 bytes): Upper frequency in kHz (UInt32 LE)
+    public enum AllowedRepeatFreq {
+        /// Parses allowed frequency ranges.
+        static func parse(_ data: Data) -> MeshEvent {
+            var ranges: [FrequencyRange] = []
+            var offset = 0
+            while offset + 8 <= data.count {
+                let lower = data.readUInt32LE(at: offset)
+                let upper = data.readUInt32LE(at: offset + 4)
+                ranges.append(FrequencyRange(lowerKHz: lower, upperKHz: upper))
+                offset += 8
+            }
+            return .allowedRepeatFreq(ranges)
         }
     }
 }
