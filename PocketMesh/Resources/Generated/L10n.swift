@@ -2539,6 +2539,8 @@ public enum L10n {
         public static let battery = L10n.tr("RemoteNodes", "remoteNodes.status.battery", fallback: "Battery")
         /// Location: RepeaterStatusView.swift - Battery curve section label
         public static let batteryCurve = L10n.tr("RemoteNodes", "remoteNodes.status.batteryCurve", fallback: "Battery Curve")
+        /// Location: RepeaterStatusView.swift - Battery curve section footer
+        public static let batteryCurveFooter = L10n.tr("RemoteNodes", "remoteNodes.status.batteryCurveFooter", fallback: "Voltage-to-percentage mapping used for battery level estimation.")
         /// Location: RepeaterStatusView.swift - Channel header for grouped telemetry
         public static func channel(_ p1: Int) -> String {
           return L10n.tr("RemoteNodes", "remoteNodes.status.channel", p1, fallback: "Channel %d")
@@ -2557,6 +2559,8 @@ public enum L10n {
         }
         /// Location: RepeaterStatusView.swift - Neighbors section label
         public static let neighbors = L10n.tr("RemoteNodes", "remoteNodes.status.neighbors", fallback: "Neighbors")
+        /// Location: RepeaterStatusView.swift - Neighbors section footer
+        public static let neighborsFooter = L10n.tr("RemoteNodes", "remoteNodes.status.neighborsFooter", fallback: "Other nodes discovered by this repeater and their signal quality.")
         /// Location: RepeaterStatusView.swift - Noise floor label
         public static let noiseFloor = L10n.tr("RemoteNodes", "remoteNodes.status.noiseFloor", fallback: "Noise Floor")
         /// Location: RepeaterStatusView.swift - No neighbors empty state
@@ -2593,6 +2597,8 @@ public enum L10n {
         public static let statusSection = L10n.tr("RemoteNodes", "remoteNodes.status.statusSection", fallback: "Status")
         /// Location: RepeaterStatusView.swift - Telemetry section label
         public static let telemetry = L10n.tr("RemoteNodes", "remoteNodes.status.telemetry", fallback: "Telemetry")
+        /// Location: RepeaterStatusView.swift - Telemetry section footer
+        public static let telemetryFooter = L10n.tr("RemoteNodes", "remoteNodes.status.telemetryFooter", fallback: "Sensor readings such as temperature, humidity, and voltage.")
         /// Location: RepeaterStatusView.swift - Navigation title
         public static let title = L10n.tr("RemoteNodes", "remoteNodes.status.title", fallback: "Repeater Status")
         /// Location: RepeaterStatusView.swift - Unknown neighbor name

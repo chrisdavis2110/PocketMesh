@@ -234,6 +234,8 @@ struct RepeaterStatusView: View {
                     }
                 }
             }
+        } footer: {
+            Text(L10n.RemoteNodes.RemoteNodes.Status.neighborsFooter)
         }
     }
 
@@ -267,6 +269,8 @@ struct RepeaterStatusView: View {
                     }
                 }
             }
+        } footer: {
+            Text(L10n.RemoteNodes.RemoteNodes.Status.batteryCurveFooter)
         }
     }
 
@@ -322,6 +326,8 @@ struct RepeaterStatusView: View {
                     }
                 }
             }
+        } footer: {
+            Text(L10n.RemoteNodes.RemoteNodes.Status.telemetryFooter)
         }
     }
 
