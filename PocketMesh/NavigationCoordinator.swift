@@ -97,4 +97,59 @@ public final class NavigationCoordinator {
     func clearPendingContactDetailNavigation() {
         pendingContactDetail = nil
     }
+
+    /// Tabs where BLEStatusIndicatorView exists and the device menu tip can anchor (Chats, Contacts, Map).
+    var isOnValidTabForDeviceMenuTip: Bool {
+        selectedTab == 0 || selectedTab == 1 || selectedTab == 2
+    }
+
+    // MARK: - Notification Handlers
+
+    /// Configure notification tap handlers that navigate to conversations.
+    /// Called from AppState.configureNotificationHandlers() when services become available.
+    func configureNotificationHandlers(
+        notificationService: NotificationService,
+        dataStore: PersistenceStore,
+        connectedDevice: @escaping @Sendable @MainActor () -> DeviceDTO?
+    ) {
+        // Direct message notification tap
+        notificationService.onNotificationTapped = { [weak self] contactID in
+            guard let self else { return }
+            guard let contact = try? await dataStore.fetchContact(id: contactID) else { return }
+            self.navigateToChat(with: contact)
+        }
+
+        // New contact notification tap
+        notificationService.onNewContactNotificationTapped = { [weak self] contactID in
+            guard let self else { return }
+            if connectedDevice()?.manualAddContacts == true {
+                self.navigateToDiscovery()
+            } else {
+                guard let contact = try? await dataStore.fetchContact(id: contactID) else {
+                    self.navigateToContacts()
+                    return
+                }
+                self.navigateToContactDetail(contact)
+            }
+        }
+
+        // Channel notification tap
+        notificationService.onChannelNotificationTapped = { [weak self] deviceID, channelIndex in
+            guard let self else { return }
+            guard let channel = try? await dataStore.fetchChannel(deviceID: deviceID, index: channelIndex) else { return }
+            self.navigateToChannel(with: channel)
+        }
+
+        // Reaction notification tap
+        notificationService.onReactionNotificationTapped = { [weak self] contactID, channelIndex, deviceID, messageID in
+            guard let self else { return }
+            if let contactID,
+               let contact = try? await dataStore.fetchContact(id: contactID) {
+                self.navigateToChat(with: contact, scrollToMessageID: messageID)
+            } else if let channelIndex, let deviceID,
+                      let channel = try? await dataStore.fetchChannel(deviceID: deviceID, index: channelIndex) {
+                self.navigateToChannel(with: channel, scrollToMessageID: messageID)
+            }
+        }
+    }
 }

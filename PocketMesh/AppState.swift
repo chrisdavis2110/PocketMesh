@@ -191,35 +191,26 @@ public final class AppState {
     /// Wire services to message event broadcaster
     func wireServicesIfConnected() async {
         guard let services else {
-            // Announce disconnection for VoiceOver users
-            if UIAccessibility.isVoiceOverRunning {
-                connectionUI.announceConnectionState("Device connection lost")
-            }
-            // Clear syncCoordinator when services are nil
             syncCoordinator = nil
-            // Reset sync activity count to prevent stuck pill
-            connectionUI.syncActivityCount = 0
-            connectionUI.currentSyncPhase = nil
-            // Reset CLI tool state on disconnect (preserves command history)
+            connectionUI.handleDisconnect(
+                connectionState: connectionState,
+                lastConnectedDeviceID: connectionManager.lastConnectedDeviceID,
+                shouldSuppressDisconnectedPill: connectionManager.shouldSuppressDisconnectedPill
+            )
             cliToolViewModel?.reset()
-            // Hide ready toast on disconnect
-            connectionUI.hideReadyToast()
-            // Stop battery refresh and clear thresholds on disconnect
             batteryMonitor.stop()
             batteryMonitor.clearThresholds()
-            // Reset node storage full flag (will be set again by 0x90 push if still full)
-            connectionUI.isNodeStorageFull = false
-            // Update disconnected pill state (may show after delay)
-            connectionUI.updateDisconnectedPillState(
-            connectionState: connectionState,
-            lastConnectedDeviceID: connectionManager.lastConnectedDeviceID,
-            shouldSuppressDisconnectedPill: connectionManager.shouldSuppressDisconnectedPill
-        )
             return
         }
 
-        // Hide disconnected pill when services are available (connected)
-        connectionUI.hideDisconnectedPill()
+        // Wire ConnectionUI callbacks (sync activity, node storage, pills, VoiceOver)
+        // IMPORTANT: Must be set before onConnectionEstablished to avoid race condition
+        await connectionUI.wireCallbacks(
+            syncCoordinator: services.syncCoordinator,
+            advertisementService: services.advertisementService,
+            contactService: services.contactService,
+            connectionManager: connectionManager
+        )
 
         // Reset CLI if device changed (handles device switch where onConnectionLost doesn't fire)
         if let newDeviceID = connectedDevice?.id,
@@ -228,11 +219,6 @@ public final class AppState {
             cliToolViewModel?.reset()
         }
         lastConnectedDeviceIDForCLI = connectedDevice?.id
-
-        // Announce reconnection for VoiceOver users
-        if UIAccessibility.isVoiceOverRunning {
-            connectionUI.announceConnectionState("Device reconnected")
-        }
 
         // Store syncCoordinator reference
         syncCoordinator = services.syncCoordinator
@@ -247,34 +233,6 @@ public final class AppState {
                 self?.conversationsVersion += 1
             }
         )
-
-        // Wire sync activity callbacks for syncing pill display
-        // These are called for contacts and channels phases, NOT for messages
-        // IMPORTANT: Must be set before onConnectionEstablished to avoid race condition
-        await services.syncCoordinator.setSyncActivityCallbacks(
-            onStarted: { @MainActor [weak self] in
-                self?.connectionUI.syncActivityCount += 1
-            },
-            onEnded: { @MainActor [weak self] in
-                guard let self else { return }
-                // Guard against double-decrement: onDisconnected and sync error path
-                // can both call this if WiFi drops or device switch during sync
-                guard self.connectionUI.syncActivityCount > 0 else { return }
-                self.connectionUI.syncActivityCount -= 1
-                // Show "Ready" toast when all sync activity completes
-                if self.connectionUI.syncActivityCount == 0 {
-                    self.connectionUI.showReadyToastBriefly()
-                }
-            },
-            onPhaseChanged: { @MainActor [weak self] phase in
-                self?.connectionUI.currentSyncPhase = phase
-            }
-        )
-
-        // Wire resync failed callback for "Sync Failed" pill
-        connectionManager.onResyncFailed = { [weak self] in
-            self?.connectionUI.showSyncFailedPill()
-        }
 
         // Consume settings service event stream
         // Updates connectedDevice when settings are changed via SettingsService
@@ -314,25 +272,9 @@ public final class AppState {
             }
         }
 
-        // Wire node storage full callback
-        // Updates isNodeStorageFull when 0x90 (contactsFull) or 0x8F (contactDeleted) push received
-        await services.advertisementService.setNodeStorageFullChangedHandler { [weak self] isFull in
-            await MainActor.run {
-                self?.connectionUI.isNodeStorageFull = isFull
-            }
-        }
-
         // Wire contact updated callback for real-time Discover page updates
         await services.advertisementService.setContactUpdatedHandler { @MainActor [weak self] in
             self?.contactsVersion += 1
-        }
-
-        // Wire node deleted callback
-        // Clears isNodeStorageFull when user manually deletes a node (frees up space)
-        await services.contactService.setNodeDeletedHandler { [weak self] in
-            await MainActor.run {
-                self?.connectionUI.isNodeStorageFull = false
-            }
         }
 
         // Wire contact deleted cleanup callback
@@ -343,29 +285,16 @@ public final class AppState {
             await self.services?.notificationService.updateBadgeCount()
         }
 
-        // Wire message event callbacks for real-time chat updates
-        await services.syncCoordinator.setMessageEventCallbacks(
-            onDirectMessageReceived: { [weak self] message, contact in
-                await self?.messageEventBroadcaster.handleDirectMessage(message, from: contact)
+        // Wire message event broadcaster callbacks
+        await messageEventBroadcaster.wireServices(
+            services,
+            onConversationsChanged: { [weak self] in
+                self?.conversationsVersion += 1
             },
-            onChannelMessageReceived: { [weak self] message, channelIndex in
-                await self?.messageEventBroadcaster.handleChannelMessage(message, channelIndex: channelIndex)
-            },
-            onRoomMessageReceived: { [weak self] message in
-                await self?.messageEventBroadcaster.handleRoomMessage(message)
-            },
-            onReactionReceived: { [weak self] messageID, summary in
-                await self?.messageEventBroadcaster.handleReactionReceived(messageID: messageID, summary: summary)
+            onReactionReceived: { [weak self] messageID in
                 await self?.handleReactionNotification(messageID: messageID)
             }
         )
-
-        // Wire heard repeat callback for UI updates when repeats are recorded
-        await services.heardRepeatsService.setRepeatRecordedHandler { [weak self] messageID, count in
-            await MainActor.run {
-                self?.messageEventBroadcaster.handleHeardRepeatRecorded(messageID: messageID, count: count)
-            }
-        }
 
         // Increment version to trigger UI refresh in views observing this
         servicesVersion += 1
@@ -376,82 +305,6 @@ public final class AppState {
 
         // Wire notification string provider for localized discovery notifications
         services.notificationService.setStringProvider(NotificationStringProviderImpl())
-
-        // Wire message service for send confirmation handling
-        messageEventBroadcaster.messageService = services.messageService
-
-        // Wire remote node service for login result handling
-        messageEventBroadcaster.remoteNodeService = services.remoteNodeService
-        messageEventBroadcaster.dataStore = services.dataStore
-
-        // Wire session state change handler for room connection status UI updates
-        await services.remoteNodeService.setSessionStateChangedHandler { [weak self] sessionID, isConnected in
-            await MainActor.run {
-                self?.conversationsVersion += 1
-                self?.messageEventBroadcaster.handleSessionStateChanged(sessionID: sessionID, isConnected: isConnected)
-            }
-        }
-
-        // Wire room connection recovery handler
-        await services.roomServerService.setConnectionRecoveryHandler { [weak self] sessionID in
-            await MainActor.run {
-                self?.conversationsVersion += 1
-                self?.messageEventBroadcaster.handleSessionStateChanged(sessionID: sessionID, isConnected: true)
-            }
-        }
-
-        // Wire room server service for room message handling
-        messageEventBroadcaster.roomServerService = services.roomServerService
-
-        // Wire room message status handler for delivery confirmation UI updates
-        await services.roomServerService.setStatusUpdateHandler { [weak self] messageID, status in
-            await MainActor.run {
-                if status == .failed {
-                    self?.messageEventBroadcaster.handleRoomMessageFailed(messageID: messageID)
-                } else {
-                    self?.messageEventBroadcaster.handleRoomMessageStatusUpdated(messageID: messageID)
-                }
-            }
-        }
-
-        // Wire binary protocol and repeater admin services
-        messageEventBroadcaster.binaryProtocolService = services.binaryProtocolService
-        messageEventBroadcaster.repeaterAdminService = services.repeaterAdminService
-
-        // Wire up ACK confirmation handler to trigger UI refresh on delivery
-        await services.messageService.setAckConfirmationHandler { [weak self] ackCode, _ in
-            Task { @MainActor in
-                self?.messageEventBroadcaster.handleAcknowledgement(ackCode: ackCode)
-            }
-        }
-
-        // Wire up retry status events from MessageService
-        await services.messageService.setRetryStatusHandler { [weak self] messageID, attempt, maxAttempts in
-            await MainActor.run {
-                self?.messageEventBroadcaster.handleMessageRetrying(
-                    messageID: messageID,
-                    attempt: attempt,
-                    maxAttempts: maxAttempts
-                )
-            }
-        }
-
-        // Wire up routing change events from MessageService
-        await services.messageService.setRoutingChangedHandler { [weak self] contactID, isFlood in
-            await MainActor.run {
-                self?.messageEventBroadcaster.handleRoutingChanged(
-                    contactID: contactID,
-                    isFlood: isFlood
-                )
-            }
-        }
-
-        // Wire up message failure handler
-        await services.messageService.setMessageFailedHandler { [weak self] messageID in
-            await MainActor.run {
-                self?.messageEventBroadcaster.handleMessageFailed(messageID: messageID)
-            }
-        }
 
         // Configure badge count callback
         services.notificationService.getBadgeCount = { [weak self, dataStore = services.dataStore] in
@@ -522,11 +375,6 @@ public final class AppState {
             // Set flag - View observing scenePhase will trigger startDeviceScan when active
             connectionUI.shouldShowPickerOnForeground = true
         }
-    }
-
-    /// Dismisses the other app warning alert
-    func cancelOtherAppWarning() {
-        connectionUI.otherAppWarningDeviceID = nil
     }
 
     /// Called by View when scenePhase becomes active and shouldShowPickerOnForeground is true
@@ -659,15 +507,10 @@ public final class AppState {
         }
     }
 
-    /// Tabs where BLEStatusIndicatorView exists and tip can anchor (Chats, Contacts, Map)
-    private var isOnValidTabForDeviceMenuTip: Bool {
-        navigation.selectedTab == 0 || navigation.selectedTab == 1 || navigation.selectedTab == 2
-    }
-
     /// Donates the tip if on a valid tab, otherwise marks it pending.
     /// Thin coordinator that reads from both navigation and onboarding concerns.
     func donateDeviceMenuTipIfOnValidTab() async {
-        if isOnValidTabForDeviceMenuTip {
+        if navigation.isOnValidTabForDeviceMenuTip {
             navigation.pendingDeviceMenuTipDonation = false
             await DeviceMenuTip.hasCompletedOnboarding.donate()
         } else {
@@ -692,37 +535,12 @@ public final class AppState {
     func configureNotificationHandlers() {
         guard let services else { return }
 
-        // Notification tap handler
-        services.notificationService.onNotificationTapped = { [weak self] contactID in
-            guard let self else { return }
-
-            guard let contact = try? await services.dataStore.fetchContact(id: contactID) else { return }
-            self.navigation.navigateToChat(with: contact)
-        }
-
-        // New contact notification tap
-        services.notificationService.onNewContactNotificationTapped = { [weak self] contactID in
-            guard let self else { return }
-
-            if self.connectedDevice?.manualAddContacts == true {
-                self.navigation.navigateToDiscovery()
-            } else {
-                // Navigate to contact detail, with contacts list as base
-                guard let contact = try? await services.dataStore.fetchContact(id: contactID) else {
-                    self.navigation.navigateToContacts()
-                    return
-                }
-                self.navigation.navigateToContactDetail(contact)
-            }
-        }
-
-        // Channel notification tap handler
-        services.notificationService.onChannelNotificationTapped = { [weak self] deviceID, channelIndex in
-            guard let self else { return }
-
-            guard let channel = try? await services.dataStore.fetchChannel(deviceID: deviceID, index: channelIndex) else { return }
-            self.navigation.navigateToChannel(with: channel)
-        }
+        // Navigation-related notification tap handlers (delegated to NavigationCoordinator)
+        navigation.configureNotificationHandlers(
+            notificationService: services.notificationService,
+            dataStore: services.dataStore,
+            connectedDevice: { [weak self] in self?.connectedDevice }
+        )
 
         // Quick reply handler
         services.notificationService.onQuickReply = { [weak self] contactID, text in
@@ -821,19 +639,6 @@ public final class AppState {
             }
         }
 
-        // Reaction notification tap handler
-        services.notificationService.onReactionNotificationTapped = { [weak self] contactID, channelIndex, deviceID, messageID in
-            guard let self else { return }
-
-            // Navigate to the appropriate conversation and scroll to the message
-            if let contactID,
-               let contact = try? await services.dataStore.fetchContact(id: contactID) {
-                self.navigation.navigateToChat(with: contact, scrollToMessageID: messageID)
-            } else if let channelIndex, let deviceID,
-                      let channel = try? await services.dataStore.fetchChannel(deviceID: deviceID, index: channelIndex) {
-                self.navigation.navigateToChannel(with: channel, scrollToMessageID: messageID)
-            }
-        }
     }
 
     /// Handle posting a notification when someone reacts to the user's message

@@ -48,9 +48,6 @@ public final class ConnectionUIState {
     /// Message for connection failure alert
     var connectionFailedMessage: String?
 
-    /// Device ID pending retry
-    var pendingReconnectDeviceID: UUID?
-
     /// Device ID that failed pairing (wrong PIN) - for recovery UI
     var failedPairingDeviceID: UUID?
 
@@ -165,6 +162,83 @@ public final class ConnectionUIState {
         syncActivityCount -= 1
     }
 #endif
+
+    // MARK: - Service Wiring
+
+    /// Resets connection UI state when services become unavailable (disconnect).
+    func handleDisconnect(
+        connectionState: PocketMeshServices.ConnectionState,
+        lastConnectedDeviceID: UUID?,
+        shouldSuppressDisconnectedPill: Bool
+    ) {
+        if UIAccessibility.isVoiceOverRunning {
+            announceConnectionState("Device connection lost")
+        }
+        syncActivityCount = 0
+        currentSyncPhase = nil
+        hideReadyToast()
+        isNodeStorageFull = false
+        updateDisconnectedPillState(
+            connectionState: connectionState,
+            lastConnectedDeviceID: lastConnectedDeviceID,
+            shouldSuppressDisconnectedPill: shouldSuppressDisconnectedPill
+        )
+    }
+
+    /// Wires ConnectionUI-related callbacks on the sync coordinator and services.
+    func wireCallbacks(
+        syncCoordinator: SyncCoordinator,
+        advertisementService: AdvertisementService,
+        contactService: ContactService,
+        connectionManager: ConnectionManager
+    ) async {
+        hideDisconnectedPill()
+
+        if UIAccessibility.isVoiceOverRunning {
+            announceConnectionState("Device reconnected")
+        }
+
+        // Sync activity callbacks for syncing pill display
+        // These are called for contacts and channels phases, NOT for messages
+        await syncCoordinator.setSyncActivityCallbacks(
+            onStarted: { @MainActor [weak self] in
+                self?.syncActivityCount += 1
+            },
+            onEnded: { @MainActor [weak self] in
+                guard let self else { return }
+                // Guard against double-decrement: onDisconnected and sync error path
+                // can both call this if WiFi drops or device switch during sync
+                guard self.syncActivityCount > 0 else { return }
+                self.syncActivityCount -= 1
+                // Show "Ready" toast when all sync activity completes
+                if self.syncActivityCount == 0 {
+                    self.showReadyToastBriefly()
+                }
+            },
+            onPhaseChanged: { @MainActor [weak self] phase in
+                self?.currentSyncPhase = phase
+            }
+        )
+
+        // Resync failed callback for "Sync Failed" pill
+        connectionManager.onResyncFailed = { [weak self] in
+            self?.showSyncFailedPill()
+        }
+
+        // Node storage full callback (0x90 contactsFull or 0x8F contactDeleted push)
+        await advertisementService.setNodeStorageFullChangedHandler { [weak self] isFull in
+            await MainActor.run {
+                self?.isNodeStorageFull = isFull
+            }
+        }
+
+        // Node deleted callback (clears storage full when user manually deletes a node)
+        await contactService.setNodeDeletedHandler { [weak self] in
+            await MainActor.run {
+                self?.isNodeStorageFull = false
+            }
+        }
+    }
 
     // MARK: - Accessibility
 

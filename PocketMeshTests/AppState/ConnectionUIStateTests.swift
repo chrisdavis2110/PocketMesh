@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import PocketMesh
+@testable import PocketMeshServices
 
 @Suite("Connection UI State Tests")
 @MainActor
@@ -225,20 +226,138 @@ struct ConnectionUIStateTests {
         let appState = AppState()
         #expect(appState.connectionUI.showingConnectionFailedAlert == false)
         #expect(appState.connectionUI.connectionFailedMessage == nil)
-        #expect(appState.connectionUI.pendingReconnectDeviceID == nil)
-        #expect(appState.connectionUI.failedPairingDeviceID == nil)
+#expect(appState.connectionUI.failedPairingDeviceID == nil)
         #expect(appState.connectionUI.otherAppWarningDeviceID == nil)
         #expect(appState.connectionUI.isPairing == false)
         #expect(appState.connectionUI.isNodeStorageFull == false)
     }
 
-    @Test("cancelOtherAppWarning clears the device ID")
-    func cancelOtherAppWarning() {
-        let appState = AppState()
-        appState.connectionUI.otherAppWarningDeviceID = UUID()
 
-        appState.cancelOtherAppWarning()
 
-        #expect(appState.connectionUI.otherAppWarningDeviceID == nil)
+    // MARK: - handleDisconnect
+
+    @Test("handleDisconnect resets syncActivityCount to zero")
+    func handleDisconnectResetsSyncActivityCount() {
+        let sut = ConnectionUIState()
+        sut.simulateSyncStarted()
+        sut.simulateSyncStarted()
+        #expect(sut.syncActivityCount == 2)
+
+        sut.handleDisconnect(
+            connectionState: .disconnected,
+            lastConnectedDeviceID: nil,
+            shouldSuppressDisconnectedPill: false
+        )
+
+        #expect(sut.syncActivityCount == 0)
+    }
+
+    @Test("handleDisconnect clears currentSyncPhase")
+    func handleDisconnectClearsSyncPhase() {
+        let sut = ConnectionUIState()
+        sut.currentSyncPhase = .contacts
+
+        sut.handleDisconnect(
+            connectionState: .disconnected,
+            lastConnectedDeviceID: nil,
+            shouldSuppressDisconnectedPill: false
+        )
+
+        #expect(sut.currentSyncPhase == nil)
+    }
+
+    @Test("handleDisconnect sets isNodeStorageFull to false")
+    func handleDisconnectClearsNodeStorageFull() {
+        let sut = ConnectionUIState()
+        sut.isNodeStorageFull = true
+
+        sut.handleDisconnect(
+            connectionState: .disconnected,
+            lastConnectedDeviceID: nil,
+            shouldSuppressDisconnectedPill: false
+        )
+
+        #expect(sut.isNodeStorageFull == false)
+    }
+
+    @Test("handleDisconnect hides ready toast")
+    func handleDisconnectHidesReadyToast() {
+        let sut = ConnectionUIState()
+        sut.showReadyToastBriefly()
+        #expect(sut.showReadyToast == true)
+
+        sut.handleDisconnect(
+            connectionState: .disconnected,
+            lastConnectedDeviceID: nil,
+            shouldSuppressDisconnectedPill: false
+        )
+
+        #expect(sut.showReadyToast == false)
+    }
+
+    @Test("handleDisconnect shows disconnected pill when device was paired")
+    func handleDisconnectShowsDisconnectedPill() async throws {
+        let sut = ConnectionUIState()
+
+        sut.handleDisconnect(
+            connectionState: .disconnected,
+            lastConnectedDeviceID: UUID(),
+            shouldSuppressDisconnectedPill: false
+        )
+
+        // Disconnected pill shows after 1s delay
+        try await Task.sleep(for: .seconds(1.3))
+        #expect(sut.disconnectedPillVisible == true)
+    }
+
+    @Test("handleDisconnect does not show disconnected pill when suppressed")
+    func handleDisconnectSuppressesDisconnectedPill() async throws {
+        let sut = ConnectionUIState()
+
+        sut.handleDisconnect(
+            connectionState: .disconnected,
+            lastConnectedDeviceID: UUID(),
+            shouldSuppressDisconnectedPill: true
+        )
+
+        try await Task.sleep(for: .seconds(1.3))
+        #expect(sut.disconnectedPillVisible == false)
+    }
+
+    @Test("handleDisconnect does not show disconnected pill without paired device")
+    func handleDisconnectNoPairedDevice() async throws {
+        let sut = ConnectionUIState()
+
+        sut.handleDisconnect(
+            connectionState: .disconnected,
+            lastConnectedDeviceID: nil,
+            shouldSuppressDisconnectedPill: false
+        )
+
+        try await Task.sleep(for: .seconds(1.3))
+        #expect(sut.disconnectedPillVisible == false)
+    }
+
+    @Test("handleDisconnect resets all state in a single call")
+    func handleDisconnectResetsAllState() {
+        let sut = ConnectionUIState()
+
+        // Set up various dirty state
+        sut.simulateSyncStarted()
+        sut.simulateSyncStarted()
+        sut.currentSyncPhase = .channels
+        sut.isNodeStorageFull = true
+        sut.showReadyToastBriefly()
+
+        sut.handleDisconnect(
+            connectionState: .disconnected,
+            lastConnectedDeviceID: nil,
+            shouldSuppressDisconnectedPill: false
+        )
+
+        #expect(sut.syncActivityCount == 0)
+        #expect(sut.currentSyncPhase == nil)
+        #expect(sut.isNodeStorageFull == false)
+        #expect(sut.showReadyToast == false)
     }
 }

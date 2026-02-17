@@ -30,17 +30,6 @@ struct ContentView: View {
                 Button(L10n.Localizable.Common.cancel, role: .cancel) {
                     appState.connectionUI.failedPairingDeviceID = nil
                 }
-            } else if appState.connectionUI.pendingReconnectDeviceID != nil {
-                Button(L10n.Localizable.Common.tryAgain) {
-                    Task {
-                        if let deviceID = appState.connectionUI.pendingReconnectDeviceID {
-                            try? await appState.connectionManager.connect(to: deviceID, forceReconnect: true)
-                        }
-                    }
-                }
-                Button(L10n.Localizable.Common.cancel, role: .cancel) {
-                    appState.connectionUI.pendingReconnectDeviceID = nil
-                }
             } else {
                 Button(L10n.Localizable.Common.ok, role: .cancel) { }
             }
@@ -55,7 +44,7 @@ struct ContentView: View {
             )
         ) {
             Button(L10n.Localizable.Common.ok) {
-                appState.cancelOtherAppWarning()
+                appState.connectionUI.otherAppWarningDeviceID = nil
             }
         } message: {
             Text(L10n.Localizable.Alert.CouldNotConnect.otherAppMessage)
@@ -163,7 +152,7 @@ struct MainTabView: View {
         }
         .onChange(of: appState.navigation.selectedTab) { _, newTab in
             // Donate pending device menu tip when returning to a valid tab
-            if appState.navigation.pendingDeviceMenuTipDonation && (newTab == 0 || newTab == 1 || newTab == 2) {
+            if appState.navigation.pendingDeviceMenuTipDonation && appState.navigation.isOnValidTabForDeviceMenuTip {
                 Task {
                     await appState.donateDeviceMenuTipIfOnValidTab()
                 }
