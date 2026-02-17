@@ -24,10 +24,11 @@ This guide provides information for developers who want to contribute to the Poc
 ### Project Setup
 
 1. **Clone the repository**.
-2. **Generate the Xcode project**:
+2. **Generate the Xcode project** from `project.yml`:
    ```bash
    xcodegen generate
    ```
+   > **Note:** Do not edit `PocketMesh.xcodeproj` directly — it is generated from `project.yml` and will be overwritten. Make project configuration changes in `project.yml` and regenerate.
 3. **Open `PocketMesh.xcodeproj`**.
 
 ## Building the Project
@@ -368,30 +369,20 @@ xcodebuild test \
 ### Responsive Design Testing
 
 ```swift
-// Test different size classes in SwiftUI preview
-struct MyView_Previews: PreviewProvider {
-    static var previews: some View {
-        // Compact (iPhone)
-        Group {
-            MyView()
-                .previewInterfaceOrientation(.portrait)
-        }
-        .previewLayout(.sizeThatFits)
+// Test different size classes with the #Preview macro
+#Preview("iPhone Portrait") {
+    MyView()
+        .previewInterfaceOrientation(.portrait)
+}
 
-        // Regular (iPad portrait)
-        Group {
-            MyView()
-                .previewInterfaceOrientation(.portrait)
-        }
-        .previewLayout(.device(IPadPro12_9))
+#Preview("iPad Portrait", traits: .fixedLayout(width: 1024, height: 1366)) {
+    MyView()
+        .previewInterfaceOrientation(.portrait)
+}
 
-        // Regular (iPad landscape)
-        Group {
-            MyView()
-                .previewInterfaceOrientation(.landscapeLeft)
-        }
-        .previewLayout(.device(IPadPro12_9))
-    }
+#Preview("iPad Landscape", traits: .fixedLayout(width: 1366, height: 1024)) {
+    MyView()
+        .previewInterfaceOrientation(.landscapeLeft)
 }
 ```
 

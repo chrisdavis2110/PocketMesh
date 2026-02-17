@@ -106,7 +106,7 @@ struct MapView: View {
                 MKMapViewRepresentable(
                     contacts: viewModel.contactsWithLocation,
                     mapType: viewModel.mapStyleSelection.mkMapType,
-                    showLabels: viewModel.shouldShowLabels,
+                    showLabels: viewModel.showLabels,
                     showsUserLocation: true,
                     selectedContact: $viewModel.selectedContact,
                     cameraRegion: $viewModel.cameraRegion,
