@@ -295,7 +295,7 @@ public actor AdvertisementService {
                             _ = try? await dataStore.upsertDiscoveredNode(deviceID: deviceID, from: frame)
 
                             let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
-                            let contactType = ContactType(rawValue: meshContact.type) ?? .chat
+                            let contactType = meshContact.type
                             await newContactDiscoveredHandler?(contactName, contactID, contactType)
                         }
                     } catch {
@@ -329,7 +329,7 @@ public actor AdvertisementService {
                     _ = try? await dataStore.upsertDiscoveredNode(deviceID: deviceID, from: frame)
 
                     let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
-                    let contactType = ContactType(rawValue: meshContact.type) ?? .chat
+                    let contactType = meshContact.type
                     await newContactDiscoveredHandler?(contactName, contactID, contactType)
                     await contactSyncRequestHandler?(deviceID)
                 }

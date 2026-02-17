@@ -7,8 +7,8 @@ final class UpdateContactTests: XCTestCase {
         let contact = MeshContact(
             id: "test",
             publicKey: Data(repeating: 0xAA, count: 32),
-            type: 0x01,
-            flags: 0x02,
+            type: .chat,
+            flags: ContactFlags(rawValue: 0x02),
             outPathLength: 3,
             outPath: Data([0x11, 0x22, 0x33]),
             advertisedName: "TestNode",
@@ -29,8 +29,8 @@ final class UpdateContactTests: XCTestCase {
         let contact = MeshContact(
             id: "test",
             publicKey: pubkey,
-            type: 0x05,
-            flags: 0x03,
+            type: .room,
+            flags: ContactFlags(rawValue: 0x03),
             outPathLength: 3,
             outPath: outPath,
             advertisedName: "Node",
@@ -45,7 +45,7 @@ final class UpdateContactTests: XCTestCase {
         // Verify layout
         XCTAssertEqual(packet[0], 0x09, "Byte 0: command code")
         XCTAssertEqual(Data(packet[1..<33]), pubkey, "Bytes 1-32: public key")
-        XCTAssertEqual(packet[33], 0x05, "Byte 33: type")
+        XCTAssertEqual(packet[33], ContactType.room.rawValue, "Byte 33: type")
         XCTAssertEqual(packet[34], 0x03, "Byte 34: flags")
         XCTAssertEqual(packet[35], 0x03, "Byte 35: outPathLength")
 
@@ -76,8 +76,8 @@ final class UpdateContactTests: XCTestCase {
         let contact = MeshContact(
             id: "test",
             publicKey: Data(repeating: 0x00, count: 32),
-            type: 0x00,
-            flags: 0x00,
+            type: .chat,
+            flags: [],
             outPathLength: -1,  // Flood path
             outPath: Data(),
             advertisedName: "",

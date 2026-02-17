@@ -47,8 +47,8 @@ final class RoundTripTests: XCTestCase {
 
         // Verify round-trip
         XCTAssertEqual(contact.publicKey, publicKey)
-        XCTAssertEqual(contact.type, type)
-        XCTAssertEqual(contact.flags, flags)
+        XCTAssertEqual(contact.type, ContactType(rawValue: type))
+        XCTAssertEqual(contact.flags, ContactFlags(rawValue: flags))
         XCTAssertEqual(contact.outPathLength, pathLen)
         XCTAssertEqual(contact.outPath, Data([0x11, 0x22, 0x33]))
         XCTAssertEqual(contact.advertisedName, "TestContact")

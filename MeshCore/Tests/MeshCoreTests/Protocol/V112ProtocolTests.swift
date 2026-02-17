@@ -139,8 +139,8 @@ final class V112ProtocolTests: XCTestCase {
         let contact = MeshContact(
             id: contactId,
             publicKey: publicKey,
-            type: 0,
-            flags: 0,
+            type: .chat,
+            flags: [],
             outPathLength: 0,
             outPath: Data(),
             advertisedName: "Test",

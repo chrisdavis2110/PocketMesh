@@ -35,6 +35,9 @@ import Foundation
 /// Multi-byte integers are little-endian. Strings are UTF-8 encoded.
 public enum PacketBuilder: Sendable {
 
+    /// Size of a public key in bytes.
+    static let publicKeySize = 32
+
     // MARK: - Device Commands
 
     /// Builds an appStart command to initialize the session.
@@ -255,7 +258,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 1 (32 bytes): Full public key
     public static func resetPath(publicKey: Data) -> Data {
         var data = Data([CommandCode.resetPath.rawValue])
-        data.append(publicKey.prefix(32))
+        data.append(publicKey.prefix(publicKeySize))
         return data
     }
 
@@ -269,7 +272,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 1 (32 bytes): Full public key
     public static func removeContact(publicKey: Data) -> Data {
         var data = Data([CommandCode.removeContact.rawValue])
-        data.append(publicKey.prefix(32))
+        data.append(publicKey.prefix(publicKeySize))
         return data
     }
 
@@ -283,7 +286,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 1 (32 bytes): Full public key
     public static func shareContact(publicKey: Data) -> Data {
         var data = Data([CommandCode.shareContact.rawValue])
-        data.append(publicKey.prefix(32))
+        data.append(publicKey.prefix(publicKeySize))
         return data
     }
 
@@ -298,7 +301,7 @@ public enum PacketBuilder: Sendable {
     public static func exportContact(publicKey: Data? = nil) -> Data {
         var data = Data([CommandCode.exportContact.rawValue])
         if let key = publicKey {
-            data.append(key.prefix(32))
+            data.append(key.prefix(publicKeySize))
         }
         return data
     }
@@ -412,7 +415,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 33 (N bytes): Password (UTF-8)
     public static func sendLogin(to destination: Data, password: String) -> Data {
         var data = Data([CommandCode.sendLogin.rawValue])
-        data.append(destination.prefix(32))
+        data.append(destination.prefix(publicKeySize))
         data.append(password.data(using: .utf8) ?? Data())
         return data
     }
@@ -423,7 +426,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     public static func sendLogout(to destination: Data) -> Data {
         var data = Data([CommandCode.sendLogout.rawValue])
-        data.append(destination.prefix(32))
+        data.append(destination.prefix(publicKeySize))
         return data
     }
 
@@ -433,7 +436,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     public static func sendStatusRequest(to destination: Data) -> Data {
         var data = Data([CommandCode.sendStatusRequest.rawValue])
-        data.append(destination.prefix(32))
+        data.append(destination.prefix(publicKeySize))
         return data
     }
 
@@ -458,7 +461,7 @@ public enum PacketBuilder: Sendable {
         payload: Data? = nil
     ) -> Data {
         var data = Data([CommandCode.binaryRequest.rawValue])
-        data.append(destination.prefix(32))
+        data.append(destination.prefix(publicKeySize))
         data.append(type.rawValue)
         if let payload = payload {
             data.append(payload)
@@ -552,8 +555,8 @@ public enum PacketBuilder: Sendable {
     public static func updateContact(_ contact: MeshContact) -> Data {
         var data = Data([CommandCode.updateContact.rawValue])              // 1 byte
         data.append(contact.publicKey.paddedOrTruncated(to: 32))           // 32 bytes
-        data.append(contact.type)                                           // 1 byte
-        data.append(contact.flags)                                          // 1 byte
+        data.append(contact.type.rawValue)                                   // 1 byte
+        data.append(contact.flags.rawValue)                                  // 1 byte
         data.append(UInt8(bitPattern: contact.outPathLength))               // 1 byte
         data.append(contact.outPath.paddedOrTruncated(to: 64))              // 64 bytes
         data.append(contact.advertisedName.utf8PaddedOrTruncated(to: 32))   // 32 bytes
@@ -652,7 +655,7 @@ public enum PacketBuilder: Sendable {
     public static func getSelfTelemetry(destination: Data? = nil) -> Data {
         var data = Data([CommandCode.getSelfTelemetry.rawValue, 0x00, 0x00, 0x00])
         if let dest = destination {
-            data.append(dest.prefix(32))
+            data.append(dest.prefix(publicKeySize))
         }
         return data
     }
@@ -739,7 +742,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     public static func sendPathDiscovery(to destination: Data) -> Data {
         var data = Data([CommandCode.pathDiscovery.rawValue, 0x00])
-        data.append(destination.prefix(32))
+        data.append(destination.prefix(publicKeySize))
         return data
     }
 
@@ -865,7 +868,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 1 (32 bytes): Full public key
     public static func hasConnection(publicKey: Data) -> Data {
         var data = Data([CommandCode.hasConnection.rawValue])
-        data.append(publicKey.prefix(32))
+        data.append(publicKey.prefix(publicKeySize))
         return data
     }
 
@@ -879,7 +882,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 1 (32 bytes): Full public key
     public static func getContactByKey(publicKey: Data) -> Data {
         var data = Data([CommandCode.getContactByKey.rawValue])
-        data.append(publicKey.prefix(32))
+        data.append(publicKey.prefix(publicKeySize))
         return data
     }
 
@@ -894,7 +897,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 2 (32 bytes): Full public key
     public static func getAdvertPath(publicKey: Data) -> Data {
         var data = Data([CommandCode.getAdvertPath.rawValue, 0x00])
-        data.append(publicKey.prefix(32))
+        data.append(publicKey.prefix(publicKeySize))
         return data
     }
 

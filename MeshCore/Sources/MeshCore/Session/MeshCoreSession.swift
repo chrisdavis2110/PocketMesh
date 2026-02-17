@@ -770,8 +770,8 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         maxFloodAttempts: Int = 2,
         timeout: TimeInterval? = nil
     ) async throws -> MessageSentInfo? {
-        guard destination.count >= 32 else {
-            throw MeshCoreError.invalidInput("Full 32-byte public key required for retry with path reset")
+        guard destination.count >= PacketBuilder.publicKeySize else {
+            throw MeshCoreError.invalidInput("Full \(PacketBuilder.publicKeySize)-byte public key required for retry with path reset")
         }
 
         var attempts = 0
@@ -1389,8 +1389,8 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func updateContact(
         publicKey: Data,
-        type: UInt8,
-        flags: UInt8,
+        type: ContactType,
+        flags: ContactFlags,
         outPathLength: Int8,
         outPath: Data,
         advertisedName: String,
@@ -1399,9 +1399,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         longitude: Double
     ) async throws {
         var data = Data([CommandCode.updateContact.rawValue])
-        data.append(publicKey.prefix(32))
-        data.append(type)
-        data.append(flags)
+        data.append(publicKey.prefix(PacketBuilder.publicKeySize))
+        data.append(type.rawValue)
+        data.append(flags.rawValue)
         data.append(UInt8(bitPattern: outPathLength))
 
         var pathData = outPath.prefix(64)
@@ -1476,7 +1476,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///   - contact: The contact to modify.
     ///   - flags: The new flags value.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
-    public func changeContactFlags(_ contact: MeshContact, flags: UInt8) async throws {
+    public func changeContactFlags(_ contact: MeshContact, flags: ContactFlags) async throws {
         try await updateContact(
             publicKey: contact.publicKey,
             type: contact.type,

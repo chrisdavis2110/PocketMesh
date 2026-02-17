@@ -340,8 +340,8 @@ public actor NodeConfigService {
             let meshContact = MeshContact(
                 id: publicKey.hexString().lowercased(),
                 publicKey: publicKey,
-                type: contact.type,
-                flags: contact.flags,
+                type: ContactType(rawValue: contact.type) ?? .chat,
+                flags: ContactFlags(rawValue: contact.flags),
                 outPathLength: outPathLength,
                 outPath: outPath,
                 advertisedName: contact.name,
@@ -427,10 +427,10 @@ extension NodeConfigService {
         }
 
         return MeshCoreNodeConfig.ContactConfig(
-            type: contact.type,
+            type: contact.type.rawValue,
             name: contact.advertisedName,
             publicKey: contact.publicKey.hexString().lowercased(),
-            flags: contact.flags,
+            flags: contact.flags.rawValue,
             latitude: String(contact.latitude),
             longitude: String(contact.longitude),
             lastAdvert: UInt32(contact.lastAdvertisement.timeIntervalSince1970),
