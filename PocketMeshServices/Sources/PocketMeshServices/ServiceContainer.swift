@@ -426,12 +426,19 @@ extension ServiceContainer {
 
     /// Creates a service container with a new in-memory model container.
     ///
-    /// Useful for testing and previews.
+    /// Useful for testing and previews. By default, inter-service dependencies
+    /// are wired via `wireServices()` so the container matches production behavior.
     ///
-    /// - Parameter session: The MeshCoreSession for device communication
+    /// - Parameters:
+    ///   - session: The MeshCoreSession for device communication
+    ///   - wired: Whether to call `wireServices()` after creation (default `true`)
     /// - Returns: A configured ServiceContainer with in-memory storage
-    public static func forTesting(session: MeshCoreSession) throws -> ServiceContainer {
+    public static func forTesting(session: MeshCoreSession, wired: Bool = true) async throws -> ServiceContainer {
         let container = try PersistenceStore.createContainer(inMemory: true)
-        return ServiceContainer(session: session, modelContainer: container)
+        let services = ServiceContainer(session: session, modelContainer: container)
+        if wired {
+            await services.wireServices()
+        }
+        return services
     }
 }

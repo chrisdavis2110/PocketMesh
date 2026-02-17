@@ -5,20 +5,26 @@ import MeshCore
 @Suite("ServiceContainer Wiring Tests")
 struct ServiceContainerWiringTests {
 
-    /// Creates a ServiceContainer using the test factory.
+    /// Creates a wired ServiceContainer using the test factory.
     @MainActor
-    private func makeContainer() throws -> ServiceContainer {
+    private func makeWiredContainer() async throws -> ServiceContainer {
         let transport = SimulatorMockTransport()
         let session = MeshCoreSession(transport: transport)
-        return try ServiceContainer.forTesting(session: session)
+        return try await ServiceContainer.forTesting(session: session)
+    }
+
+    /// Creates an unwired ServiceContainer for pre-wiring assertions.
+    @MainActor
+    private func makeUnwiredContainer() async throws -> ServiceContainer {
+        let transport = SimulatorMockTransport()
+        let session = MeshCoreSession(transport: transport)
+        return try await ServiceContainer.forTesting(session: session, wired: false)
     }
 
     @Test("wireServices establishes all 6 cross-service connections")
     @MainActor
     func wireServicesEstablishesAllConnections() async throws {
-        let container = try makeContainer()
-
-        await container.wireServices()
+        let container = try await makeWiredContainer()
 
         // 1. messageService → contactService
         let hasContact = await container.messageService.hasContactServiceWired
@@ -48,20 +54,19 @@ struct ServiceContainerWiringTests {
     @Test("wireServices is idempotent")
     @MainActor
     func wireServicesIsIdempotent() async throws {
-        let container = try makeContainer()
+        let container = try await makeWiredContainer()
 
-        await container.wireServices()
+        // Call wireServices again on an already-wired container
         await container.wireServices()
 
-        // Verify connections still intact after second call
         let hasContact = await container.messageService.hasContactServiceWired
         #expect(hasContact, "connections should persist after duplicate wireServices call")
     }
 
-    @Test("services are not wired before wireServices is called")
+    @Test("forTesting with wired false does not wire services")
     @MainActor
-    func servicesNotWiredBeforeCall() async throws {
-        let container = try makeContainer()
+    func forTestingUnwiredDoesNotWire() async throws {
+        let container = try await makeUnwiredContainer()
 
         let hasContact = await container.messageService.hasContactServiceWired
         #expect(!hasContact, "messageService should not have contactService before wiring")

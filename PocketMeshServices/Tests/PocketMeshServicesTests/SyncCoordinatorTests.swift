@@ -209,7 +209,7 @@ struct SyncCoordinatorTests {
         // Create a test ServiceContainer
         let mockTransport = SimulatorMockTransport()
         let session = MeshCoreSession(transport: mockTransport)
-        let services = try ServiceContainer.forTesting(session: session)
+        let services = try await ServiceContainer.forTesting(session: session)
 
         // Manually set suppression flag to true (simulating mid-sync state)
         services.notificationService.isSuppressingNotifications = true
@@ -230,7 +230,7 @@ struct SyncCoordinatorTests {
         // Create a test ServiceContainer
         let mockTransport = SimulatorMockTransport()
         let session = MeshCoreSession(transport: mockTransport)
-        let services = try ServiceContainer.forTesting(session: session)
+        let services = try await ServiceContainer.forTesting(session: session)
 
         // Call onDisconnected
         await coordinator.onDisconnected(services: services)
@@ -252,7 +252,7 @@ struct SyncCoordinatorTests {
         // Create a test ServiceContainer
         let mockTransport = SimulatorMockTransport()
         let session = MeshCoreSession(transport: mockTransport)
-        let services = try ServiceContainer.forTesting(session: session)
+        let services = try await ServiceContainer.forTesting(session: session)
 
         let tracker = CallbackTracker()
 
