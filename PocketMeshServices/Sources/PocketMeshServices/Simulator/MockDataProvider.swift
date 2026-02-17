@@ -21,7 +21,7 @@ public enum MockDataProvider {
 
     /// Generate a deterministic 32-byte public key from a seed
     private static func mockPublicKey(seed: UInt8) -> Data {
-        Data((0..<32).map { UInt8($0) &+ seed })
+        Data((0..<ProtocolLimits.publicKeySize).map { UInt8($0) &+ seed })
     }
 
     // MARK: - Simulator Device

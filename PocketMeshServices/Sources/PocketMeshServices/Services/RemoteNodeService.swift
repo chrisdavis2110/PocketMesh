@@ -346,8 +346,8 @@ public actor RemoteNodeService {
             throw RemoteNodeError.invalidResponse
         }
 
-        guard contact.publicKey.count == 32 else {
-            throw RemoteNodeError.loginFailed("Invalid public key length: expected 32 bytes, got \(contact.publicKey.count)")
+        guard contact.publicKey.count == ProtocolLimits.publicKeySize else {
+            throw RemoteNodeError.loginFailed("Invalid public key length: expected \(ProtocolLimits.publicKeySize) bytes, got \(contact.publicKey.count)")
         }
 
         let pubKeyHex = contact.publicKey.prefix(6).map { String(format: "%02x", $0) }.joined()

@@ -14,7 +14,7 @@ private func createTestContact(
     let contact = Contact(
         id: UUID(),
         deviceID: deviceID,
-        publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+        publicKey: Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) }),
         name: name,
         typeRawValue: type.rawValue,
         flags: 0,

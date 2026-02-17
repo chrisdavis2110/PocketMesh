@@ -94,6 +94,12 @@ enum RFCalculator {
     /// Earth's radius in kilometers
     static let earthRadiusKm: Double = 6371
 
+    /// Minimum Fresnel zone clearance percentage for a "clear" path
+    static let clearClearanceThreshold: Double = 80
+
+    /// Minimum Fresnel zone clearance percentage for a "marginal" path
+    static let marginalClearanceThreshold: Double = 60
+
     // MARK: - Wavelength
 
     /// Calculates the wavelength in meters for a given frequency.
@@ -401,8 +407,8 @@ enum RFCalculator {
                 }
             }
 
-            // Record obstruction points where clearance < 60%
-            if clearancePercent < 60 {
+            // Record obstruction points where clearance < marginal threshold
+            if clearancePercent < marginalClearanceThreshold {
                 let obstruction = ObstructionPoint(
                     distanceFromAMeters: distanceFromA,
                     obstructionHeightMeters: obstructionHeight,
@@ -419,9 +425,9 @@ enum RFCalculator {
 
         // Determine clearance status
         let clearanceStatus: ClearanceStatus
-        if worstClearancePercent >= 80 {
+        if worstClearancePercent >= clearClearanceThreshold {
             clearanceStatus = .clear
-        } else if worstClearancePercent >= 60 {
+        } else if worstClearancePercent >= marginalClearanceThreshold {
             clearanceStatus = .marginal
         } else if worstClearancePercent >= 0 {
             clearanceStatus = .partialObstruction
@@ -564,7 +570,7 @@ enum RFCalculator {
             }
 
             // Record obstruction points
-            if clearancePercent < 60 {
+            if clearancePercent < marginalClearanceThreshold {
                 let obstruction = ObstructionPoint(
                     distanceFromAMeters: sample.distanceFromAMeters, // Keep original distance
                     obstructionHeightMeters: obstructionHeight,
@@ -579,9 +585,9 @@ enum RFCalculator {
         }
 
         let clearanceStatus: ClearanceStatus
-        if worstClearancePercent >= 80 {
+        if worstClearancePercent >= clearClearanceThreshold {
             clearanceStatus = .clear
-        } else if worstClearancePercent >= 60 {
+        } else if worstClearancePercent >= marginalClearanceThreshold {
             clearanceStatus = .marginal
         } else if worstClearancePercent >= 0 {
             clearanceStatus = .partialObstruction

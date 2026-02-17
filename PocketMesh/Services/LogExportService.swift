@@ -148,7 +148,8 @@ enum LogExportService {
         var lines = ["=== Logs (Last 24 Hours) ==="]
 
         do {
-            let twentyFourHoursAgo = Date().addingTimeInterval(-86400)
+            let secondsPerDay: TimeInterval = 86_400
+            let twentyFourHoursAgo = Date().addingTimeInterval(-secondsPerDay)
             let entries = try await persistenceStore.fetchDebugLogEntries(
                 since: twentyFourHoursAgo,
                 limit: 1000

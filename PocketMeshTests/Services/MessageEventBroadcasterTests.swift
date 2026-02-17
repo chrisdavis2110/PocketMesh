@@ -287,7 +287,7 @@ private extension ContactDTO {
         ContactDTO(
             id: id,
             deviceID: UUID(),
-            publicKey: Data(repeating: 0xAA, count: 32),
+            publicKey: Data(repeating: 0xAA, count: ProtocolLimits.publicKeySize),
             name: name,
             typeRawValue: 0,
             flags: 0,

@@ -17,7 +17,7 @@ struct PersistenceStoreTests {
     private func createTestDevice(id: UUID = UUID()) -> DeviceDTO {
         DeviceDTO.testDevice(
             id: id,
-            publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+            publicKey: Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) }),
             firmwareVersion: 8,
             firmwareVersionString: "v1.11.0",
             multiAcks: 0,
@@ -30,7 +30,7 @@ struct PersistenceStoreTests {
 
     private func createTestContactFrame(name: String = "TestContact") -> ContactFrame {
         ContactFrame(
-            publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+            publicKey: Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) }),
             type: .chat,
             flags: 0,
             outPathLength: 2,
@@ -558,7 +558,7 @@ struct PersistenceStoreTests {
         RemoteNodeSessionDTO(
             id: UUID(),
             deviceID: deviceID,
-            publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+            publicKey: Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) }),
             name: "TestRoom",
             role: .roomServer,
             latitude: 37.7749,
@@ -926,7 +926,7 @@ struct PersistenceStoreTests {
         let blockedContact = ContactDTO(
             id: UUID(),
             deviceID: device.id,
-            publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+            publicKey: Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) }),
             name: "BlockedContact",
             typeRawValue: 0,
             flags: 0,
