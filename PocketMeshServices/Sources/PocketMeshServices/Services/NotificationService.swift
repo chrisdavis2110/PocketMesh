@@ -461,7 +461,7 @@ public final class NotificationService: NSObject {
     }
 
     /// Default English titles when no string provider is set.
-    private func defaultDiscoveryTitle(for type: ContactType) -> String {
+    func defaultDiscoveryTitle(for type: ContactType) -> String {
         switch type {
         case .chat: "New Contact Discovered"
         case .repeater: "New Repeater Discovered"

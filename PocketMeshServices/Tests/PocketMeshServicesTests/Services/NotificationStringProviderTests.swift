@@ -38,16 +38,10 @@ struct NotificationStringProviderTests {
 
     @Test("Default fallback titles are English")
     @MainActor
-    func defaultFallbackTitlesAreEnglish() async {
+    func defaultFallbackTitlesAreEnglish() {
         let service = NotificationService()
-        // Without a provider set, should use defaults
-        // We can't easily test the internal default method, but we verify
-        // the service can be used without a provider (no crash)
-        await service.postNewContactNotification(
-            contactName: "Test",
-            contactID: UUID(),
-            contactType: ContactType.repeater
-        )
-        #expect(true) // If we got here, no crash occurred
+        #expect(service.defaultDiscoveryTitle(for: .chat) == "New Contact Discovered")
+        #expect(service.defaultDiscoveryTitle(for: .repeater) == "New Repeater Discovered")
+        #expect(service.defaultDiscoveryTitle(for: .room) == "New Room Discovered")
     }
 }
