@@ -2,8 +2,8 @@ import SwiftUI
 import UIKit
 
 /// Observes keyboard show/hide to provide height for docked keyboards only.
-/// Key insight: iOS sends `keyboardWillHide` for floating/undocked keyboards,
-/// so we only get `keyboardWillShow` for docked keyboards.
+/// Uses both notification type AND geometric validation (WWDC 2023 guidance)
+/// to reliably distinguish docked from floating/undocked keyboards.
 /// Use with `.ignoresSafeArea(.keyboard)` to disable SwiftUI's automatic avoidance.
 @Observable @MainActor
 final class KeyboardObserver {
@@ -74,6 +74,7 @@ final class KeyboardObserver {
     }
 
     private func handleKeyboardShow(_ keyboardFrame: CGRect) {
+        guard isDockedKeyboard(keyboardFrame) else { return }
         let newHeight = calculateKeyboardOverlap(keyboardFrame)
         guard abs(newHeight - keyboardHeight) > 0.5 else { return }
         keyboardHeight = newHeight
@@ -84,9 +85,30 @@ final class KeyboardObserver {
         // This avoids reacting to change notifications during hide transitions
         guard keyboardHeight > 0 else { return }
 
+        // If keyboard moved away from docked position (e.g. undocked/floated),
+        // clear the height immediately rather than waiting for keyboardWillHide
+        guard isDockedKeyboard(keyboardFrame) else {
+            keyboardHeight = 0
+            return
+        }
+
         let newHeight = calculateKeyboardOverlap(keyboardFrame)
         guard abs(newHeight - keyboardHeight) > 0.5 else { return }
         keyboardHeight = newHeight
+    }
+
+    /// A docked keyboard spans the full screen width and sits at the bottom edge.
+    /// Floating/undocked/split keyboards are narrower or positioned elsewhere.
+    private func isDockedKeyboard(_ keyboardFrame: CGRect) -> Bool {
+        guard let windowScene = UIApplication.shared.connectedScenes
+                  .compactMap({ $0 as? UIWindowScene })
+                  .first(where: { $0.activationState == .foregroundActive }) else {
+            return false
+        }
+        let screenBounds = windowScene.screen.bounds
+        let isAtBottom = keyboardFrame.maxY >= screenBounds.height - 1
+        let isFullWidth = keyboardFrame.width >= screenBounds.width - 1
+        return isAtBottom && isFullWidth
     }
 
     /// Calculates actual keyboard overlap with the key window
@@ -128,17 +150,26 @@ struct FloatingKeyboardAwareModifier: ViewModifier {
     @Environment(KeyboardObserver.self) private var keyboardObserver
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var isIPad: Bool {
-        UIDevice.current.userInterfaceIdiom == .pad
+    /// Manual keyboard avoidance is only needed on iPadOS 26+ where
+    /// `.ignoresSafeArea(.keyboard)` correctly suppresses SwiftUI's avoidance.
+    /// On iPadOS 18, `.ignoresSafeArea(.keyboard)` leaks through `.safeAreaInset`
+    /// (FB11957786), causing double-avoidance. Native SwiftUI avoidance is used instead.
+    private var shouldApplyManualAvoidance: Bool {
+        guard #available(iOS 26.0, *) else { return false }
+        return UIDevice.current.userInterfaceIdiom == .pad
     }
 
     func body(content: Content) -> some View {
-        content
-            .padding(.bottom, isIPad ? keyboardObserver.keyboardHeight : 0)
-            .animation(
-                reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.85),
-                value: keyboardObserver.keyboardHeight
-            )
+        if shouldApplyManualAvoidance {
+            content
+                .padding(.bottom, keyboardObserver.keyboardHeight)
+                .animation(
+                    reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.85),
+                    value: keyboardObserver.keyboardHeight
+                )
+        } else {
+            content
+        }
     }
 }
 
@@ -150,11 +181,12 @@ extension View {
         modifier(FloatingKeyboardAwareModifier())
     }
 
-    /// Conditionally ignores keyboard safe area on iPad only.
-    /// iPhone uses SwiftUI's default keyboard avoidance.
+    /// Conditionally ignores keyboard safe area on iPad running iPadOS 26+.
+    /// On iPadOS 18, `.ignoresSafeArea(.keyboard)` doesn't fully suppress avoidance
+    /// when combined with `.safeAreaInset` (FB11957786), so native avoidance is used.
     @ViewBuilder
     func ignoreKeyboardOnIPad() -> some View {
-        if UIDevice.current.userInterfaceIdiom == .pad {
+        if #available(iOS 26.0, *), UIDevice.current.userInterfaceIdiom == .pad {
             self.ignoresSafeArea(.keyboard)
         } else {
             self
