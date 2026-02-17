@@ -1680,6 +1680,9 @@ final class ChatViewModel {
 
     // MARK: - Timestamp Helpers
 
+    /// Time gap (in seconds) that breaks message grouping for timestamps and sender names.
+    static let messageGroupingGapSeconds = 300
+
     /// Determines if a timestamp should be shown for a message at the given index.
     /// Shows timestamp for first message or when there's a gap > 5 minutes.
     static func shouldShowTimestamp(at index: Int, in messages: [MessageDTO]) -> Bool {
@@ -1689,7 +1692,7 @@ final class ChatViewModel {
         let previousMessage = messages[index - 1]
 
         let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
-        return gap > 300
+        return gap > messageGroupingGapSeconds
     }
 
     /// Determines if the message direction changed from the previous message.
@@ -1729,7 +1732,7 @@ final class ChatViewModel {
 
         // Time gap > 5 minutes breaks group
         let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
-        guard gap <= 300 else { return true }
+        guard gap <= messageGroupingGapSeconds else { return true }
 
         // Different sender breaks group (channel messages only use senderNodeName)
         if let currentName = currentMessage.senderNodeName,
@@ -1760,7 +1763,7 @@ final class ChatViewModel {
         let timeGap = abs(Int(message.timestamp) - Int(previous.timestamp))
 
         // Timestamp: gap > 5 minutes
-        let showTimestamp = timeGap > 300
+        let showTimestamp = timeGap > messageGroupingGapSeconds
 
         // Direction gap: direction changed from previous
         let showDirectionGap = message.direction != previous.direction
@@ -1770,7 +1773,7 @@ final class ChatViewModel {
         if message.contactID != nil || message.isOutgoing {
             // Direct messages or outgoing: always true (UI ignores for direct messages anyway)
             showSenderName = true
-        } else if previous.isOutgoing || timeGap > 300 {
+        } else if previous.isOutgoing || timeGap > messageGroupingGapSeconds {
             // Direction change or time gap breaks group
             showSenderName = true
         } else if let currentName = message.senderNodeName, let previousName = previous.senderNodeName {
