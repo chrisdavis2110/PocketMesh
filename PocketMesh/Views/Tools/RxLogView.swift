@@ -256,7 +256,7 @@ struct RxLogRowView: View {
                     .font(.caption.bold())
                     .foregroundStyle(entry.isFlood ? .green : .blue)
 
-                Text(entry.receivedAt, format: .dateTime.hour().minute().second())
+                Text(entry.receivedAt, format: .dateTime.month(.twoDigits).day(.twoDigits).hour().minute().second())
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
 
