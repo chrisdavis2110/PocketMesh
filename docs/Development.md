@@ -21,8 +21,6 @@ This guide provides information for developers who want to contribute to the Poc
   brew install xcsift
   ```
 
-Note: SwiftLint and SwiftFormat are not currently configured for this project but may be added optionally. See the "Linting and Formatting" section below.
-
 ### Project Setup
 
 1. **Clone the repository**.
