@@ -44,6 +44,7 @@ graph TD
             BPS[BinaryProtocolService actor]
             DS[DeviceService actor]
             HRS[HeardRepeatsService actor]
+            RXS[RxLogService actor]
         end
 
         subgraph RemoteServices [Remote Node Services]
@@ -251,7 +252,7 @@ Activates event listeners on services that process live device events. Only call
 - `HeardRepeatsService.configure(deviceID:localNodeName:)` — needs device info for local node identification
 - `AdvertisementService.startEventMonitoring(deviceID:)` — listens for advertisement/path discovery events
 - `RxLogService.startEventMonitoring(deviceID:)` — captures RF packets for diagnostic viewer
-- `MessageService.startEventListening()` — listens for ACK events during send-with-retry
+- `MessageService.startEventMonitoring()` — listens for ACK events during send-with-retry
 - `RemoteNodeService.startEventMonitoring()` — listens for remote node session events
 - `MessagePollingService.startMessageEventMonitoring(deviceID:)` — routes polled messages to handlers
 - `MessagePollingService.startAutoFetch(deviceID:)` — begins periodic message polling
@@ -436,20 +437,18 @@ The split-view implementation follows Apple's iPad interface guidelines:
 
 ### Implementation Details
 
-```swift
-// AppState manages split-view state
-@Observable class AppState {
-    var splitViewSelection: TabSelection? = nil
-    var selectedConversation: Conversation? = nil
-    var selectedContact: Contact? = nil
+Navigation state is managed by `NavigationCoordinator`, one of AppState's extracted sub-objects:
 
-    // Methods to update right panel based on left panel selection
-    func selectConversation(_ conversation: Conversation) {
-        selectedConversation = conversation
-        // Right panel updates independently
-    }
+```swift
+@Observable class AppState {
+    let connectionUI = ConnectionUIState()    // Status pills, sync activity, alerts
+    let batteryMonitor = BatteryMonitor()     // Battery polling, thresholds
+    let onboarding = OnboardingState()        // Onboarding flag and path
+    let navigation = NavigationCoordinator()  // Tab selection, pending navigation
 }
 ```
+
+Views access sub-objects directly (e.g., `appState.navigation.selectedTab`). Cross-tab navigation uses a pending navigation mechanism — the source view sets a pending target on `NavigationCoordinator`, which the destination view picks up on tab switch.
 
 ### Panel Independence
 

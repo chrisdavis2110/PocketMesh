@@ -290,7 +290,7 @@ public final class ServiceContainer {
             await advertisementService.startEventMonitoring(deviceID: deviceID)
         }
         await rxLogService.startEventMonitoring(deviceID: deviceID)
-        await messageService.startEventListening()
+        await messageService.startEventMonitoring()
         await remoteNodeService.startEventMonitoring()
 
         // Always start message event monitoring so handlers are ready for polled messages
@@ -321,7 +321,7 @@ public final class ServiceContainer {
 
         await advertisementService.stopEventMonitoring()
         await rxLogService.stopEventMonitoring()
-        await messageService.stopEventListening()
+        await messageService.stopEventMonitoring()
         await messagePollingService.stopMessageEventMonitoring()
         // RemoteNodeService event monitoring is per-session, handled internally
 
