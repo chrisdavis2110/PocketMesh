@@ -5,8 +5,8 @@ A Swift library for communicating with MeshCore devices over BLE. This is a Swif
 ## Requirements
 
 - iOS 18.0+ / macOS 15.0+
-- Swift 6.0+
-- Xcode 16.0+
+- Swift 6.2+
+- Xcode 26.0+
 
 ## Installation
 
