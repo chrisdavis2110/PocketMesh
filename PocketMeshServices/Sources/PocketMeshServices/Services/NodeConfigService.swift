@@ -61,6 +61,9 @@ public actor NodeConfigService {
         self.syncCoordinator = coordinator
     }
 
+    /// Whether a sync coordinator has been wired via `setSyncCoordinator`.
+    var hasSyncCoordinatorWired: Bool { syncCoordinator != nil }
+
     // MARK: - Export
 
     /// Reads the device state and builds a `MeshCoreNodeConfig`.

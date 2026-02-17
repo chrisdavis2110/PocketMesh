@@ -103,6 +103,12 @@ public actor ContactService {
         cleanupHandler = handler
     }
 
+    /// Whether a sync coordinator has been wired via `setSyncCoordinator`.
+    var hasSyncCoordinatorWired: Bool { syncCoordinator != nil }
+
+    /// Whether a cleanup handler has been wired via `setCleanupHandler`.
+    var hasCleanupHandlerWired: Bool { cleanupHandler != nil }
+
     /// Set handler for node deletion events (for clearing storage full flag)
     public func setNodeDeletedHandler(_ handler: @escaping @Sendable () async -> Void) {
         nodeDeletedHandler = handler

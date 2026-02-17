@@ -42,6 +42,9 @@ public actor RxLogService {
         self.heardRepeatsService = service
     }
 
+    /// Whether a heard repeats service has been wired via `setHeardRepeatsService`.
+    var hasHeardRepeatsServiceWired: Bool { heardRepeatsService != nil }
+
     deinit {
         eventMonitorTask?.cancel()
     }

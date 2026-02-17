@@ -199,6 +199,9 @@ public actor MessageService {
         self.contactService = service
     }
 
+    /// Whether a contact service has been wired via `setContactService`.
+    var hasContactServiceWired: Bool { contactService != nil }
+
     // MARK: - Event Listening
 
     /// Starts listening for session events to process message acknowledgements.

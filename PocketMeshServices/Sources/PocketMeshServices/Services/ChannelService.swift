@@ -599,6 +599,9 @@ public actor ChannelService {
         channelUpdateHandler = handler
     }
 
+    /// Whether a channel update handler has been wired via `setChannelUpdateHandler`.
+    var hasChannelUpdateHandlerWired: Bool { channelUpdateHandler != nil }
+
     // MARK: - Private Helpers
 
     /// Classifies an error into a ChannelSyncError for the given index
