@@ -29,7 +29,8 @@ public final class RxLogEntry {
     public var packetHash: String
 
     // App-level decoding
-    public var channelHash: Int?
+    @Attribute(originalName: "channelHash")
+    public var channelIndex: Int?
     public var channelName: String?
     public var decryptStatus: Int
     public var fromContactName: String?
@@ -58,7 +59,7 @@ public final class RxLogEntry {
         packetPayload: Data,
         rawPayload: Data,
         packetHash: String,
-        channelHash: Int? = nil,
+        channelIndex: Int? = nil,
         channelName: String? = nil,
         decryptStatus: Int = DecryptStatus.notApplicable.rawValue,
         fromContactName: String? = nil,
@@ -79,7 +80,7 @@ public final class RxLogEntry {
         self.packetPayload = packetPayload
         self.rawPayload = rawPayload
         self.packetHash = packetHash
-        self.channelHash = channelHash
+        self.channelIndex = channelIndex
         self.channelName = channelName
         self.decryptStatus = decryptStatus
         self.fromContactName = fromContactName
@@ -104,7 +105,7 @@ public struct RxLogEntryDTO: Sendable, Identifiable, Equatable, Hashable {
     public let packetPayload: Data
     public let rawPayload: Data
     public let packetHash: String
-    public let channelHash: UInt8?
+    public let channelIndex: UInt8?
     public let channelName: String?
     public let decryptStatus: DecryptStatus
     public let fromContactName: String?
@@ -134,7 +135,7 @@ public struct RxLogEntryDTO: Sendable, Identifiable, Equatable, Hashable {
         self.packetPayload = model.packetPayload
         self.rawPayload = model.rawPayload
         self.packetHash = model.packetHash
-        self.channelHash = model.channelHash.map { UInt8($0) }
+        self.channelIndex = model.channelIndex.map { UInt8($0) }
         self.channelName = model.channelName
         self.decryptStatus = DecryptStatus(rawValue: model.decryptStatus) ?? .notApplicable
         self.fromContactName = model.fromContactName
@@ -149,7 +150,7 @@ public struct RxLogEntryDTO: Sendable, Identifiable, Equatable, Hashable {
         deviceID: UUID,
         receivedAt: Date = Date(),
         from parsed: ParsedRxLogData,
-        channelHash: UInt8? = nil,
+        channelIndex: UInt8? = nil,
         channelName: String? = nil,
         decryptStatus: DecryptStatus = .notApplicable,
         fromContactName: String? = nil,
@@ -171,7 +172,7 @@ public struct RxLogEntryDTO: Sendable, Identifiable, Equatable, Hashable {
         self.packetPayload = parsed.packetPayload
         self.rawPayload = parsed.rawPayload
         self.packetHash = parsed.packetHash
-        self.channelHash = channelHash
+        self.channelIndex = channelIndex
         self.channelName = channelName
         self.decryptStatus = decryptStatus
         self.fromContactName = fromContactName

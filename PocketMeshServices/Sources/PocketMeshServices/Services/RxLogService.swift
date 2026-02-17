@@ -149,7 +149,7 @@ public actor RxLogService {
             logger.info("Re-processing \(entries.count) noMatchingKey entries")
 
             // Collect successful decryptions for batch update
-            var updates: [(id: UUID, channelHash: UInt8?, channelName: String?, senderTimestamp: UInt32?)] = []
+            var updates: [(id: UUID, channelIndex: UInt8?, channelName: String?, senderTimestamp: UInt32?)] = []
             var decryptedEntries: [RxLogEntryDTO] = []
 
             for entry in entries {
@@ -160,8 +160,8 @@ public actor RxLogService {
 
                 updates.append((
                     id: entry.id,
-                    channelHash: decrypted.channelHash,
-                    channelName: channelNames[decrypted.channelHash ?? 0],
+                    channelIndex: decrypted.channelIndex,
+                    channelName: channelNames[decrypted.channelIndex ?? 0],
                     senderTimestamp: decrypted.senderTimestamp
                 ))
                 decryptedEntries.append(decrypted)
@@ -280,7 +280,7 @@ public actor RxLogService {
         let dto = RxLogEntryDTO(
             deviceID: deviceID,
             from: parsed,
-            channelHash: channelIndex,
+            channelIndex: channelIndex,
             channelName: channelName,
             decryptStatus: decryptStatus,
             fromContactName: fromContactName,
@@ -344,7 +344,7 @@ public actor RxLogService {
         let encryptedPayload = Data(entry.packetPayload.dropFirst(1))
 
         // Fast path: use stored channel index if previously decrypted successfully
-        if entry.decryptStatus == .success, let channelIndex = entry.channelHash,
+        if entry.decryptStatus == .success, let channelIndex = entry.channelIndex,
            let secret = channelSecrets[channelIndex] {
             let decryptResult = ChannelCrypto.decrypt(payload: encryptedPayload, secret: secret)
             if case .success(let timestamp, _, let text) = decryptResult {
@@ -404,7 +404,7 @@ public actor RxLogService {
         let encryptedPayload = Data(entry.packetPayload.dropFirst(1))
 
         // Fast path: use stored channel index
-        if entry.decryptStatus == .success, let channelIndex = entry.channelHash,
+        if entry.decryptStatus == .success, let channelIndex = entry.channelIndex,
            let secret = secrets[channelIndex] {
             let decryptResult = ChannelCrypto.decrypt(payload: encryptedPayload, secret: secret)
             if case .success(let timestamp, _, let text) = decryptResult {

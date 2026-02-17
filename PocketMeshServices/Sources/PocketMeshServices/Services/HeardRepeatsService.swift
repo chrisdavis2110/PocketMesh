@@ -62,7 +62,7 @@ public actor HeardRepeatsService {
         guard entry.payloadType == .groupText else { return nil }
         guard entry.decryptStatus == .success else { return nil }
         guard let decodedText = entry.decodedText else { return nil }
-        guard let channelIndex = entry.channelHash else { return nil }
+        guard let channelIndex = entry.channelIndex else { return nil }
         guard let senderTimestamp = entry.senderTimestamp else { return nil }
         guard let deviceID = self.deviceID else { return nil }
         guard let localNodeName = self.localNodeName else { return nil }

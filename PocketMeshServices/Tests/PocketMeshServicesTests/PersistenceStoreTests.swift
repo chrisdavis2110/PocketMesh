@@ -985,7 +985,7 @@ struct PersistenceStoreTests {
         return RxLogEntryDTO(
             deviceID: deviceID,
             from: parsed,
-            channelHash: 1,
+            channelIndex: 1,
             channelName: "TestChannel",
             decryptStatus: .success,
             senderTimestamp: senderTimestamp,

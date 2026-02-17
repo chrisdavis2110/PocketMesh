@@ -2027,7 +2027,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             packetPayload: dto.packetPayload,
             rawPayload: dto.rawPayload,
             packetHash: dto.packetHash,
-            channelHash: dto.channelHash.map { Int($0) },
+            channelIndex: dto.channelIndex.map { Int($0) },
             channelName: dto.channelName,
             decryptStatus: dto.decryptStatus.rawValue,
             fromContactName: dto.fromContactName,
@@ -2112,11 +2112,11 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         let targetTimestamp = Int(senderTimestamp)
 
         if let channelIndex {
-            // Channel message: match on channelHash and senderTimestamp
+            // Channel message: match on channelIndex and senderTimestamp
             let channelIndexInt = Int(channelIndex)
 
             let predicate = #Predicate<RxLogEntry> { entry in
-                entry.channelHash == channelIndexInt &&
+                entry.channelIndex == channelIndexInt &&
                 entry.senderTimestamp == targetTimestamp
             }
 
@@ -2134,14 +2134,14 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             if let contactName {
                 predicate = #Predicate<RxLogEntry> { entry in
                     entry.senderTimestamp == targetTimestamp &&
-                    entry.channelHash == nil &&
+                    entry.channelIndex == nil &&
                     entry.payloadType == textMessageType &&
                     entry.fromContactName == contactName
                 }
             } else {
                 predicate = #Predicate<RxLogEntry> { entry in
                     entry.senderTimestamp == targetTimestamp &&
-                    entry.channelHash == nil &&
+                    entry.channelIndex == nil &&
                     entry.payloadType == textMessageType
                 }
             }
@@ -2175,7 +2175,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
     /// Batch update RX log entries after successful decryption.
     /// Note: decodedText is @Transient and not persisted.
     public func batchUpdateRxLogDecryption(
-        _ updates: [(id: UUID, channelHash: UInt8?, channelName: String?, senderTimestamp: UInt32?)]
+        _ updates: [(id: UUID, channelIndex: UInt8?, channelName: String?, senderTimestamp: UInt32?)]
     ) throws {
         for update in updates {
             let targetID = update.id
@@ -2184,7 +2184,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             )
             guard let entry = try modelContext.fetch(descriptor).first else { continue }
 
-            entry.channelHash = update.channelHash.map { Int($0) }
+            entry.channelIndex = update.channelIndex.map { Int($0) }
             entry.channelName = update.channelName
             entry.decryptStatus = DecryptStatus.success.rawValue
             entry.senderTimestamp = update.senderTimestamp.map { Int($0) }
