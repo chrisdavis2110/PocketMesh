@@ -1688,56 +1688,6 @@ final class ChatViewModel {
     /// Time gap (in seconds) that breaks message grouping for timestamps and sender names.
     static let messageGroupingGapSeconds = 300
 
-    /// Determines if a timestamp should be shown for a message at the given index.
-    /// Shows timestamp for first message or when there's a gap > 5 minutes.
-    static func shouldShowTimestamp(at index: Int, in messages: [MessageDTO]) -> Bool {
-        guard index > 0 else { return true }
-
-        let currentMessage = messages[index]
-        let previousMessage = messages[index - 1]
-
-        let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
-        return gap > messageGroupingGapSeconds
-    }
-
-    /// Determines if sender name should be shown for a channel message at the given index.
-    /// Returns true for first message or when sender/timing breaks the group.
-    ///
-    /// **Note:** Channel messages identify senders solely by parsing "NodeName: text" from
-    /// the message content (per MeshCore protocol). There is no cryptographic sender
-    /// verification. `senderKeyPrefix` is always nil for channel messages.
-    static func shouldShowSenderName(at index: Int, in messages: [MessageDTO]) -> Bool {
-        let currentMessage = messages[index]
-
-        // Direct messages use configuration.showSenderName=false to hide names,
-        // so this value is ignored. Return true (no grouping) for simplicity.
-        guard currentMessage.contactID == nil else { return true }
-
-        // Outgoing messages don't show sender name
-        guard !currentMessage.isOutgoing else { return true }
-
-        // First message always shows sender name
-        guard index > 0 else { return true }
-
-        let previousMessage = messages[index - 1]
-
-        // Direction change breaks group
-        guard !previousMessage.isOutgoing else { return true }
-
-        // Time gap > 5 minutes breaks group
-        let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
-        guard gap <= messageGroupingGapSeconds else { return true }
-
-        // Different sender breaks group (channel messages only use senderNodeName)
-        if let currentName = currentMessage.senderNodeName,
-           let previousName = previousMessage.senderNodeName {
-            return currentName != previousName
-        }
-
-        // No sender name available (malformed message), show name to be safe
-        return true
-    }
-
     /// Pre-computed display flags for a single message
     struct DisplayFlags {
         let showTimestamp: Bool
@@ -2083,6 +2033,10 @@ final class ChatViewModel {
             imageFetchTasks.removeValue(forKey: messageID)
             return
         }
+        guard displayItemIndexByID[messageID] != nil else {
+            imageFetchTasks.removeValue(forKey: messageID)
+            return
+        }
 
         switch result {
         case .loaded(let data):
@@ -2099,6 +2053,10 @@ final class ChatViewModel {
                 }
             }.value
             guard !Task.isCancelled, let decoded else {
+                imageFetchTasks.removeValue(forKey: messageID)
+                return
+            }
+            guard displayItemIndexByID[messageID] != nil else {
                 imageFetchTasks.removeValue(forKey: messageID)
                 return
             }
