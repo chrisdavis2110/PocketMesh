@@ -184,6 +184,45 @@ public final class Device {
         self.customOCVArrayString = customOCVArrayString
         self.connectionMethods = connectionMethods
     }
+
+    /// Applies all mutable fields from a DTO to this model instance.
+    func apply(_ dto: DeviceDTO) {
+        publicKey = dto.publicKey
+        nodeName = dto.nodeName
+        firmwareVersion = dto.firmwareVersion
+        firmwareVersionString = dto.firmwareVersionString
+        manufacturerName = dto.manufacturerName
+        buildDate = dto.buildDate
+        maxContacts = dto.maxContacts
+        maxChannels = dto.maxChannels
+        frequency = dto.frequency
+        bandwidth = dto.bandwidth
+        spreadingFactor = dto.spreadingFactor
+        codingRate = dto.codingRate
+        txPower = dto.txPower
+        maxTxPower = dto.maxTxPower
+        latitude = dto.latitude
+        longitude = dto.longitude
+        blePin = dto.blePin
+        clientRepeat = dto.clientRepeat
+        preRepeatFrequency = dto.preRepeatFrequency
+        preRepeatBandwidth = dto.preRepeatBandwidth
+        preRepeatSpreadingFactor = dto.preRepeatSpreadingFactor
+        preRepeatCodingRate = dto.preRepeatCodingRate
+        manualAddContacts = dto.manualAddContacts
+        autoAddConfig = dto.autoAddConfig
+        multiAcks = dto.multiAcks
+        telemetryModeBase = dto.telemetryModeBase
+        telemetryModeLoc = dto.telemetryModeLoc
+        telemetryModeEnv = dto.telemetryModeEnv
+        advertLocationPolicy = dto.advertLocationPolicy
+        lastConnected = dto.lastConnected
+        lastContactSync = dto.lastContactSync
+        isActive = dto.isActive
+        ocvPreset = dto.ocvPreset
+        customOCVArrayString = dto.customOCVArrayString
+        connectionMethods = dto.connectionMethods
+    }
 }
 
 // MARK: - Sendable DTO

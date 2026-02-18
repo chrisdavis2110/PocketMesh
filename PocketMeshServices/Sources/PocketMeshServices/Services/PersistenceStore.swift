@@ -100,42 +100,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         descriptor.fetchLimit = 1
 
         if let existing = try modelContext.fetch(descriptor).first {
-            // Update existing
-            existing.publicKey = dto.publicKey
-            existing.nodeName = dto.nodeName
-            existing.firmwareVersion = dto.firmwareVersion
-            existing.firmwareVersionString = dto.firmwareVersionString
-            existing.manufacturerName = dto.manufacturerName
-            existing.buildDate = dto.buildDate
-            existing.maxContacts = dto.maxContacts
-            existing.maxChannels = dto.maxChannels
-            existing.frequency = dto.frequency
-            existing.bandwidth = dto.bandwidth
-            existing.spreadingFactor = dto.spreadingFactor
-            existing.codingRate = dto.codingRate
-            existing.txPower = dto.txPower
-            existing.maxTxPower = dto.maxTxPower
-            existing.latitude = dto.latitude
-            existing.longitude = dto.longitude
-            existing.blePin = dto.blePin
-            existing.clientRepeat = dto.clientRepeat
-            existing.preRepeatFrequency = dto.preRepeatFrequency
-            existing.preRepeatBandwidth = dto.preRepeatBandwidth
-            existing.preRepeatSpreadingFactor = dto.preRepeatSpreadingFactor
-            existing.preRepeatCodingRate = dto.preRepeatCodingRate
-            existing.manualAddContacts = dto.manualAddContacts
-            existing.autoAddConfig = dto.autoAddConfig
-            existing.multiAcks = dto.multiAcks
-            existing.telemetryModeBase = dto.telemetryModeBase
-            existing.telemetryModeLoc = dto.telemetryModeLoc
-            existing.telemetryModeEnv = dto.telemetryModeEnv
-            existing.advertLocationPolicy = dto.advertLocationPolicy
-            existing.lastConnected = dto.lastConnected
-            existing.lastContactSync = dto.lastContactSync
-            existing.isActive = dto.isActive
-            existing.ocvPreset = dto.ocvPreset
-            existing.customOCVArrayString = dto.customOCVArrayString
-            existing.connectionMethods = dto.connectionMethods
+            existing.apply(dto)
         } else {
             // Create new
             let device = Device(
@@ -389,22 +354,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         descriptor.fetchLimit = 1
 
         if let existing = try modelContext.fetch(descriptor).first {
-            existing.name = dto.name
-            existing.typeRawValue = dto.typeRawValue
-            existing.flags = dto.flags
-            existing.outPathLength = dto.outPathLength
-            existing.outPath = dto.outPath
-            existing.lastAdvertTimestamp = dto.lastAdvertTimestamp
-            existing.latitude = dto.latitude
-            existing.longitude = dto.longitude
-            existing.lastModified = dto.lastModified
-            existing.nickname = dto.nickname
-            existing.isBlocked = dto.isBlocked
-            existing.isFavorite = dto.isFavorite
-            existing.lastMessageDate = dto.lastMessageDate
-            existing.unreadCount = dto.unreadCount
-            existing.ocvPreset = dto.ocvPreset
-            existing.customOCVArrayString = dto.customOCVArrayString
+            existing.apply(dto)
         } else {
             let contact = Contact(
                 id: dto.id,
@@ -1175,14 +1125,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         descriptor.fetchLimit = 1
 
         if let existing = try modelContext.fetch(descriptor).first {
-            existing.name = dto.name
-            existing.secret = dto.secret
-            existing.isEnabled = dto.isEnabled
-            existing.lastMessageDate = dto.lastMessageDate
-            existing.unreadCount = dto.unreadCount
-            existing.unreadMentionCount = dto.unreadMentionCount
-            existing.notificationLevel = dto.notificationLevel
-            existing.isFavorite = dto.isFavorite
+            existing.apply(dto)
         } else {
             let channel = Channel(
                 id: dto.id,
@@ -1481,26 +1424,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         descriptor.fetchLimit = 1
 
         if let existing = try modelContext.fetch(descriptor).first {
-            // Update existing
-            existing.deviceID = dto.deviceID
-            existing.publicKey = dto.publicKey
-            existing.name = dto.name
-            existing.roleRawValue = dto.role.rawValue
-            existing.latitude = dto.latitude
-            existing.longitude = dto.longitude
-            existing.isConnected = dto.isConnected
-            existing.permissionLevelRawValue = dto.permissionLevel.rawValue
-            existing.lastConnectedDate = dto.lastConnectedDate
-            existing.lastBatteryMillivolts = dto.lastBatteryMillivolts
-            existing.lastUptimeSeconds = dto.lastUptimeSeconds
-            existing.lastNoiseFloor = dto.lastNoiseFloor
-            existing.unreadCount = dto.unreadCount
-            existing.notificationLevel = dto.notificationLevel
-            existing.isFavorite = dto.isFavorite
-            existing.lastRxAirtimeSeconds = dto.lastRxAirtimeSeconds
-            existing.neighborCount = dto.neighborCount
-            existing.lastSyncTimestamp = dto.lastSyncTimestamp
-            existing.lastMessageDate = dto.lastMessageDate
+            existing.apply(dto)
             try modelContext.save()
             return existing
         } else {
