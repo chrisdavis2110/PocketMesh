@@ -168,13 +168,13 @@ struct BLEStatusIndicatorView: View {
 
     // MARK: - Actions
 
-    private var autoUpdateConfig: (enabled: Bool, source: GPSSource)? {
+    private var autoUpdateGPSSource: GPSSource? {
         guard let device = appState.connectedDevice,
               device.advertLocationPolicy == 1,
               devicePreferenceStore.isAutoUpdateLocationEnabled(deviceID: device.id) else {
             return nil
         }
-        return (true, devicePreferenceStore.gpsSource(deviceID: device.id))
+        return devicePreferenceStore.gpsSource(deviceID: device.id)
     }
 
     private func sendAdvert(flood: Bool) {
@@ -183,8 +183,8 @@ struct BLEStatusIndicatorView: View {
 
         Task {
             // Update location from GPS before sending if enabled
-            if let config = autoUpdateConfig {
-                await updateLocationFromGPS(source: config.source)
+            if let source = autoUpdateGPSSource {
+                await updateLocationFromGPS(source: source)
             }
 
             do {
