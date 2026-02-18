@@ -116,8 +116,7 @@ struct BLEStatusIndicatorView: View {
                 .foregroundStyle(iconColor)
                 .symbolEffect(.pulse, isActive: isAnimating)
         }
-        .popoverTip(deviceMenuTip, arrowEdge: .top)
-        .tipViewStyle(NoCloseButtonTipStyle())
+        .popoverTip(deviceMenuTip)
         .sensoryFeedback(.success, trigger: successFeedbackTrigger)
         .sensoryFeedback(.error, trigger: errorFeedbackTrigger)
         .accessibilityLabel(L10n.Settings.BleStatus.accessibilityLabel)
