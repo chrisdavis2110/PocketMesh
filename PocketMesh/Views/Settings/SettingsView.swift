@@ -102,7 +102,7 @@ struct SettingsView: View {
                 Button {
                     appState.onboarding.resetOnboarding()
                 } label: {
-                    Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
+                    TintedLabel("Reset Onboarding", systemImage: "arrow.counterclockwise")
                 }
             } header: {
                 Text("Debug")
@@ -141,12 +141,7 @@ struct SettingsView: View {
 
     private var advancedSettingsRowLabel: some View {
         HStack {
-            Label {
-                Text(L10n.Settings.AdvancedSettings.title)
-            } icon: {
-                Image(systemName: "gearshape.2")
-                    .foregroundStyle(.tint)
-            }
+            TintedLabel(L10n.Settings.AdvancedSettings.title, systemImage: "gearshape.2")
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.caption)

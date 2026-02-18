@@ -19,22 +19,22 @@ struct NotificationSettingsSection: View {
                 switch service.authorizationStatus {
                 case .authorized, .provisional, .ephemeral:
                     Toggle(isOn: $preferences.contactMessagesEnabled) {
-                        Label(L10n.Settings.Notifications.contactMessages, systemImage: "message")
+                        TintedLabel(L10n.Settings.Notifications.contactMessages, systemImage: "message")
                     }
                     Toggle(isOn: $preferences.channelMessagesEnabled) {
-                        Label(L10n.Settings.Notifications.channelMessages, systemImage: "person.3")
+                        TintedLabel(L10n.Settings.Notifications.channelMessages, systemImage: "person.3")
                     }
                     Toggle(isOn: $preferences.roomMessagesEnabled) {
-                        Label(L10n.Settings.Notifications.roomMessages, systemImage: "bubble.left.and.bubble.right")
+                        TintedLabel(L10n.Settings.Notifications.roomMessages, systemImage: "bubble.left.and.bubble.right")
                     }
                     Toggle(isOn: $preferences.newContactDiscoveredEnabled) {
-                        Label(L10n.Settings.Notifications.newContactDiscovered, systemImage: "person.badge.plus")
+                        TintedLabel(L10n.Settings.Notifications.newContactDiscovered, systemImage: "person.badge.plus")
                     }
                     Toggle(isOn: $preferences.reactionNotificationsEnabled) {
-                        Label(L10n.Settings.Notifications.reactions, systemImage: "face.smiling")
+                        TintedLabel(L10n.Settings.Notifications.reactions, systemImage: "face.smiling")
                     }
                     Toggle(isOn: $preferences.lowBatteryEnabled) {
-                        Label(L10n.Settings.Notifications.lowBattery, systemImage: "battery.25")
+                        TintedLabel(L10n.Settings.Notifications.lowBattery, systemImage: "battery.25")
                     }
 
                 case .notDetermined:
@@ -43,7 +43,7 @@ struct NotificationSettingsSection: View {
                             await service.requestAuthorization()
                         }
                     } label: {
-                        Label(L10n.Settings.Notifications.enable, systemImage: "bell.badge")
+                        TintedLabel(L10n.Settings.Notifications.enable, systemImage: "bell.badge")
                     }
 
                 case .denied:
@@ -61,22 +61,22 @@ struct NotificationSettingsSection: View {
 
                 @unknown default:
                     Toggle(isOn: $preferences.contactMessagesEnabled) {
-                        Label(L10n.Settings.Notifications.contactMessages, systemImage: "message")
+                        TintedLabel(L10n.Settings.Notifications.contactMessages, systemImage: "message")
                     }
                     Toggle(isOn: $preferences.channelMessagesEnabled) {
-                        Label(L10n.Settings.Notifications.channelMessages, systemImage: "person.3")
+                        TintedLabel(L10n.Settings.Notifications.channelMessages, systemImage: "person.3")
                     }
                     Toggle(isOn: $preferences.roomMessagesEnabled) {
-                        Label(L10n.Settings.Notifications.roomMessages, systemImage: "bubble.left.and.bubble.right")
+                        TintedLabel(L10n.Settings.Notifications.roomMessages, systemImage: "bubble.left.and.bubble.right")
                     }
                     Toggle(isOn: $preferences.newContactDiscoveredEnabled) {
-                        Label(L10n.Settings.Notifications.newContactDiscovered, systemImage: "person.badge.plus")
+                        TintedLabel(L10n.Settings.Notifications.newContactDiscovered, systemImage: "person.badge.plus")
                     }
                     Toggle(isOn: $preferences.reactionNotificationsEnabled) {
-                        Label(L10n.Settings.Notifications.reactions, systemImage: "face.smiling")
+                        TintedLabel(L10n.Settings.Notifications.reactions, systemImage: "face.smiling")
                     }
                     Toggle(isOn: $preferences.lowBatteryEnabled) {
-                        Label(L10n.Settings.Notifications.lowBattery, systemImage: "battery.25")
+                        TintedLabel(L10n.Settings.Notifications.lowBattery, systemImage: "battery.25")
                     }
                 }
             } else {

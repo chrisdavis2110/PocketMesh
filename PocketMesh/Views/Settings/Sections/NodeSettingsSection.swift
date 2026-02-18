@@ -16,7 +16,7 @@ struct NodeSettingsSection: View {
         Section {
             // Node Name
             HStack {
-                Label(L10n.Settings.Node.name, systemImage: "person.text.rectangle")
+                TintedLabel(L10n.Settings.Node.name, systemImage: "person.text.rectangle")
                 Spacer()
                 Button(appState.connectedDevice?.nodeName ?? L10n.Settings.Node.unknown) {
                     nodeName = appState.connectedDevice?.nodeName ?? ""
@@ -34,12 +34,7 @@ struct NodeSettingsSection: View {
                     UIPasteboard.general.string = hex
                 } label: {
                     HStack {
-                        Label {
-                            Text(L10n.Settings.DeviceInfo.publicKey)
-                        } icon: {
-                            Image(systemName: "key")
-                                .foregroundStyle(.tint)
-                        }
+                        TintedLabel(L10n.Settings.DeviceInfo.publicKey, systemImage: "key")
                         Spacer()
                         Text(L10n.Settings.Node.copy)
                             .foregroundStyle(.tint)

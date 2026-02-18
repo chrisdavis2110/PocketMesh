@@ -15,7 +15,7 @@ struct DiagnosticsSection: View {
                 exportLogs()
             } label: {
                 HStack {
-                    Label(L10n.Settings.Diagnostics.exportLogs, systemImage: "arrow.up.doc")
+                    TintedLabel(L10n.Settings.Diagnostics.exportLogs, systemImage: "arrow.up.doc")
                     Spacer()
                     if isExporting {
                         ProgressView()
