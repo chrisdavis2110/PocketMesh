@@ -213,7 +213,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     public func stop() async {
         logger.info("Stopping MeshCore session...")
         isRunning = false
+        stopAutoMessageFetching()
         receiveTask?.cancel()
+        await dispatcher.finishAllSubscriptions()
         logger.info("Disconnecting transport...")
         await transport.disconnect()
         updateConnectionState(.disconnected)

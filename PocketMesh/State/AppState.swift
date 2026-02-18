@@ -90,12 +90,14 @@ public final class AppState {
     /// app is still disconnected. Covers edge cases where scene-phase callbacks are missed.
     private var activeRecoveryFallbackTask: Task<Void, Never>?
 
+    /// Task consuming SettingsService event stream, canceled on disconnect
+    private var settingsEventsTask: Task<Void, Never>?
+
 #if DEBUG
     /// Optional test-only hooks for deterministic lifecycle ordering tests.
     private var bleEnterBackgroundOverride: (@MainActor () async -> Void)?
     private var bleBecomeActiveOverride: (@MainActor () async -> Void)?
 #endif
-
 
     // MARK: - Onboarding State
 
@@ -191,6 +193,8 @@ public final class AppState {
     /// Wire services to message event broadcaster
     func wireServicesIfConnected() async {
         guard let services else {
+            settingsEventsTask?.cancel()
+            settingsEventsTask = nil
             syncCoordinator = nil
             connectionUI.handleDisconnect(
                 connectionState: connectionState,
@@ -236,7 +240,8 @@ public final class AppState {
 
         // Consume settings service event stream
         // Updates connectedDevice when settings are changed via SettingsService
-        Task { [weak self] in
+        settingsEventsTask?.cancel()
+        settingsEventsTask = Task { [weak self] in
             guard let self else { return }
             for await event in await services.settingsService.events() {
                 switch event {
