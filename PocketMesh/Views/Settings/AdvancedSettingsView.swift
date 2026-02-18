@@ -67,6 +67,11 @@ struct AdvancedSettingsView: View {
         .task(id: appState.connectedDevice?.id) {
             loadOCVFromDevice()
         }
+        .onChange(of: appState.connectedDevice) { _, newDevice in
+            if newDevice == nil {
+                dismiss()
+            }
+        }
     }
 
     private var refreshTaskID: String {
