@@ -298,6 +298,34 @@ public actor BLEStateMachine: BLEStateMachineProtocol {
         return connectedPeripherals.contains { $0.identifier == deviceID }
     }
 
+    /// Starts a best-effort adoption of an already system-connected peripheral.
+    ///
+    /// When iOS keeps the BLE link alive but state restoration does not fire (common across app updates),
+    /// `retrieveConnectedPeripherals` may report the radio as system-connected while our state machine
+    /// remains `.idle`. In that scenario, we can adopt the existing link by running the restoration
+    /// discovery chain against the connected peripheral.
+    ///
+    /// - Parameter deviceID: The UUID of the device to adopt.
+    /// - Returns: `true` if an adoption attempt was started.
+    public func startAdoptingSystemConnectedPeripheral(_ deviceID: UUID) -> Bool {
+        activate()
+
+        guard case .idle = phase else {
+            logger.info("[BLE] adoptSystemConnectedPeripheral skipped - phase: \(self.phase.name)")
+            return false
+        }
+
+        let connectedPeripherals = centralManager.retrieveConnectedPeripherals(withServices: [nordicUARTServiceUUID])
+        guard let peripheral = connectedPeripherals.first(where: { $0.identifier == deviceID }) else {
+            return false
+        }
+
+        let pState = peripheralStateString(peripheral.state)
+        logger.info("[BLE] Adopting system-connected peripheral: \(deviceID.uuidString.prefix(8)), state: \(pState)")
+        handleRestoredPeripheral(peripheral)
+        return true
+    }
+
     // MARK: - Event Handler Registration
 
     /// Sets a handler for disconnection events

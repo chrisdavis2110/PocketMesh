@@ -475,6 +475,71 @@ public final class ConnectionManager {
         return await stateMachine.isDeviceConnectedToSystem(deviceID)
     }
 
+    /// Attempts to adopt a system-connected BLE link for the *last connected* device.
+    ///
+    /// iOS can keep a BLE link alive across app termination (notably after app updates) while state
+    /// restoration does not fire for the new process. In that case, CoreBluetooth may report the
+    /// radio as system-connected even though our state machine is `.idle`.
+    ///
+    /// Rather than treating this as "connected elsewhere" and blocking reconnect, we can adopt the
+    /// existing link by running the restoration discovery chain against the connected peripheral.
+    ///
+    /// - Returns: `true` if an adoption attempt was started.
+    private func startAdoptingLastSystemConnectedPeripheralIfAvailable(
+        deviceID: UUID,
+        context: String
+    ) async -> Bool {
+        guard deviceID == lastConnectedDeviceID else { return false }
+        guard currentTransportType == nil || currentTransportType == .bluetooth else { return false }
+        guard connectionState == .disconnected else { return false }
+        guard connectionIntent.wantsConnection else { return false }
+
+        // Don't interfere with iOS auto-reconnect or an active BLE connection.
+        guard !(await stateMachine.isAutoReconnecting) else { return false }
+        if await stateMachine.isConnected, await stateMachine.connectedDeviceID == deviceID {
+            return false
+        }
+
+        // Avoid doing teardown/UI transitions when there is no system-level link.
+        guard await stateMachine.isDeviceConnectedToSystem(deviceID) else { return false }
+
+        let bleState = await stateMachine.centralManagerStateName
+        let blePhase = await stateMachine.currentPhaseName
+        let blePeripheralState = await stateMachine.currentPeripheralState ?? "none"
+        logger.warning(
+            "[BLE] \(context): device appears system-connected while disconnected; attempting adoption - " +
+            "device=\(deviceID.uuidString.prefix(8)), " +
+            "bleState=\(bleState), " +
+            "blePhase=\(blePhase), " +
+            "blePeripheralState=\(blePeripheralState)"
+        )
+
+        // Prepare session layer + UI timeout window before starting adoption.
+        await reconnectionCoordinator.handleEnteringAutoReconnect(deviceID: deviceID)
+
+        let started = await stateMachine.startAdoptingSystemConnectedPeripheral(deviceID)
+        guard started else {
+            logger.warning("[BLE] \(context): startAdoptingSystemConnectedPeripheral returned false after system-connected preflight")
+            // Undo UI timeout + state changes so downstream health checks remain accurate.
+            reconnectionCoordinator.cancelTimeout()
+            reconnectionCoordinator.clearReconnectingDevice()
+            if connectionState == .connecting {
+                connectionState = .disconnected
+            }
+            return false
+        }
+
+        persistDisconnectDiagnostic(
+            "source=\(context).adoptSystemConnectedPeripheral, " +
+            "device=\(deviceID.uuidString.prefix(8)), " +
+            "bleState=\(bleState), " +
+            "blePhase=\(blePhase), " +
+            "blePeripheralState=\(blePeripheralState), " +
+            "intent=\(connectionIntent)"
+        )
+        return true
+    }
+
     // MARK: - BLE Scanning
 
     /// Starts scanning for nearby BLE devices and returns an AsyncStream of (deviceID, rssi) discoveries.
@@ -978,6 +1043,15 @@ public final class ConnectionManager {
             await handleConnectionLoss(deviceID: deviceID, error: nil)
         }
 
+        // If iOS kept a system-level BLE link alive (common across app updates) but our state machine is idle,
+        // adopt the existing connection rather than treating it as "connected elsewhere".
+        if await startAdoptingLastSystemConnectedPeripheralIfAvailable(
+            deviceID: deviceID,
+            context: "checkBLEConnectionHealth"
+        ) {
+            return
+        }
+
         // Don't reconnect if device is connected to another app
         if await isDeviceConnectedToOtherApp(deviceID) {
             let blePeripheralState = await stateMachine.currentPeripheralState ?? "none"
@@ -1302,6 +1376,15 @@ public final class ConnectionManager {
                 return
             }
 
+            // If iOS kept the BLE link alive (common across app updates) but restoration didn't fire,
+            // adopt the system-connected peripheral rather than treating it as "connected elsewhere".
+            if await startAdoptingLastSystemConnectedPeripheralIfAvailable(
+                deviceID: lastDeviceID,
+                context: "activate"
+            ) {
+                return
+            }
+
             // Check if device is connected to another app before auto-reconnect
             // Silently skip per HIG: minimize interruptions on app launch
             if await isDeviceConnectedToOtherApp(lastDeviceID) {
@@ -1464,6 +1547,20 @@ public final class ConnectionManager {
                 logger.warning(
                     "[BLE] Deferring to iOS auto-reconnect for device \(deviceID.uuidString.prefix(8)) - connectionState: \(String(describing: connectionState)), blePhase: \(blePhase), blePeripheralState: \(blePeripheralState)"
                 )
+                return
+            }
+        }
+
+        // If the user is reconnecting to the last radio and iOS still has a system-level BLE link
+        // (common after app updates), adopt the existing link rather than blocking as "connected elsewhere".
+        if deviceID == lastConnectedDeviceID {
+            connectionIntent = .wantsConnection(forceFullSync: forceFullSync)
+            connectionIntent.persist()
+
+            if await startAdoptingLastSystemConnectedPeripheralIfAvailable(
+                deviceID: deviceID,
+                context: "connect(to:)"
+            ) {
                 return
             }
         }
