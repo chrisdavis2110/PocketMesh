@@ -3497,6 +3497,8 @@ public enum L10n {
       /// Location: ToolsView.swift - Tool selection label
       public static let lineOfSight = L10n.tr("Tools", "tools.lineOfSight", fallback: "Line of Sight")
       /// Location: ToolsView.swift - Tool selection label
+      public static let nodeDiscovery = L10n.tr("Tools", "tools.nodeDiscovery", fallback: "Discover Nodes")
+      /// Location: ToolsView.swift - Tool selection label
       public static let noiseFloor = L10n.tr("Tools", "tools.noiseFloor", fallback: "Noise Floor")
       /// Location: ToolsView.swift - Tool selection label
       public static let rxLog = L10n.tr("Tools", "tools.rxLog", fallback: "RX Log")
@@ -3809,6 +3811,66 @@ public enum L10n {
           /// Location: LOSRepeaterTargetPinView.swift - Accessibility hint for repeater target
           public static let accessibilityHint = L10n.tr("Tools", "tools.lineOfSight.repeaterTarget.accessibilityHint", fallback: "Repeater placement marker")
         }
+      }
+      public enum NodeDiscovery {
+        /// Location: NodeDiscoveryView.swift - Error alert title
+        public static let errorTitle = L10n.tr("Tools", "tools.nodeDiscovery.errorTitle", fallback: "Scan Failed")
+        /// Location: NodeDiscoveryView.swift - No results empty state title
+        public static func noResults(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.nodeDiscovery.noResults", String(describing: p1), fallback: "No %@ Found")
+        }
+        /// Location: NodeDiscoveryView.swift - No results empty state description
+        public static func noResultsDescription(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.nodeDiscovery.noResultsDescription", String(describing: p1), fallback: "No %@ responded to the discovery ping. Try again or move closer to the mesh.")
+        }
+        /// Location: NodeDiscoveryView.swift - Disconnected state description
+        public static func notConnectedDescription(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.nodeDiscovery.notConnectedDescription", String(describing: p1), fallback: "Connect to a mesh radio to discover %@.")
+        }
+        /// Location: NodeDiscoveryView.swift - Segment label
+        public static let repeaters = L10n.tr("Tools", "tools.nodeDiscovery.repeaters", fallback: "Repeaters")
+        /// Location: NodeDiscoveryRowView.swift - RSSI label
+        public static func rssi(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.nodeDiscovery.rssi", String(describing: p1), fallback: "RSSI %@ dBm")
+        }
+        /// Location: NodeDiscoveryView.swift - Scan button label (idle)
+        public static func scanButton(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.nodeDiscovery.scanButton", String(describing: p1), fallback: "Scan for %@")
+        }
+        /// Location: NodeDiscoveryView.swift - Initial empty state title
+        public static func scanPrompt(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.nodeDiscovery.scanPrompt", String(describing: p1), fallback: "Scan for %@")
+        }
+        /// Location: NodeDiscoveryView.swift - Initial empty state description
+        public static func scanPromptDescription(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.nodeDiscovery.scanPromptDescription", String(describing: p1), fallback: "Tap the button below to discover nearby %@.")
+        }
+        /// Location: NodeDiscoveryView.swift - Segment label
+        public static let sensors = L10n.tr("Tools", "tools.nodeDiscovery.sensors", fallback: "Sensors")
+        /// Location: NodeDiscoveryRowView.swift - SNR label (local receive)
+        public static func snrDown(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.nodeDiscovery.snrDown", String(describing: p1), fallback: "↓ %@ dB")
+        }
+        /// Location: NodeDiscoveryRowView.swift - SNR label (remote receive)
+        public static func snrUp(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.nodeDiscovery.snrUp", String(describing: p1), fallback: "↑ %@ dB")
+        }
+        /// Location: NodeDiscoveryView.swift - Sort menu accessibility label
+        public static let sortMenu = L10n.tr("Tools", "tools.nodeDiscovery.sortMenu", fallback: "Sort nodes")
+        /// Location: NodeDiscoveryView.swift - Sort menu accessibility hint
+        public static let sortMenuHint = L10n.tr("Tools", "tools.nodeDiscovery.sortMenuHint", fallback: "Changes the sort order of discovered nodes")
+        /// Location: NodeDiscoveryView.swift - Sort option
+        public static let sortName = L10n.tr("Tools", "tools.nodeDiscovery.sortName", fallback: "Name")
+        /// Location: NodeDiscoveryView.swift - Sort option
+        public static let sortSignal = L10n.tr("Tools", "tools.nodeDiscovery.sortSignal", fallback: "Signal Strength")
+        /// Location: NodeDiscoveryView.swift - Scan button label (scanning)
+        public static let stopButton = L10n.tr("Tools", "tools.nodeDiscovery.stopButton", fallback: "Stop Scanning")
+        /// Location: NodeDiscoveryRowView.swift - Node type: repeater
+        public static let typeRepeater = L10n.tr("Tools", "tools.nodeDiscovery.typeRepeater", fallback: "Repeater")
+        /// Location: NodeDiscoveryRowView.swift - Node type: sensor
+        public static let typeSensor = L10n.tr("Tools", "tools.nodeDiscovery.typeSensor", fallback: "Sensor")
+        /// Location: NodeDiscoveryRowView.swift - Unknown node name fallback
+        public static let unknownNode = L10n.tr("Tools", "tools.nodeDiscovery.unknownNode", fallback: "Unknown")
       }
       public enum NoiseFloor {
         /// Location: NoiseFloorView.swift - Average label
