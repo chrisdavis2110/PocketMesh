@@ -12,12 +12,17 @@ struct ToolsView: View {
         case noiseFloor
         case nodeDiscovery
         case cli
+
+        var requiresRadio: Bool {
+            self != .lineOfSight
+        }
     }
 
     private enum SidebarDestination: Hashable {
         case lineOfSightPoints
     }
 
+    @Environment(\.appState) private var appState
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var selectedTool: ToolSelection?
@@ -79,6 +84,13 @@ struct ToolsView: View {
                 if sidebarPath.isEmpty, isShowingLineOfSightPoints {
                     isShowingLineOfSightPoints = false
                     selectedTool = nil
+                }
+            }
+            .onChange(of: appState.connectedDevice) { _, newDevice in
+                if newDevice == nil, selectedTool?.requiresRadio == true {
+                    selectedTool = nil
+                    isShowingLineOfSightPoints = false
+                    sidebarPath = NavigationPath()
                 }
             }
         } else {
