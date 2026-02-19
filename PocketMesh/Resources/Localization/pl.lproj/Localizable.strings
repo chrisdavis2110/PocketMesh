@@ -165,6 +165,15 @@
 "notifications.action.markAsRead" = "Oznacz jako przeczytane";
 
 
+// MARK: - Low Battery Notifications
+
+/* Notification title for low battery warning */
+"notifications.lowBattery.title" = "Niski poziom baterii";
+
+/* Notification body for low battery warning - %1$@ is device name, %2$d is battery percentage */
+"notifications.lowBattery.body" = "Bateria %1$@ na poziomie %2$d%%";
+
+
 // MARK: - Connection VoiceOver Announcements
 
 /* VoiceOver announcement when sync fails and device is disconnecting */

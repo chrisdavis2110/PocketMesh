@@ -21,4 +21,14 @@ public protocol NotificationStringProvider: Sendable {
 
     /// Returns the localized title for the "Mark as Read" notification action.
     var markAsReadActionTitle: String { get }
+
+    /// Returns the localized title for a low battery warning notification.
+    var lowBatteryTitle: String { get }
+
+    /// Returns the localized body for a low battery warning notification.
+    /// - Parameters:
+    ///   - deviceName: The name of the device with low battery
+    ///   - percentage: The current battery percentage
+    /// - Returns: Localized notification body
+    func lowBatteryBody(deviceName: String, percentage: Int) -> String
 }

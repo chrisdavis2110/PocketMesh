@@ -1894,6 +1894,14 @@ public enum L10n {
         /// Notification title when a new room is discovered on the mesh network
         public static let room = L10n.tr("Localizable", "notifications.discovery.room", fallback: "New Room Discovered")
       }
+      public enum LowBattery {
+        /// Notification body for low battery warning - %1$@ is device name, %2$d is battery percentage
+        public static func body(_ p1: Any, _ p2: Int) -> String {
+          return L10n.tr("Localizable", "notifications.lowBattery.body", String(describing: p1), p2, fallback: "%1$@ battery is at %2$d%%")
+        }
+        /// Notification title for low battery warning
+        public static let title = L10n.tr("Localizable", "notifications.lowBattery.title", fallback: "Low Battery")
+      }
       public enum Reaction {
         /// Notification body when someone reacts to your message - %1$@ is the emoji, %2$@ is the message preview
         public static func body(_ p1: Any, _ p2: Any) -> String {

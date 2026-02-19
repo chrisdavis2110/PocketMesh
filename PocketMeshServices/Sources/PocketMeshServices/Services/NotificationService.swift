@@ -549,8 +549,9 @@ public final class NotificationService: NSObject {
         guard preferences.lowBatteryEnabled else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "Low Battery"
-        content.body = "\(deviceName) battery is at \(batteryPercentage)%"
+        content.title = stringProvider?.lowBatteryTitle ?? "Low Battery"
+        content.body = stringProvider?.lowBatteryBody(deviceName: deviceName, percentage: batteryPercentage)
+            ?? "\(deviceName) battery is at \(batteryPercentage)%"
         content.sound = preferences.soundEnabled ? .default : nil
         content.categoryIdentifier = NotificationCategory.lowBattery.rawValue
         content.userInfo = [
