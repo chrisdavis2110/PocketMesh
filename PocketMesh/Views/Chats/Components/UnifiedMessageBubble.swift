@@ -213,9 +213,9 @@ struct UnifiedMessageBubble: View {
                 }
             }
         }
-        .padding(.horizontal)
-        .padding(.top, showDirectionGap ? 12 : (showSenderName ? 8 : 2))
-        .padding(.bottom, message.isOutgoing ? 4 : 2)
+        .padding(.horizontal, 12)
+        .padding(.top, showDirectionGap ? 8 : (showSenderName ? 6 : 2))
+        .padding(.bottom, 2)
         .onAppear {
             // Request preview/image fetch when cell becomes visible
             // ViewModel handles deduplication and cancellation
@@ -256,7 +256,7 @@ struct UnifiedMessageBubble: View {
                         .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.vertical, 6)
             }
 
         case .noPreview, .disabled:
@@ -270,7 +270,7 @@ struct UnifiedMessageBubble: View {
                             .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
                     }
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 6)
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(L10n.Chats.Chats.InlineImage.retryHint)
@@ -351,7 +351,7 @@ struct UnifiedMessageBubble: View {
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
 
             if isImageURL && showInlineImages {
                 embeddedImageContent
