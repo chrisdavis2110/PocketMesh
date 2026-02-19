@@ -10,6 +10,7 @@ struct ToolsView: View {
         case lineOfSight
         case rxLog
         case noiseFloor
+        case nodeDiscovery
         case cli
     }
 
@@ -38,6 +39,8 @@ struct ToolsView: View {
             L10n.Tools.Tools.rxLog
         case .noiseFloor:
             L10n.Tools.Tools.noiseFloor
+        case .nodeDiscovery:
+            L10n.Tools.Tools.nodeDiscovery
         case .cli:
             L10n.Tools.Tools.cli
         case .lineOfSight, .none:
@@ -106,6 +109,12 @@ struct ToolsView: View {
                     }
 
                     NavigationLink {
+                        NodeDiscoveryView()
+                    } label: {
+                        Label(L10n.Tools.Tools.nodeDiscovery, systemImage: "dot.radiowaves.left.and.right")
+                    }
+
+                    NavigationLink {
                         CLIToolView()
                     } label: {
                         Label(L10n.Tools.Tools.cli, systemImage: "terminal")
@@ -158,6 +167,14 @@ struct ToolsView: View {
                 }
 
                 Button {
+                    selectedTool = .nodeDiscovery
+                    isShowingLineOfSightPoints = false
+                    sidebarPath = NavigationPath()
+                } label: {
+                    Label(L10n.Tools.Tools.nodeDiscovery, systemImage: "dot.radiowaves.left.and.right")
+                }
+
+                Button {
                     selectedTool = .cli
                     isShowingLineOfSightPoints = false
                     sidebarPath = NavigationPath()
@@ -194,6 +211,8 @@ struct ToolsView: View {
             RxLogView()
         case .noiseFloor:
             NoiseFloorView()
+        case .nodeDiscovery:
+            NodeDiscoveryView()
         case .cli:
             CLIToolView()
         case .none:
