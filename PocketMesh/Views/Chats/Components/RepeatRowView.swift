@@ -11,15 +11,16 @@ struct RepeatRowView: View {
 
     var body: some View {
         HStack(alignment: .top) {
-            // Left side: Repeater name, hash, and hop count
+            // Left side: Repeater ID + name, hop count
             VStack(alignment: .leading, spacing: 2) {
-                Text(repeaterName)
-                    .font(.body)
-
-                Text(repeatEntry.repeaterHashFormatted)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospaced()
+                HStack {
+                    Text(repeatEntry.repeaterHashFormatted)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .monospaced()
+                    Text(repeaterName)
+                        .font(.body)
+                }
 
                 Text(hopCountText)
                     .font(.caption)
