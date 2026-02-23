@@ -398,9 +398,9 @@ struct TraceResultHopRow: View {
                     HStack {
                         Text(hashDisplay)
                             .font(.body.monospaced())
+                            .foregroundStyle(.secondary)
                         if let name = hop.resolvedName {
                             Text(name)
-                                .foregroundStyle(.secondary)
                         }
                     }
                     Text(L10n.Contacts.Contacts.Results.Hop.repeated)

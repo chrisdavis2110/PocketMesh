@@ -94,10 +94,23 @@ struct MessageActionsSheet: View {
 
     // MARK: - Header
 
+    private var senderNodeID: String? {
+        guard !message.isOutgoing,
+              let keyPrefix = message.senderKeyPrefix,
+              let firstByte = keyPrefix.first else { return nil }
+        return String(format: "%02X", firstByte)
+    }
+
     private var messagePreviewHeader: some View {
         VStack(alignment: .leading, spacing: 4) {
             ViewThatFits(in: .horizontal) {
                 HStack {
+                    if let senderNodeID {
+                        Text(senderNodeID)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .monospaced()
+                    }
                     Text(senderName)
                         .font(.subheadline)
                         .bold()
@@ -106,9 +119,17 @@ struct MessageActionsSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(senderName)
-                        .font(.subheadline)
-                        .bold()
+                    HStack(spacing: 6) {
+                        if let senderNodeID {
+                            Text(senderNodeID)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .monospaced()
+                        }
+                        Text(senderName)
+                            .font(.subheadline)
+                            .bold()
+                    }
                     messageTimestamp
                 }
             }
