@@ -519,8 +519,9 @@ struct ErrorHandlingTests {
         viewModel.setError("Test error")
         #expect(viewModel.errorMessage != nil)
 
-        // Wait slightly more than the auto-clear delay
-        try await Task.sleep(for: .milliseconds(150))
+        try await waitUntil(timeout: .seconds(1), "error should auto-clear after delay") {
+            viewModel.errorMessage == nil
+        }
 
         #expect(viewModel.errorMessage == nil)
     }

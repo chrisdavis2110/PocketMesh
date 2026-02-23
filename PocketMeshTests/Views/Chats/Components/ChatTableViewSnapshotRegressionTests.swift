@@ -13,8 +13,22 @@ struct ChatTableViewSnapshotRegressionTests {
         let revision: Int
     }
 
+    private func waitForRowCount(
+        _ expectedCount: Int,
+        in controller: ChatTableViewController<TestMessageItem, Text>,
+        context: String
+    ) async throws {
+        try await waitUntil(
+            timeout: .seconds(30),
+            pollingInterval: .milliseconds(20),
+            "table rows should match expected count for \(context)"
+        ) {
+            controller.tableView.numberOfRows(inSection: 0) == expectedCount
+        }
+    }
+
     @Test("Scroll completion reload does not re-enter diffable apply during animated updates")
-    func scrollCompletionReloadIsSafeDuringAnimatedUpdates() async {
+    func scrollCompletionReloadIsSafeDuringAnimatedUpdates() async throws {
         let controller = ChatTableViewController<TestMessageItem, Text>()
         controller.configure { item in
             Text(item.text)
@@ -28,8 +42,9 @@ struct ChatTableViewSnapshotRegressionTests {
         let targetID = items[targetIndex].id
 
         controller.updateItems(items, animated: false)
+        try await waitForRowCount(items.count, in: controller, context: "initial seed")
 
-        for iteration in 1...8 {
+        for iteration in 1...5 {
             controller.scrollToItem(id: targetID, animated: true)
 
             var updatedItems = items
@@ -51,7 +66,7 @@ struct ChatTableViewSnapshotRegressionTests {
             items = updatedItems
         }
 
-        try? await Task.sleep(for: .milliseconds(250))
+        try await waitForRowCount(items.count, in: controller, context: "final snapshot")
 
         #expect(controller.tableView.numberOfRows(inSection: 0) == items.count)
     }

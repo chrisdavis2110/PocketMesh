@@ -27,6 +27,7 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
     public var currentPeripheralState: String? { stubbedCurrentPeripheralState }
     public var centralManagerStateName: String { stubbedCentralManagerStateName }
     public var isBluetoothPoweredOff: Bool { stubbedIsBluetoothPoweredOff }
+    public var hasAutoReconnectingHandler: Bool { autoReconnectingHandler != nil }
 
     // MARK: - Recorded Invocations
 

@@ -38,26 +38,21 @@ jobs:
           submodules: recursive
 
       - name: Install dependencies
-        run: brew install xcodegen swiftgen
+        run: |
+          command -v xcodegen >/dev/null 2>&1 || brew install xcodegen
+          command -v swiftgen >/dev/null 2>&1 || brew install swiftgen
 
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Cache SPM packages
-        uses: actions/cache@v4
+      - name: Cache Xcode build
+        uses: irgaly/xcode-cache@v1
         with:
-          path: |
-            ~/Library/Caches/org.swift.swiftpm
-            ~/Library/org.swift.swiftpm
-          key: spm-${{ hashFiles('**/Package.resolved') }}
-          restore-keys: spm-
-
-      - name: Cache DerivedData
-        uses: actions/cache@v4
-        with:
-          path: .derivedData
-          key: deriveddata-${{ hashFiles('**/*.swift', '**/project.yml') }}
-          restore-keys: deriveddata-
+          key: xcode-deriveddata-${{ github.workflow }}-${{ github.sha }}
+          restore-keys: |
+            xcode-deriveddata-${{ github.workflow }}-
+          deriveddata-directory: .derivedData
+          delete-used-deriveddata-cache: true
 
       - name: Boot simulator
         run: |
@@ -81,7 +76,9 @@ jobs:
             -derivedDataPath .derivedData \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            GCC_GENERATE_DEBUGGING_SYMBOLS=NO
 
       - name: Run tests
         run: |
@@ -89,4 +86,7 @@ jobs:
             -scheme PocketMesh \
             -destination "platform=iOS Simulator,name=iPhone 16e" \
             -derivedDataPath .derivedData \
-            -resultBundlePath TestResults.xcresult
+            -resultBundlePath TestResults.xcresult \
+            -parallel-testing-enabled NO \
+            -enableCodeCoverage NO \
+            -collect-test-diagnostics never

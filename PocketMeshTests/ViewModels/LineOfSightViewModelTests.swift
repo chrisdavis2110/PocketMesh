@@ -250,6 +250,39 @@ private func createTestContact(
     )
 }
 
+@MainActor
+private func waitForPointAElevation(_ viewModel: LineOfSightViewModel) async throws {
+    try await waitUntil("point A elevation should load") {
+        guard let pointA = viewModel.pointA else { return false }
+        return pointA.groundElevation != nil && pointA.isLoadingElevation == false
+    }
+}
+
+@MainActor
+private func waitForPointBElevation(_ viewModel: LineOfSightViewModel) async throws {
+    try await waitUntil("point B elevation should load") {
+        guard let pointB = viewModel.pointB else { return false }
+        return pointB.groundElevation != nil && pointB.isLoadingElevation == false
+    }
+}
+
+@MainActor
+private func waitForBothPointElevations(_ viewModel: LineOfSightViewModel) async throws {
+    try await waitUntil("both point elevations should load") {
+        viewModel.canAnalyze
+    }
+}
+
+@MainActor
+private func waitForAnalysisResult(_ viewModel: LineOfSightViewModel) async throws {
+    try await waitUntil(timeout: .seconds(5), "analysis should produce result") {
+        if case .result = viewModel.analysisStatus {
+            return true
+        }
+        return false
+    }
+}
+
 // MARK: - Initial State Tests
 
 @Suite("LineOfSightViewModel Initial State")
@@ -473,8 +506,10 @@ struct ElevationFetchingTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
 
-        // Wait for elevation fetch
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitUntil("point A elevation should be loaded") {
+            guard let pointA = viewModel.pointA else { return false }
+            return pointA.groundElevation == 100 && pointA.isLoadingElevation == false
+        }
 
         #expect(viewModel.pointA?.groundElevation == 100)
         #expect(viewModel.pointA?.isLoadingElevation == false)
@@ -576,21 +611,21 @@ struct HeightAdjustmentTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForBothPointElevations(viewModel)
 
         viewModel.analyze()
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForAnalysisResult(viewModel)
 
-        // Should have a result
         if case .result = viewModel.analysisStatus {
-            // Now change height
             viewModel.updateAdditionalHeight(for: .pointA, meters: 5)
-
-            // Should be back to idle
+            try await waitUntil("analysis should be invalidated after height change") {
+                viewModel.analysisStatus == .idle
+            }
             #expect(viewModel.analysisStatus == .idle)
-        } else {
-            Issue.record("Expected analysis result before height change")
+            return
         }
+
+        Issue.record("Expected analysis result before height change")
     }
 }
 
@@ -737,7 +772,7 @@ struct AnalysisTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForBothPointElevations(viewModel)
 
         // Start analysis but don't wait for it
         viewModel.analyze()
@@ -756,10 +791,10 @@ struct AnalysisTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForBothPointElevations(viewModel)
 
         viewModel.analyze()
-        try await Task.sleep(for: .milliseconds(300))
+        try await waitForAnalysisResult(viewModel)
 
         if case .result(let result) = viewModel.analysisStatus {
             #expect(result.distanceMeters > 0)
@@ -802,13 +837,20 @@ struct AnalysisTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("both point elevations should load before analyze") {
+            viewModel.canAnalyze
+        }
 
         // Now make the service fail for the analysis fetch
         await mockService.setFailure(true)
 
         viewModel.analyze()
-        try await Task.sleep(for: .milliseconds(300))
+        try await waitUntil("analysis should transition to error") {
+            if case .error = viewModel.analysisStatus {
+                return true
+            }
+            return false
+        }
 
         if case .error = viewModel.analysisStatus {
             // Expected

@@ -247,16 +247,25 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable, Ce
         }
 
         isApplyingSnapshot = true
-        dataSource.apply(request.snapshot, animatingDifferences: request.animatingDifferences) { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.isApplyingSnapshot = false
+        let shouldAnimate = request.animatingDifferences && view.window != nil
 
-                guard !self.pendingSnapshotApplies.isEmpty else { return }
-                let nextRequest = self.pendingSnapshotApplies.removeFirst()
-                self.applySnapshotRequest(nextRequest)
+        if shouldAnimate {
+            dataSource.apply(request.snapshot, animatingDifferences: true) { [weak self] in
+                Task { @MainActor [weak self] in
+                    self?.drainSnapshotQueue()
+                }
             }
+        } else {
+            dataSource.apply(request.snapshot, animatingDifferences: false)
+            drainSnapshotQueue()
         }
+    }
+
+    private func drainSnapshotQueue() {
+        isApplyingSnapshot = false
+        guard !pendingSnapshotApplies.isEmpty else { return }
+        let nextRequest = pendingSnapshotApplies.removeFirst()
+        applySnapshotRequest(nextRequest)
     }
 
     func updateItems(_ newItems: [Item], animated: Bool = true) {

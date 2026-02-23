@@ -21,7 +21,9 @@ struct ConnectionManagerBLEScanningTests {
         let expectedID = UUID()
         let receiveTask = Task { await nextValue(from: stream, timeout: .seconds(1)) }
 
-        await Task.yield()
+        try await waitUntil("BLE scanning should start") {
+            await mock.isScanning
+        }
         await mock.simulateDiscoveredDevice(id: expectedID, rssi: -68)
 
         let discovery = await receiveTask.value
@@ -61,13 +63,17 @@ struct ConnectionManagerBLEScanningTests {
         let consumeTask1 = Task {
             for await _ in stream1 {}
         }
-        await Task.yield()
+        try await waitUntil("stream1 scanning should start") {
+            await mock.isScanning
+        }
 
         let stream2 = manager.startBLEScanning()
         let consumeTask2 = Task {
             for await _ in stream2 {}
         }
-        await Task.yield()
+        try await waitUntil("stream2 scanning should start") {
+            await mock.startScanningCallCount == 2
+        }
 
         consumeTask1.cancel()
         _ = await consumeTask1.result

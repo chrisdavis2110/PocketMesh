@@ -30,8 +30,11 @@ struct ConnectionManagerDisconnectDiagnosticsTests {
             connectionIntent: .wantsConnection()
         )
 
-        // Yield to let handler wiring task from ConnectionManager init complete
-        await Task.yield()
+        // Wait for ConnectionManager init to wire auto-reconnect handler.
+        try await waitUntil("auto-reconnect handler should be installed") {
+            await mock.hasAutoReconnectingHandler
+        }
+
         await mock.simulateAutoReconnecting(
             deviceID: deviceID,
             errorInfo: "domain=CBErrorDomain, code=15, desc=Failed to encrypt"
