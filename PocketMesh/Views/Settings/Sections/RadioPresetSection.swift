@@ -97,24 +97,20 @@ struct RadioPresetSection: View {
 
             let detailPresets = isRepeatEnabled ? repeatPresets : presets
             if let preset = detailPresets.first(where: { $0.id == selectedPresetID }) {
-                // Display preset settings
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(preset.frequencyMHz, format: .number.precision(.fractionLength(3)).locale(.posix))
-                        .font(.caption.monospacedDigit()) +
-                    Text(" MHz \u{2022} BW\(preset.bandwidthKHz, format: .number.locale(.posix)) kHz \u{2022} SF\(preset.spreadingFactor) \u{2022} CR\(preset.codingRate)")
-                        .font(.caption)
-                }
+                RadioParameterText(
+                    frequencyMHz: preset.frequencyMHz,
+                    bandwidthKHz: preset.bandwidthKHz,
+                    spreadingFactor: preset.spreadingFactor,
+                    codingRate: preset.codingRate
+                )
                 .foregroundStyle(.secondary)
             } else if let device = appState.connectedDevice {
-                // Display device's current custom settings
-                let freqMHz = Double(device.frequency) / 1000.0
-                let bwKHz = Double(device.bandwidth) / 1000.0
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(freqMHz, format: .number.precision(.fractionLength(3)).locale(.posix))
-                        .font(.caption.monospacedDigit()) +
-                    Text(" MHz \u{2022} BW\(bwKHz, format: .number.locale(.posix)) kHz \u{2022} SF\(device.spreadingFactor) \u{2022} CR\(device.codingRate)")
-                        .font(.caption)
-                }
+                RadioParameterText(
+                    frequencyMHz: Double(device.frequency) / 1000.0,
+                    bandwidthKHz: Double(device.bandwidth) / 1000.0,
+                    spreadingFactor: device.spreadingFactor,
+                    codingRate: device.codingRate
+                )
                 .foregroundStyle(.secondary)
             }
 
