@@ -619,7 +619,7 @@ extension SyncCoordinator {
         lastUnresolvedChannelSummaryAt = now
     }
 
-    private nonisolated static func parseChannelMessage(_ text: String) -> (senderNodeName: String?, messageText: String) {
+    nonisolated static func parseChannelMessage(_ text: String) -> (senderNodeName: String?, messageText: String) {
         let parts = text.split(separator: ":", maxSplits: 1)
         if parts.count > 1 {
             let senderName = String(parts[0]).trimmingCharacters(in: .whitespaces)
