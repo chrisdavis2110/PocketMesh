@@ -13,9 +13,15 @@ struct MessagePathContent: View {
 
     @State private var copyHapticTrigger = 0
 
-    private var pathBytes: [UInt8] {
+    /// Path hops chunked by hash size, each as (hashData, hexString) pair
+    private var pathHops: [(data: Data, hex: String)] {
         guard let pathNodes = message.pathNodes else { return [] }
-        return Array(pathNodes)
+        let size = message.pathHashSize
+        return stride(from: 0, to: pathNodes.count, by: size).map { start in
+            let end = min(start + size, pathNodes.count)
+            let chunk = Data(pathNodes[start..<end])
+            return (chunk, chunk.hexString())
+        }
     }
 
     var body: some View {
@@ -39,14 +45,14 @@ struct MessagePathContent: View {
             )
 
             // Intermediate hops
-            ForEach(Array(pathBytes.enumerated()), id: \.offset) { index, byte in
+            ForEach(Array(pathHops.enumerated()), id: \.offset) { index, hop in
                 PathHopRowView(
                     hopType: .intermediate(index + 1),
                     nodeName: viewModel.repeaterName(
-                        for: byte,
+                        for: hop.data,
                         userLocation: userLocation
                     ),
-                    nodeID: String(format: "%02X", byte),
+                    nodeID: hop.hex,
                     snr: nil
                 )
             }
@@ -60,7 +66,7 @@ struct MessagePathContent: View {
             )
 
             // Raw path hex + copy button
-            if !pathBytes.isEmpty {
+            if !pathHops.isEmpty {
                 HStack {
                     Button(L10n.Chats.Chats.Path.copyButton, systemImage: "doc.on.doc") {
                         copyHapticTrigger += 1

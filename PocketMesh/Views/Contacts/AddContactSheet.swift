@@ -117,7 +117,7 @@ struct AddContactSheet: View {
                 publicKey: publicKeyData,
                 type: selectedType,
                 flags: 0,
-                outPathLength: -1,  // Flood routing
+                outPathLength: 0xFF,  // Flood routing
                 outPath: Data(),
                 name: contactName,
                 lastAdvertTimestamp: 0,  // Never advertised

@@ -179,6 +179,8 @@ extension MeshCoreNodeConfig {
         public var lastModified: UInt32
         /// Hex-encoded path data, or nil for no path
         public var outPath: String?
+        /// Path hash mode (0=1-byte, 1=2-byte, 2=3-byte). Nil in configs from older versions.
+        public var pathHashMode: UInt8?
 
         public init(
             type: UInt8,
@@ -190,7 +192,8 @@ extension MeshCoreNodeConfig {
             longitude: String,
             lastAdvert: UInt32,
             lastModified: UInt32,
-            outPath: String? = nil
+            outPath: String? = nil,
+            pathHashMode: UInt8? = nil
         ) {
             self.type = type
             self.name = name
@@ -202,6 +205,7 @@ extension MeshCoreNodeConfig {
             self.lastAdvert = lastAdvert
             self.lastModified = lastModified
             self.outPath = outPath
+            self.pathHashMode = pathHashMode
         }
 
         // swiftlint:disable:next nesting
@@ -212,6 +216,7 @@ extension MeshCoreNodeConfig {
             case lastAdvert = "last_advert"
             case lastModified = "last_modified"
             case outPath = "out_path"
+            case pathHashMode = "path_hash_mode"
         }
 
         /// Encodes with explicit `null` for nil `customName` and `outPath`,
@@ -228,6 +233,7 @@ extension MeshCoreNodeConfig {
             try container.encode(lastAdvert, forKey: .lastAdvert)
             try container.encode(lastModified, forKey: .lastModified)
             try container.encode(outPath, forKey: .outPath)
+            try container.encodeIfPresent(pathHashMode, forKey: .pathHashMode)
         }
     }
 }

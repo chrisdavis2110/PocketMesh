@@ -156,7 +156,7 @@ extension CLIToolViewModel {
             let loginResult = try await remoteNodeService.login(
                 sessionID: remoteSession.id,
                 password: password,
-                pathLength: UInt8(max(0, contact.outPathLength)),
+                pathLength: contact.outPathLength,
                 onTimeoutKnown: { [weak self] seconds in
                     await self?.startCountdown(seconds)
                 }
@@ -253,7 +253,7 @@ extension CLIToolViewModel {
         defer { isWaitingForResponse = false }
 
         do {
-            let timeout = LoginTimeoutConfig.timeout(forPathLength: UInt8(max(0, session.pathLength)))
+            let timeout = LoginTimeoutConfig.timeout(forPathLength: session.pathLength)
 
             let response = try await service.sendRawCommand(
                 sessionID: session.id,
@@ -352,10 +352,10 @@ extension CLIToolViewModel {
     private func formatRoute(_ contact: ContactDTO) -> String {
         if contact.isFloodRouted {
             return L10n.Contacts.Contacts.Route.flood
-        } else if contact.outPathLength == 0 {
+        } else if contact.pathHopCount == 0 {
             return L10n.Contacts.Contacts.Route.direct
         } else {
-            return L10n.Contacts.Contacts.Route.hops(Int(contact.outPathLength))
+            return L10n.Contacts.Contacts.Route.hops(contact.pathHopCount)
         }
     }
 }

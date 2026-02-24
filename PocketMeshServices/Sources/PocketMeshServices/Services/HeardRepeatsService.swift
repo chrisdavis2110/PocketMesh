@@ -99,6 +99,7 @@ public actor HeardRepeatsService {
                 messageID: message.id,
                 receivedAt: entry.receivedAt,
                 pathNodes: entry.pathNodes,
+                pathLength: entry.pathLength,
                 snr: entry.snr,
                 rssi: entry.rssi,
                 rxLogEntryID: entry.id

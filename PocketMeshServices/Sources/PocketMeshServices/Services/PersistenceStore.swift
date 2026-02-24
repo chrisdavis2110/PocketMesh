@@ -43,7 +43,13 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         BlockedChannelSender.self
     ])
 
-    /// Creates a ModelContainer for the app
+    /// Creates a ModelContainer for the app.
+    ///
+    /// Schema evolution (no VersionedSchema — handled via lightweight migration):
+    /// - v1→v2: Contact.outPathLength, DiscoveredNode.outPathLength changed Int8→UInt8
+    ///          (SQLite INTEGER is identical for both; bit pattern -1 == 0xFF).
+    ///          Added MessageRepeat.pathLength (UInt8, default 0).
+    ///          Added SavedTracePath.hashSize (Int, default 1).
     public static func createContainer(inMemory: Bool = false) throws -> ModelContainer {
         if !inMemory {
             let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -1862,12 +1868,14 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         deviceID: UUID,
         name: String,
         pathBytes: Data,
+        hashSize: Int = 1,
         initialRun: TracePathRunDTO?
     ) throws -> SavedTracePathDTO {
         let path = SavedTracePath(
             deviceID: deviceID,
             name: name,
-            pathBytes: pathBytes
+            pathBytes: pathBytes,
+            hashSize: hashSize
         )
 
         if let runDTO = initialRun {
@@ -2188,6 +2196,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             messageID: dto.messageID,
             receivedAt: dto.receivedAt,
             pathNodes: dto.pathNodes,
+            pathLength: dto.pathLength,
             snr: dto.snr,
             rssi: dto.rssi,
             rxLogEntryID: dto.rxLogEntryID

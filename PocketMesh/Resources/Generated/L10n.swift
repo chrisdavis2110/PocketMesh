@@ -3445,6 +3445,20 @@ public enum L10n {
       /// Toggle label for room messages notifications
       public static let roomMessages = L10n.tr("Settings", "notifications.roomMessages", fallback: "Room Messages")
     }
+    public enum PathHashMode {
+      /// Footer explaining path hash mode tradeoff
+      public static let footer = L10n.tr("Settings", "pathHashMode.footer", fallback: "Larger hashes reduce routing collisions but limit the maximum number of hops per path.")
+      /// Section header for path hash mode
+      public static let header = L10n.tr("Settings", "pathHashMode.header", fallback: "Path Hash Size")
+      /// Label for path hash mode picker
+      public static let label = L10n.tr("Settings", "pathHashMode.label", fallback: "Hash Size")
+      /// Path hash mode option: 1 byte
+      public static let oneByte = L10n.tr("Settings", "pathHashMode.oneByte", fallback: "1 Byte")
+      /// Path hash mode option: 3 bytes
+      public static let threeBytes = L10n.tr("Settings", "pathHashMode.threeBytes", fallback: "3 Bytes")
+      /// Path hash mode option: 2 bytes
+      public static let twoBytes = L10n.tr("Settings", "pathHashMode.twoBytes", fallback: "2 Bytes")
+    }
     public enum PublicKey {
       /// Button to copy key to clipboard
       public static let copy = L10n.tr("Settings", "publicKey.copy", fallback: "Copy to Clipboard")

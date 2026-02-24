@@ -33,8 +33,8 @@ public final class DiscoveredNode {
     /// Node longitude
     public var longitude: Double
 
-    /// Routing path length (-1 = flood)
-    public var outPathLength: Int8
+    /// Encoded routing path length (0xFF = flood)
+    public var outPathLength: UInt8
 
     /// Routing path data (up to 64 bytes)
     public var outPath: Data
@@ -49,7 +49,7 @@ public final class DiscoveredNode {
         lastAdvertTimestamp: UInt32,
         latitude: Double = 0,
         longitude: Double = 0,
-        outPathLength: Int8 = -1,
+        outPathLength: UInt8 = 0xFF,
         outPath: Data = Data()
     ) {
         self.id = id
@@ -79,7 +79,7 @@ public struct DiscoveredNodeDTO: Sendable, Equatable, Identifiable {
     public let lastAdvertTimestamp: UInt32
     public let latitude: Double
     public let longitude: Double
-    public let outPathLength: Int8
+    public let outPathLength: UInt8
     public let outPath: Data
 
     public var nodeType: ContactType {
@@ -100,7 +100,7 @@ public struct DiscoveredNodeDTO: Sendable, Equatable, Identifiable {
         lastAdvertTimestamp: UInt32,
         latitude: Double,
         longitude: Double,
-        outPathLength: Int8,
+        outPathLength: UInt8,
         outPath: Data
     ) {
         self.id = id

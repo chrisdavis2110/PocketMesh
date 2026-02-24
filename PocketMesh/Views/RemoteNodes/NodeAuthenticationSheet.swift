@@ -158,7 +158,7 @@ struct NodeAuthenticationSheet: View {
                 }
 
                 // Determine path length from contact for timeout calculation
-                let pathLength = UInt8(max(0, contact.outPathLength))
+                let pathLength = contact.outPathLength
 
                 let session: RemoteNodeSessionDTO
                 // MeshCore repeaters and rooms only support 15-character passwords, truncate if needed

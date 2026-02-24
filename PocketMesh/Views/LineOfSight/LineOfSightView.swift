@@ -1352,7 +1352,7 @@ extension View {
         name: "Test Contact",
         typeRawValue: 0,
         flags: 0,
-        outPathLength: -1,
+        outPathLength: 0xFF,
         outPath: Data(),
         lastAdvertTimestamp: 0,
         latitude: 37.7749,

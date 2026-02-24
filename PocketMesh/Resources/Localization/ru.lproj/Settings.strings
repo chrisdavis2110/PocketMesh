@@ -331,6 +331,27 @@
 /* Accessibility hint for voltage text field */
 "batteryCurve.accessibility.voltageHint" = "Введите ожидаемое напряжение при этом уровне заряда";
 
+// MARK: - Path Hash Mode Section
+
+/* Section header for path hash mode */
+"pathHashMode.header" = "Размер хеша пути";
+
+/* Label for path hash mode picker */
+"pathHashMode.label" = "Размер хеша";
+
+/* Path hash mode option: 1 byte */
+"pathHashMode.oneByte" = "1 байт";
+
+/* Path hash mode option: 2 bytes */
+"pathHashMode.twoBytes" = "2 байта";
+
+/* Path hash mode option: 3 bytes */
+"pathHashMode.threeBytes" = "3 байта";
+
+/* Footer explaining path hash mode tradeoff */
+"pathHashMode.footer" = "Более крупные хеши уменьшают коллизии маршрутизации, но ограничивают максимальное количество переходов на маршруте.";
+
+
 // MARK: - Battery Curve Section
 
 /* Section header for battery curve */

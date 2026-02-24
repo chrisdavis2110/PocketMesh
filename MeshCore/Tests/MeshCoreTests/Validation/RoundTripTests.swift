@@ -366,8 +366,8 @@ struct RoundTripTests {
         #expect(stats.rxAirtimeSeconds == rxAir)
     }
 
-    @Test("PacketStats round trip")
-    func packetStatsRoundTrip() {
+    @Test("PacketStats round trip (legacy 24-byte format)")
+    func packetStatsRoundTripLegacy() {
         var data = Data()
         let received: UInt32 = 1000
         let sent: UInt32 = 500
@@ -396,6 +396,42 @@ struct RoundTripTests {
         #expect(stats.directTx == directTx)
         #expect(stats.floodRx == floodRx)
         #expect(stats.directRx == directRx)
+        #expect(stats.receiveErrors == 0)
+    }
+
+    @Test("PacketStats round trip (28-byte format with receiveErrors)")
+    func packetStatsRoundTripWithReceiveErrors() {
+        var data = Data()
+        let received: UInt32 = 1000
+        let sent: UInt32 = 500
+        let floodTx: UInt32 = 100
+        let directTx: UInt32 = 400
+        let floodRx: UInt32 = 200
+        let directRx: UInt32 = 800
+        let receiveErrors: UInt32 = 42
+
+        data.append(contentsOf: withUnsafeBytes(of: received.littleEndian) { Data($0) })
+        data.append(contentsOf: withUnsafeBytes(of: sent.littleEndian) { Data($0) })
+        data.append(contentsOf: withUnsafeBytes(of: floodTx.littleEndian) { Data($0) })
+        data.append(contentsOf: withUnsafeBytes(of: directTx.littleEndian) { Data($0) })
+        data.append(contentsOf: withUnsafeBytes(of: floodRx.littleEndian) { Data($0) })
+        data.append(contentsOf: withUnsafeBytes(of: directRx.littleEndian) { Data($0) })
+        data.append(contentsOf: withUnsafeBytes(of: receiveErrors.littleEndian) { Data($0) })
+
+        let event = Parsers.PacketStats.parse(data)
+
+        guard case .statsPackets(let stats) = event else {
+            Issue.record("Expected .statsPackets event, got \(event)")
+            return
+        }
+
+        #expect(stats.received == received)
+        #expect(stats.sent == sent)
+        #expect(stats.floodTx == floodTx)
+        #expect(stats.directTx == directTx)
+        #expect(stats.floodRx == floodRx)
+        #expect(stats.directRx == directRx)
+        #expect(stats.receiveErrors == receiveErrors)
     }
 
     // MARK: - ChannelInfo Round-Trip
@@ -531,6 +567,84 @@ struct RoundTripTests {
         #expect(caps.maxChannels == 8)
         #expect(caps.blePin == blePin)
         #expect(caps.clientRepeat, "client_repeat should be true for v9 with byte=1")
+    }
+
+    @Test("DeviceInfo v10 pathHashMode round trip")
+    func deviceInfoV10PathHashModeRoundTrip() {
+        // Build a v10 device info response (81 bytes: 79 base + 1 client_repeat + 1 pathHashMode)
+        var data = Data()
+        let fwVer: UInt8 = 10
+        let maxContacts: UInt8 = 50
+        let maxChannels: UInt8 = 8
+        let blePin: UInt32 = 654321
+        let fwBuild = "20 Feb 2026"
+        let model = "T-Deck"
+        let version = "1.14.0"
+        let clientRepeat: UInt8 = 1
+        let pathHashMode: UInt8 = 2  // 3-byte hashes
+
+        data.append(fwVer)
+        data.append(maxContacts)
+        data.append(maxChannels)
+        data.append(contentsOf: withUnsafeBytes(of: blePin.littleEndian) { Data($0) })
+
+        let fwBuildPadded = fwBuild.data(using: .utf8)!.prefix(12)
+        data.append(fwBuildPadded)
+        data.append(Data(repeating: 0, count: 12 - fwBuildPadded.count))
+
+        let modelPadded = model.data(using: .utf8)!.prefix(40)
+        data.append(modelPadded)
+        data.append(Data(repeating: 0, count: 40 - modelPadded.count))
+
+        let versionPadded = version.data(using: .utf8)!.prefix(20)
+        data.append(versionPadded)
+        data.append(Data(repeating: 0, count: 20 - versionPadded.count))
+
+        data.append(clientRepeat)
+        data.append(pathHashMode)
+
+        #expect(data.count == 81, "v10 DeviceInfo should be 81 bytes (79 + client_repeat + pathHashMode)")
+
+        let event = Parsers.DeviceInfo.parse(data)
+
+        guard case .deviceInfo(let caps) = event else {
+            Issue.record("Expected .deviceInfo event, got \(event)")
+            return
+        }
+
+        #expect(caps.firmwareVersion == 10)
+        #expect(caps.maxContacts == 100)
+        #expect(caps.maxChannels == 8)
+        #expect(caps.blePin == blePin)
+        #expect(caps.clientRepeat, "client_repeat should be true")
+        #expect(caps.pathHashMode == 2, "pathHashMode should be 2 (3-byte hashes)")
+    }
+
+    @Test("DeviceInfo v9 defaults pathHashMode to 0")
+    func deviceInfoV9DefaultsPathHashMode() {
+        // v9 firmware doesn't include pathHashMode — it should default to 0
+        var data = Data()
+        data.append(9)   // fwVer
+        data.append(50)  // maxContacts
+        data.append(8)   // maxChannels
+        let blePin: UInt32 = 0
+        data.append(contentsOf: withUnsafeBytes(of: blePin.littleEndian) { Data($0) })
+        data.append(Data(repeating: 0, count: 12))  // fwBuild
+        data.append(Data(repeating: 0, count: 40))  // model
+        data.append(Data(repeating: 0, count: 20))  // version
+        data.append(0)  // client_repeat = disabled
+
+        #expect(data.count == 80, "v9 DeviceInfo should be 80 bytes")
+
+        let event = Parsers.DeviceInfo.parse(data)
+
+        guard case .deviceInfo(let caps) = event else {
+            Issue.record("Expected .deviceInfo event, got \(event)")
+            return
+        }
+
+        #expect(caps.firmwareVersion == 9)
+        #expect(caps.pathHashMode == 0, "v9 firmware should default pathHashMode to 0")
     }
 
     @Test("DeviceInfo v8 no client repeat round trip")

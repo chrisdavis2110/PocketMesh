@@ -2200,6 +2200,18 @@ public final class ConnectionManager {
         }
     }
 
+    /// Updates the connected device's path hash mode.
+    /// Called by SettingsService after path hash mode is successfully changed.
+    public func updatePathHashMode(_ mode: UInt8) {
+        guard let device = connectedDevice else { return }
+        let updated = device.copy { $0.pathHashMode = mode }
+        connectedDevice = updated
+
+        Task {
+            do { try await services?.dataStore.saveDevice(updated) } catch { logger.error("Failed to persist path hash mode: \(error)") }
+        }
+    }
+
     /// Saves the connected device's current radio settings as pre-repeat settings.
     /// Called before enabling repeat mode so settings can be restored later.
     public func savePreRepeatSettings() {
@@ -2577,6 +2589,7 @@ public final class ConnectionManager {
             longitude: selfInfo.longitude,
             blePin: capabilities.blePin,
             clientRepeat: capabilities.clientRepeat,
+            pathHashMode: capabilities.pathHashMode,
             preRepeatFrequency: existingDevice?.preRepeatFrequency,
             preRepeatBandwidth: existingDevice?.preRepeatBandwidth,
             preRepeatSpreadingFactor: existingDevice?.preRepeatSpreadingFactor,

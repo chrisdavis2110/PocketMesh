@@ -431,10 +431,19 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         Date(timeIntervalSince1970: TimeInterval(timestamp))
     }
 
-    /// Path nodes as hex strings for display (e.g., ["A3", "7F", "42"])
+    /// Hash size per hop in bytes (1, 2, or 3), derived from pathLength upper 2 bits
+    public var pathHashSize: Int {
+        decodePathLen(pathLength)?.hashSize ?? 1
+    }
+
+    /// Path nodes as hex strings for display, chunked by hash size
     public var pathNodesHex: [String] {
         guard let pathNodes else { return [] }
-        return pathNodes.map { String(format: "%02X", $0) }
+        let size = pathHashSize
+        return stride(from: 0, to: pathNodes.count, by: size).compactMap { start in
+            let end = min(start + size, pathNodes.count)
+            return pathNodes[start..<end].hexString()
+        }
     }
 
     /// Path as arrow-separated string (e.g., "A3 → 7F → 42")

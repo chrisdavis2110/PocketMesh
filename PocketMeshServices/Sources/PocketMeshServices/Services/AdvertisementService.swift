@@ -400,18 +400,27 @@ public actor AdvertisementService {
 
     /// Handle path discovery response event
     private func handlePathDiscoveryResponse(result: PathInfo, deviceID: UUID) async {
-        // Debug logging for path discovery
-        let outPathHex = result.outPath.map { String(format: "%02X", $0) }.joined(separator: " → ")
-        let inPathHex = result.inPath.map { String(format: "%02X", $0) }.joined(separator: " → ")
+        let deviceHashSize = (try? await dataStore.fetchDevice(id: deviceID))?.hashSize ?? 1
+
+        // Debug logging for path discovery (chunk by hash size for correct hop display)
+        let outHops = stride(from: 0, to: result.outPath.count, by: deviceHashSize).map { start in
+            result.outPath[start..<min(start + deviceHashSize, result.outPath.count)].map { String(format: "%02X", $0) }.joined()
+        }
+        let inHops = stride(from: 0, to: result.inPath.count, by: deviceHashSize).map { start in
+            result.inPath[start..<min(start + deviceHashSize, result.inPath.count)].map { String(format: "%02X", $0) }.joined()
+        }
         let pubKeyHex = result.publicKeyPrefix.prefix(3).map { String(format: "%02X", $0) }.joined()
-        logger.info("Path discovery response for \(pubKeyHex)... - Outbound: \(result.outPath.count) hops (\(outPathHex.isEmpty ? "direct" : outPathHex)), Inbound: \(result.inPath.count) hops (\(inPathHex.isEmpty ? "direct" : inPathHex))")
+        let outDisplay = outHops.isEmpty ? "direct" : outHops.joined(separator: " → ")
+        let inDisplay = inHops.isEmpty ? "direct" : inHops.joined(separator: " → ")
+        logger.info("Path discovery for \(pubKeyHex)... - Out: \(outHops.count) hops (\(outDisplay)), In: \(inHops.count) hops (\(inDisplay))")
 
         do {
             // Update contact with discovered outbound path (inbound is handled by firmware)
             if let contact = try await dataStore.fetchContact(deviceID: deviceID, publicKeyPrefix: result.publicKeyPrefix) {
                 let wasFlood = contact.isFloodRouted  // Capture BEFORE database write
 
-                let pathLength = Int8(result.outPath.count)
+                let hopCount = result.outPath.count / deviceHashSize
+                let pathLength = encodePathLen(hashSize: deviceHashSize, hopCount: hopCount)
                 let frame = ContactFrame(
                     publicKey: contact.publicKey,
                     type: contact.type,

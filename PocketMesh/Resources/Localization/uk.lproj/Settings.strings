@@ -322,6 +322,27 @@
 "advancedRadio.repeatMode.footer" = "Створює локальний ретранслятор на виділеній частоті. Корисно для походів та віддалених місцевостей. Допустимі частоти: 433, 869, 918 МГц.";
 
 
+// MARK: - Path Hash Mode Section
+
+/* Section header for path hash mode */
+"pathHashMode.header" = "Розмір хешу шляху";
+
+/* Label for path hash mode picker */
+"pathHashMode.label" = "Розмір хешу";
+
+/* Path hash mode option: 1 byte */
+"pathHashMode.oneByte" = "1 байт";
+
+/* Path hash mode option: 2 bytes */
+"pathHashMode.twoBytes" = "2 байти";
+
+/* Path hash mode option: 3 bytes */
+"pathHashMode.threeBytes" = "3 байти";
+
+/* Footer explaining path hash mode tradeoff */
+"pathHashMode.footer" = "Більші хеші зменшують колізії маршрутизації, але обмежують максимальну кількість переходів на шляху.";
+
+
 // MARK: - Battery Curve Section
 
 /* Accessibility label for voltage text field - %d is the percentage level */

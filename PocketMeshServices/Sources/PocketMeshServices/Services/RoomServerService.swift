@@ -542,11 +542,11 @@ public actor RoomServerService {
             }
 
             // Strategy:
-            // 1. If contact has a path from advertisement (outPathLength >= 0), try it first
+            // 1. If contact has a path from advertisement (not flood-routed), try it first
             // 2. If that fails or contact is flood-routed, trigger path discovery
             // 3. Wait for discovery result and retry
 
-            if contact.outPathLength >= 0 {
+            if !contact.isFloodRouted {
                 // Contact has a path from advertisement - try it directly
                 logger.info("Trying advert path for room \(remoteSession.name)")
                 do {
@@ -585,7 +585,7 @@ public actor RoomServerService {
         }
 
         // Already direct?
-        if contact.outPathLength >= 0 {
+        if !contact.isFloodRouted {
             return true
         }
 
@@ -603,7 +603,7 @@ public actor RoomServerService {
             try await Task.sleep(for: .milliseconds(500))
 
             if let updated = try await dataStore.findContactByPublicKey(remoteSession.publicKey),
-               updated.outPathLength >= 0 {
+               !updated.isFloodRouted {
                 return true
             }
         }

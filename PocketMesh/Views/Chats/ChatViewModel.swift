@@ -1435,7 +1435,7 @@ final class ChatViewModel {
             name: name,
             typeRawValue: ContactType.chat.rawValue,
             flags: 0,
-            outPathLength: -1,
+            outPathLength: 0xFF,
             outPath: Data(),
             lastAdvertTimestamp: 0,
             latitude: 0.0,

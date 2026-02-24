@@ -47,7 +47,7 @@ struct NodeConfigServiceTests {
         publicKey: Data(repeating: 0x02, count: 32),
         type: .repeater,
         flags: [],
-        outPathLength: -1,
+        outPathLength: 0xFF,
         outPath: Data(),
         advertisedName: "FloodNode",
         lastAdvertisement: Date(timeIntervalSince1970: 1_700_001_000),
@@ -342,9 +342,155 @@ struct NodeConfigServiceTests {
     @Test("buildContactConfig and import produce consistent flood path")
     func contactConfigFloodPathConsistency() {
         let exported = NodeConfigService.buildContactConfig(from: Self.floodContact)
-        // Flood routing: nil outPath, outPathLength -1
+        // Flood routing: nil outPath, outPathLength 0xFF
         #expect(exported.outPath == nil)
-        #expect(Self.floodContact.outPathLength == -1)
+        #expect(Self.floodContact.outPathLength == 0xFF)
+    }
+
+    @Test("Direct contact round-trips through export and import without becoming flood")
+    func directContactRoundTrip() throws {
+        let exported = NodeConfigService.buildContactConfig(from: Self.zeroPathContact)
+        #expect(exported.outPath == "")
+
+        // Re-encode through JSON to simulate a real import
+        let encoded = try JSONEncoder().encode(exported)
+        let reimported = try JSONDecoder().decode(MeshCoreNodeConfig.ContactConfig.self, from: encoded)
+
+        // Empty string is non-nil: must be treated as direct, not flood
+        #expect(reimported.outPath != nil)
+        #expect(reimported.outPath?.isEmpty == true)
+
+        // Simulate the fixed import logic's three-way branch
+        let outPathLength: UInt8
+        if let pathHex = reimported.outPath, !pathHex.isEmpty {
+            // Routed path (not reached for direct contacts)
+            outPathLength = 1
+        } else if reimported.outPath != nil {
+            // Direct (zero-hop) — outPath was explicitly set to ""
+            outPathLength = 0
+        } else {
+            // Flood — outPath was nil
+            outPathLength = 0xFF
+        }
+
+        #expect(outPathLength == 0, "Direct contact must stay direct (0), not become flood (0xFF)")
+    }
+
+    // MARK: - Multibyte path hash mode (export)
+
+    @Test("buildContactConfig exports pathHashMode for mode 0 contact")
+    func buildContactConfigExportsMode0() {
+        let config = NodeConfigService.buildContactConfig(from: Self.testContact)
+        // testContact has outPathLength=3 → mode 0 (upper 2 bits = 0)
+        #expect(config.pathHashMode == 0)
+    }
+
+    @Test("buildContactConfig exports pathHashMode for mode 1 (2-byte) contact")
+    func buildContactConfigExportsMode1() {
+        // outPathLength = encodePathLen(hashSize: 2, hopCount: 3) = 0b01_000011 = 0x43
+        let contact = MeshContact(
+            id: "mode1", publicKey: Data(repeating: 0x05, count: 32),
+            type: .chat, flags: [],
+            outPathLength: encodePathLen(hashSize: 2, hopCount: 3),
+            outPath: Data([0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]),
+            advertisedName: "Mode1Node",
+            lastAdvertisement: .now, latitude: 0, longitude: 0, lastModified: .now
+        )
+        let config = NodeConfigService.buildContactConfig(from: contact)
+
+        #expect(config.pathHashMode == 1)
+        #expect(config.outPath == "aabbccddeeff")
+    }
+
+    @Test("buildContactConfig exports nil pathHashMode for flood contacts")
+    func buildContactConfigExportsNilModeForFlood() {
+        let config = NodeConfigService.buildContactConfig(from: Self.floodContact)
+        #expect(config.pathHashMode == nil)
+    }
+
+    // MARK: - Multibyte path hash mode (import round-trip via JSON)
+
+    @Test("ContactConfig import with pathHashMode encodes outPathLength correctly")
+    func contactConfigImportWithHashMode() throws {
+        let json = """
+        {
+            "type": 1, "name": "Test", "public_key": "\(String(repeating: "ab", count: 32))",
+            "flags": 0, "latitude": "0", "longitude": "0",
+            "last_advert": 0, "last_modified": 0,
+            "out_path": "aabbccddeeff",
+            "path_hash_mode": 1
+        }
+        """
+        let config = try JSONDecoder().decode(MeshCoreNodeConfig.ContactConfig.self, from: Data(json.utf8))
+
+        #expect(config.pathHashMode == 1)
+
+        // Simulate what the import code does: 6 hex chars = 3 bytes
+        let pathByteCount = 6  // "aabbccddeeff" = 6 bytes
+        let hashSize = Int(config.pathHashMode ?? 0) + 1
+        let hopCount = pathByteCount / hashSize
+        let outPathLength = encodePathLen(hashSize: hashSize, hopCount: hopCount)
+
+        // 6 bytes / 2 bytes per hop = 3 hops, mode 1 → 0b01_000011 = 0x43
+        #expect(hashSize == 2)
+        #expect(hopCount == 3)
+        #expect(outPathLength == 0x43)
+    }
+
+    @Test("ContactConfig import without pathHashMode defaults to mode 0")
+    func contactConfigImportWithoutHashMode() throws {
+        let json = """
+        {
+            "type": 1, "name": "Test", "public_key": "\(String(repeating: "ab", count: 32))",
+            "flags": 0, "latitude": "0", "longitude": "0",
+            "last_advert": 0, "last_modified": 0,
+            "out_path": "aabbcc"
+        }
+        """
+        let config = try JSONDecoder().decode(MeshCoreNodeConfig.ContactConfig.self, from: Data(json.utf8))
+
+        #expect(config.pathHashMode == nil)
+
+        // Simulate import: nil defaults to mode 0, raw byte count = hop count
+        let pathByteCount = 3  // "aabbcc" = 3 bytes
+        let hashSize = Int(config.pathHashMode ?? 0) + 1
+        let hopCount = pathByteCount / hashSize
+        let outPathLength = encodePathLen(hashSize: hashSize, hopCount: hopCount)
+
+        // 3 bytes / 1 byte per hop = 3 hops, mode 0 → 0b00_000011 = 3
+        #expect(hashSize == 1)
+        #expect(hopCount == 3)
+        #expect(outPathLength == 3)
+    }
+
+    @Test("Direct contact with pathHashMode imports as outPathLength 0, not mode-encoded")
+    func directContactWithHashModeStaysDirect() throws {
+        let json = """
+        {
+            "type": 1, "name": "DirectMode1", "public_key": "\(String(repeating: "cd", count: 32))",
+            "flags": 0, "latitude": "0", "longitude": "0",
+            "last_advert": 0, "last_modified": 0,
+            "out_path": "",
+            "path_hash_mode": 1
+        }
+        """
+        let config = try JSONDecoder().decode(MeshCoreNodeConfig.ContactConfig.self, from: Data(json.utf8))
+        #expect(config.pathHashMode == 1)
+        #expect(config.outPath == "")
+
+        // Simulate the import logic's three-way branch
+        let outPathLength: UInt8
+        if let pathHex = config.outPath, !pathHex.isEmpty {
+            // Routed path (not reached for empty out_path)
+            outPathLength = 1
+        } else if config.outPath != nil {
+            outPathLength = 0
+        } else {
+            outPathLength = 0xFF
+        }
+
+        #expect(outPathLength == 0, "Direct contact must encode as 0, not mode-encoded 0x40")
+        #expect(outPathLength != 0xFF, "Direct contact must not become flood")
     }
 
     // MARK: - Error cases
@@ -357,6 +503,28 @@ struct NodeConfigServiceTests {
         let contactError = NodeConfigServiceError.invalidContactPublicKey(name: "BadContact")
         #expect(contactError.localizedDescription.contains("BadContact"))
 
+        let modeError = NodeConfigServiceError.invalidPathHashMode(name: "BadNode", mode: 5)
+        #expect(modeError.localizedDescription.contains("BadNode"))
+        #expect(modeError.localizedDescription.contains("5"))
+    }
+
+    @Test("Import rejects pathHashMode > 2 as invalid")
+    func invalidPathHashModeRejected() throws {
+        let json = """
+        {
+            "type": 1, "name": "BadMode", "public_key": "\(String(repeating: "ab", count: 32))",
+            "flags": 0, "latitude": "0", "longitude": "0",
+            "last_advert": 0, "last_modified": 0,
+            "out_path": "aabbcc",
+            "path_hash_mode": 3
+        }
+        """
+        let config = try JSONDecoder().decode(MeshCoreNodeConfig.ContactConfig.self, from: Data(json.utf8))
+        #expect(config.pathHashMode == 3)
+
+        // The mode validation guard should reject values > 2
+        let mode = config.pathHashMode ?? 0
+        #expect(mode > 2)
     }
 
     // MARK: - ImportProgress

@@ -297,12 +297,11 @@ struct ContactRowView: View {
     private var routeLabel: String {
         if contact.isFloodRouted {
             return L10n.Contacts.Contacts.Route.flood
-        } else if contact.outPathLength == 0 {
+        } else if contact.pathHopCount == 0 {
             return L10n.Contacts.Contacts.Route.direct
-        } else if contact.outPathLength > 0 {
-            return L10n.Contacts.Contacts.Route.hops(Int(contact.outPathLength))
+        } else {
+            return L10n.Contacts.Contacts.Route.hops(contact.pathHopCount)
         }
-        return ""
     }
 
     private var distanceToContact: String? {

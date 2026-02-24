@@ -83,7 +83,7 @@ struct UpdateContactTests {
             publicKey: Data(repeating: 0x00, count: 32),
             type: .chat,
             flags: [],
-            outPathLength: -1,  // Flood path
+            outPathLength: 0xFF,  // Flood path
             outPath: Data(),
             advertisedName: "",
             lastAdvertisement: Date(timeIntervalSince1970: 0),
@@ -94,7 +94,6 @@ struct UpdateContactTests {
 
         let packet = PacketBuilder.updateContact(contact)
 
-        // -1 as UInt8 bit pattern = 0xFF
-        #expect(packet[35] == 0xFF, "outPathLength -1 should be 0xFF")
+        #expect(packet[35] == 0xFF, "outPathLength 0xFF should be flood routing")
     }
 }

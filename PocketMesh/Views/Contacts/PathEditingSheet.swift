@@ -11,6 +11,8 @@ struct PathEditingSheet: View {
     @State private var dragHapticTrigger = 0
     @State private var addHapticTrigger = 0
 
+    private var hashSize: Int { viewModel.hashSize }
+
     var body: some View {
         NavigationStack {
             List {
@@ -101,7 +103,7 @@ struct PathEditingSheet: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(repeater.displayName)
-                                Text(String(format: "%02X", repeater.publicKey[0]))
+                                Text(repeater.publicKey.prefix(hashSize).hexString())
                                     .font(.caption.monospaced())
                                     .foregroundStyle(.secondary)
                             }
@@ -134,11 +136,11 @@ private struct PathHopRow: View {
         VStack(alignment: .leading) {
             if let name = hop.resolvedName {
                 Text(name)
-                Text(String(format: "%02X", hop.hashByte))
+                Text(hop.hashHex)
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
             } else {
-                Text(String(format: "%02X", hop.hashByte))
+                Text(hop.hashHex)
                     .font(.body.monospaced())
             }
         }
@@ -151,7 +153,7 @@ private struct PathHopRow: View {
         if let name = hop.resolvedName {
             return L10n.Contacts.Contacts.PathEdit.hopWithName(index + 1, totalCount, name)
         } else {
-            return L10n.Contacts.Contacts.PathEdit.hopWithHex(index + 1, totalCount, String(format: "%02X", hop.hashByte))
+            return L10n.Contacts.Contacts.PathEdit.hopWithHex(index + 1, totalCount, hop.hashHex)
         }
     }
 }

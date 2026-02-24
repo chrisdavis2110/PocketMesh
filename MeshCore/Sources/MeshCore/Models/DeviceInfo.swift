@@ -97,6 +97,11 @@ public struct DeviceCapabilities: Sendable, Equatable {
     public let version: String
     /// Whether client repeat mode is enabled (v9+ firmware).
     public let clientRepeat: Bool
+    /// The path hash mode (0=1-byte, 1=2-byte, 2=3-byte hashes). Firmware v10+.
+    public let pathHashMode: UInt8
+
+    /// The hash size per hop in bytes (1, 2, or 3), derived from ``pathHashMode``.
+    public var hashSize: Int { Int(pathHashMode) + 1 }
 
     /// Initializes a new device capabilities structure.
     public init(
@@ -107,7 +112,8 @@ public struct DeviceCapabilities: Sendable, Equatable {
         firmwareBuild: String,
         model: String,
         version: String,
-        clientRepeat: Bool = false
+        clientRepeat: Bool = false,
+        pathHashMode: UInt8 = 0
     ) {
         self.firmwareVersion = firmwareVersion
         self.maxContacts = maxContacts
@@ -117,6 +123,7 @@ public struct DeviceCapabilities: Sendable, Equatable {
         self.model = model
         self.version = version
         self.clientRepeat = clientRepeat
+        self.pathHashMode = pathHashMode
     }
 }
 

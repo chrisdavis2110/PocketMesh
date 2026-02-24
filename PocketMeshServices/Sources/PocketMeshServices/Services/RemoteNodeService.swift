@@ -96,7 +96,8 @@ public enum LoginTimeoutConfig {
     /// Calculate appropriate timeout based on path length
     public static func timeout(forPathLength pathLength: UInt8) -> Duration {
         let base = directTimeout
-        let additional = Duration.seconds(Int(pathLength) * 10)
+        let hopCount = decodePathLen(pathLength)?.hopCount ?? 0
+        let additional = Duration.seconds(hopCount * 10)
         let total = base + additional
         return min(total, maximumTimeout)
     }
@@ -621,7 +622,7 @@ public actor RemoteNodeService {
         }
 
         // Keep-alive only works with direct routing
-        if contact.outPathLength < 0 {
+        if contact.isFloodRouted {
             throw RemoteNodeError.floodRouted
         }
 
@@ -672,7 +673,7 @@ public actor RemoteNodeService {
             throw RemoteNodeError.contactNotFound
         }
 
-        if contact.outPathLength < 0 {
+        if contact.isFloodRouted {
             throw RemoteNodeError.floodRouted
         }
 

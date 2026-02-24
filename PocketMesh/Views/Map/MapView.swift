@@ -382,7 +382,7 @@ private struct ContactDetailSheet: View {
                     if contact.isFloodRouted {
                         LabeledContent(L10n.Map.Map.Detail.routing, value: L10n.Map.Map.Detail.routingFlood)
                     } else {
-                        let hopCount = Int(contact.outPathLength)
+                        let hopCount = contact.pathHopCount
                         LabeledContent(L10n.Map.Map.Detail.pathLength, value: hopCount == 1 ? L10n.Map.Map.Detail.hopSingular : L10n.Map.Map.Detail.hops(hopCount))
                     }
                 }

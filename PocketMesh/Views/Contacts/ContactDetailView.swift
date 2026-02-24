@@ -690,7 +690,7 @@ struct ContactDetailView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Text(currentContact.outPathLength, format: .number)
+                        Text(currentContact.pathHopCount, format: .number)
                             .font(.caption.monospaced())
                             .foregroundStyle(.primary)
                     }
@@ -770,15 +770,18 @@ struct ContactDetailView: View {
     // Computed property for path display with resolved names
     private var pathDisplayWithNames: String {
         let pathData = currentContact.outPath
-        let pathLength = Int(max(0, currentContact.outPathLength))
-        guard pathLength > 0 else { return L10n.Contacts.Contacts.Route.direct }
+        let byteLength = currentContact.pathByteLength
+        let hashSize = currentContact.pathHashSize
+        guard byteLength > 0 else { return L10n.Contacts.Contacts.Route.direct }
 
-        let relevantPath = pathData.prefix(pathLength)
-        return relevantPath.map { byte in
-            if let name = pathViewModel.resolveHashToName(byte) {
+        let relevantPath = pathData.prefix(byteLength)
+        return stride(from: 0, to: relevantPath.count, by: hashSize).map { start in
+            let end = min(start + hashSize, relevantPath.count)
+            let hopBytes = Data(relevantPath[start..<end])
+            if let name = pathViewModel.resolveHashToName(hopBytes) {
                 return "\(name)"
             }
-            return String(format: "%02X", byte)
+            return hopBytes.hexString()
         }.joined(separator: " \u{2192} ")
     }
 
@@ -786,7 +789,7 @@ struct ContactDetailView: View {
     private var routeDisplayText: String {
         if currentContact.isFloodRouted {
             return L10n.Contacts.Contacts.Route.flood
-        } else if currentContact.outPathLength == 0 {
+        } else if currentContact.pathHopCount == 0 {
             return L10n.Contacts.Contacts.Route.direct
         } else {
             return pathDisplayWithNames
@@ -806,7 +809,7 @@ struct ContactDetailView: View {
     private var pathAccessibilityLabel: String {
         if currentContact.isFloodRouted {
             return L10n.Contacts.Contacts.Detail.routeFlood
-        } else if currentContact.outPathLength == 0 {
+        } else if currentContact.pathHopCount == 0 {
             return L10n.Contacts.Contacts.Detail.routeDirect
         } else {
             return L10n.Contacts.Contacts.Detail.routePrefix(pathDisplayWithNames)

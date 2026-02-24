@@ -16,6 +16,9 @@ public final class SavedTracePath {
     /// The full path bytes (outbound + return)
     public var pathBytes: Data
 
+    /// Bytes per hop hash when the path was saved (1, 2, or 3)
+    public var hashSize: Int = 1
+
     /// When this path was first saved
     public var createdDate: Date
 
@@ -28,12 +31,14 @@ public final class SavedTracePath {
         deviceID: UUID,
         name: String,
         pathBytes: Data,
+        hashSize: Int = 1,
         createdDate: Date = Date()
     ) {
         self.id = id
         self.deviceID = deviceID
         self.name = name
         self.pathBytes = pathBytes
+        self.hashSize = hashSize
         self.createdDate = createdDate
         self.runs = []
     }
@@ -119,6 +124,7 @@ public struct SavedTracePathDTO: Sendable, Identifiable, Equatable, Hashable {
     public let deviceID: UUID
     public let name: String
     public let pathBytes: Data
+    public let hashSize: Int
     public let createdDate: Date
     public let runs: [TracePathRunDTO]
 
@@ -127,6 +133,7 @@ public struct SavedTracePathDTO: Sendable, Identifiable, Equatable, Hashable {
         self.deviceID = model.deviceID
         self.name = model.name
         self.pathBytes = model.pathBytes
+        self.hashSize = model.hashSize
         self.createdDate = model.createdDate
         self.runs = model.runs.map { TracePathRunDTO(from: $0) }
     }
@@ -136,6 +143,7 @@ public struct SavedTracePathDTO: Sendable, Identifiable, Equatable, Hashable {
         deviceID: UUID,
         name: String,
         pathBytes: Data,
+        hashSize: Int = 1,
         createdDate: Date,
         runs: [TracePathRunDTO]
     ) {
@@ -143,6 +151,7 @@ public struct SavedTracePathDTO: Sendable, Identifiable, Equatable, Hashable {
         self.deviceID = deviceID
         self.name = name
         self.pathBytes = pathBytes
+        self.hashSize = hashSize
         self.createdDate = createdDate
         self.runs = runs
     }

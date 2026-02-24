@@ -25,8 +25,8 @@ public final class Contact {
     /// Permission flags
     public var flags: UInt8
 
-    /// Outgoing path length (-1 = flood, 0+ = direct)
-    public var outPathLength: Int8
+    /// Encoded outbound path length (0xFF = flood; upper 2 bits = hash mode, lower 6 bits = hop count)
+    public var outPathLength: UInt8
 
     /// Outgoing routing path (up to 64 bytes)
     public var outPath: Data
@@ -77,7 +77,7 @@ public final class Contact {
         name: String,
         typeRawValue: UInt8 = 0,
         flags: UInt8 = 0,
-        outPathLength: Int8 = -1,
+        outPathLength: UInt8 = 0xFF,
         outPath: Data = Data(),
         lastAdvertTimestamp: UInt32 = 0,
         latitude: Double = 0,
@@ -177,7 +177,7 @@ public extension Contact {
 
     /// Whether this contact uses flood routing
     var isFloodRouted: Bool {
-        outPathLength < 0
+        outPathLength == 0xFF
     }
 
     /// Whether this contact has a known, valid location
@@ -240,7 +240,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     public let name: String
     public let typeRawValue: UInt8
     public let flags: UInt8
-    public let outPathLength: Int8
+    public let outPathLength: UInt8
     public let outPath: Data
     public let lastAdvertTimestamp: UInt32
     public let latitude: Double
@@ -288,7 +288,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         name: String,
         typeRawValue: UInt8,
         flags: UInt8,
-        outPathLength: Int8,
+        outPathLength: UInt8,
         outPath: Data,
         lastAdvertTimestamp: UInt32,
         latitude: Double,
@@ -340,7 +340,22 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     }
 
     public var isFloodRouted: Bool {
-        outPathLength < 0
+        outPathLength == 0xFF
+    }
+
+    /// The hash size per hop in bytes (1, 2, or 3), derived from the upper 2 bits of ``outPathLength``.
+    public var pathHashSize: Int {
+        decodePathLen(outPathLength)?.hashSize ?? 1
+    }
+
+    /// The number of hops in the path, derived from the lower 6 bits of ``outPathLength``.
+    public var pathHopCount: Int {
+        decodePathLen(outPathLength)?.hopCount ?? 0
+    }
+
+    /// The total byte length of the path data (`pathHopCount * pathHashSize`).
+    public var pathByteLength: Int {
+        decodePathLen(outPathLength)?.byteLength ?? 0
     }
 
     public var hasLocation: Bool {

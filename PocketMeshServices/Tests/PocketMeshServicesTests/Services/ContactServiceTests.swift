@@ -218,7 +218,7 @@ struct ContactServiceTests {
             publicKey: publicKey,
             type: .chat,
             flags: ContactFlags(rawValue: 0),
-            outPathLength: -1,  // Flood routing
+            outPathLength: 0xFF,  // Flood routing
             outPath: Data(),
             advertisedName: "Flood",
             lastAdvertisement: Date(),
@@ -228,7 +228,7 @@ struct ContactServiceTests {
         )
 
         let frame = floodContact.toContactFrame()
-        #expect(frame.outPathLength == -1)
+        #expect(frame.outPathLength == 0xFF)
         #expect(frame.outPath.isEmpty)
     }
 

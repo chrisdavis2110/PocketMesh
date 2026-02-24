@@ -219,7 +219,7 @@ public protocol PersistenceStoreProtocol: Actor {
     func fetchSavedTracePath(id: UUID) async throws -> SavedTracePathDTO?
 
     /// Create a new saved trace path
-    func createSavedTracePath(deviceID: UUID, name: String, pathBytes: Data, initialRun: TracePathRunDTO?) async throws -> SavedTracePathDTO
+    func createSavedTracePath(deviceID: UUID, name: String, pathBytes: Data, hashSize: Int, initialRun: TracePathRunDTO?) async throws -> SavedTracePathDTO
 
     /// Update a saved trace path's name
     func updateSavedTracePathName(id: UUID, name: String) async throws

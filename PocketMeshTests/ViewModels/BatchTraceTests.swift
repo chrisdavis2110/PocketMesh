@@ -30,7 +30,8 @@ private func createTestResult(hopSNRs: [Double], durationMs: Int, success: Bool 
         durationMs: durationMs,
         success: success,
         errorMessage: success ? nil : "Failed",
-        tracedPathBytes: [0xAA]
+        tracedPathBytes: [0xAA],
+        hashSize: 1
     )
 }
 
@@ -59,14 +60,16 @@ struct BatchTraceStateTests {
             durationMs: 100,
             success: true,
             errorMessage: nil,
-            tracedPathBytes: [0xAA]
+            tracedPathBytes: [0xAA],
+            hashSize: 1
         )
         let failedResult = TraceResult(
             hops: [],
             durationMs: 0,
             success: false,
             errorMessage: "Timeout",
-            tracedPathBytes: [0xAA]
+            tracedPathBytes: [0xAA],
+            hashSize: 1
         )
 
         viewModel.completedResults = [successResult, failedResult, successResult]
@@ -83,14 +86,16 @@ struct BatchTraceStateTests {
             durationMs: 100,
             success: true,
             errorMessage: nil,
-            tracedPathBytes: [0xAA]
+            tracedPathBytes: [0xAA],
+            hashSize: 1
         )
         let failedResult = TraceResult(
             hops: [],
             durationMs: 0,
             success: false,
             errorMessage: "Timeout",
-            tracedPathBytes: [0xAA]
+            tracedPathBytes: [0xAA],
+            hashSize: 1
         )
 
         viewModel.completedResults = [successResult, failedResult, successResult]
@@ -104,7 +109,7 @@ struct BatchTraceStateTests {
         viewModel.batchEnabled = true
         viewModel.currentTraceIndex = 3
         viewModel.completedResults = [
-            TraceResult(hops: [], durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0xAA])
+            TraceResult(hops: [], durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0xAA], hashSize: 1)
         ]
 
         viewModel.batchEnabled = false

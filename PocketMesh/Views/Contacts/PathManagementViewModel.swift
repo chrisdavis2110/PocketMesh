@@ -7,15 +7,19 @@ private let logger = Logger(subsystem: "com.pocketmesh", category: "PathManageme
 /// Represents a single hop in the routing path with stable identity for SwiftUI
 struct PathHop: Identifiable, Equatable {
     let id = UUID()
-    var hashByte: UInt8           // First byte of public key - used for protocol
+    var hashBytes: Data           // Public key prefix bytes (1–3 bytes depending on hash mode)
     var publicKey: Data?          // Full 32-byte key when known (for unambiguous matching)
     var resolvedName: String?     // Contact name if resolved, nil if unknown
 
+    var hashHex: String {
+        hashBytes.hexString()
+    }
+
     var displayText: String {
         if let name = resolvedName {
-            return "\(name) (\(String(format: "%02X", hashByte)))"
+            return "\(name) (\(hashHex))"
         }
-        return String(format: "%02X", hashByte)
+        return hashHex
     }
 }
 
@@ -88,6 +92,11 @@ final class PathManagementViewModel {
 
     private var appState: AppState?
 
+    /// Current hash size from device configuration (1, 2, or 3 bytes per hop)
+    var hashSize: Int {
+        appState?.connectedDevice?.hashSize ?? 1
+    }
+
     // MARK: - Callbacks
 
     /// Called when path discovery completes and contact should be refreshed
@@ -102,19 +111,19 @@ final class PathManagementViewModel {
 
     // MARK: - Name Resolution
 
-    /// Resolve a path hash byte to a contact name if possible
+    /// Resolve path hash bytes to a contact name if possible
     /// Returns the contact name if exactly one contact matches, otherwise nil
-    func resolveHashToName(_ hashByte: UInt8) -> String? {
-        let matches = allContacts.filter { $0.publicKey.first == hashByte }
+    func resolveHashToName(_ hashBytes: Data) -> String? {
+        let matches = allContacts.filter { $0.publicKey.prefix(hashBytes.count) == hashBytes }
         if matches.count == 1 {
             return matches[0].displayName
         }
         return nil  // Ambiguous (multiple matches) or unknown
     }
 
-    /// Create a PathHop from a hash byte, resolving the name if possible
-    func createPathHop(from hashByte: UInt8) -> PathHop {
-        PathHop(hashByte: hashByte, resolvedName: resolveHashToName(hashByte))
+    /// Create a PathHop from hash bytes, resolving the name if possible
+    func createPathHop(from hashBytes: Data) -> PathHop {
+        PathHop(hashBytes: hashBytes, resolvedName: resolveHashToName(hashBytes))
     }
 
     /// Load all contacts for name resolution and filter repeaters for adding
@@ -140,15 +149,20 @@ final class PathManagementViewModel {
 
     /// Initialize editable path from contact's current path with name resolution
     func initializeEditablePath(from contact: ContactDTO) {
-        let pathLength = Int(max(0, contact.outPathLength))
-        let pathBytes = Array(contact.outPath.prefix(pathLength))
-        editablePath = pathBytes.map { createPathHop(from: $0) }
+        let byteLength = contact.pathByteLength
+        let hashSize = contact.pathHashSize
+        let pathData = contact.outPath.prefix(byteLength)
+        editablePath = stride(from: 0, to: pathData.count, by: hashSize).map { start in
+            let end = min(start + hashSize, pathData.count)
+            let bytes = Data(pathData[start..<end])
+            return createPathHop(from: bytes)
+        }
     }
 
-    /// Add a repeater to the path using its public key's first byte
+    /// Add a repeater to the path using its public key prefix
     func addRepeater(_ repeater: ContactDTO) {
-        let hashByte = repeater.publicKey[0]
-        let hop = PathHop(hashByte: hashByte, publicKey: repeater.publicKey, resolvedName: repeater.displayName)
+        let hashBytes = Data(repeater.publicKey.prefix(hashSize))
+        let hop = PathHop(hashBytes: hashBytes, publicKey: repeater.publicKey, resolvedName: repeater.displayName)
         editablePath.append(hop)
     }
 
@@ -172,12 +186,14 @@ final class PathManagementViewModel {
         errorMessage = nil
 
         do {
-            let pathData = Data(editablePath.map { $0.hashByte })
+            let pathData = Data(editablePath.flatMap { $0.hashBytes })
+            let hashSize = editablePath.first?.hashBytes.count ?? 1 // empty path encodes as direct (outPathLength == 0)
+            let pathLength = encodePathLen(hashSize: hashSize, hopCount: editablePath.count)
             try await contactService.setPath(
                 deviceID: contact.deviceID,
                 publicKey: contact.publicKey,
                 path: pathData,
-                pathLength: Int8(editablePath.count)
+                pathLength: pathLength
             )
             onContactNeedsRefresh?()
         } catch {
@@ -340,7 +356,7 @@ final class PathManagementViewModel {
     }
 
     /// Set a specific path for a contact
-    func setPath(for contact: ContactDTO, path: Data, pathLength: Int8) async {
+    func setPath(for contact: ContactDTO, path: Data, pathLength: UInt8) async {
         guard let appState,
               let contactService = appState.services?.contactService else { return }
 

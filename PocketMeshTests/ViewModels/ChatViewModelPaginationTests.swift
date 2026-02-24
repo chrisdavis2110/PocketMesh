@@ -265,6 +265,7 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
         deviceID: UUID,
         name: String,
         pathBytes: Data,
+        hashSize: Int,
         initialRun: TracePathRunDTO?
     ) async throws -> SavedTracePathDTO {
         SavedTracePathDTO(
@@ -272,6 +273,7 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
             deviceID: deviceID,
             name: name,
             pathBytes: pathBytes,
+            hashSize: hashSize,
             createdDate: Date(),
             runs: []
         )

@@ -322,6 +322,27 @@
 "advancedRadio.repeatMode.footer" = "Crea un repetidor local en una frecuencia dedicada. Útil para senderismo y áreas remotas. Frecuencias válidas: 433, 869, 918 MHz.";
 
 
+// MARK: - Path Hash Mode Section
+
+/* Section header for path hash mode */
+"pathHashMode.header" = "Tamaño de hash de ruta";
+
+/* Label for path hash mode picker */
+"pathHashMode.label" = "Tamaño de hash";
+
+/* Path hash mode option: 1 byte */
+"pathHashMode.oneByte" = "1 byte";
+
+/* Path hash mode option: 2 bytes */
+"pathHashMode.twoBytes" = "2 bytes";
+
+/* Path hash mode option: 3 bytes */
+"pathHashMode.threeBytes" = "3 bytes";
+
+/* Footer explaining path hash mode tradeoff */
+"pathHashMode.footer" = "Los hashes más grandes reducen las colisiones de enrutamiento, pero limitan el número máximo de saltos por ruta.";
+
+
 // MARK: - Battery Curve Section
 
 /* Accessibility label for voltage text field - %d is the percentage level */

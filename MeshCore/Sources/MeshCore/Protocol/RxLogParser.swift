@@ -30,30 +30,33 @@ public enum RxLogParser {
             offset += 4
         }
 
-        // Parse path length
+        // Parse path length (multibyte encoded)
         guard payload.count > offset else { return nil }
         let pathLength = payload[offset]
         offset += 1
 
+        // Decode actual byte length from multibyte encoding
+        let pathByteLen = decodePathLen(pathLength)?.byteLength ?? 0
+
         // Parse path nodes
         var pathNodes: [UInt8] = []
-        if pathLength > 0 {
-            guard payload.count >= offset + Int(pathLength) else { return nil }
-            pathNodes = Array(payload[offset..<offset + Int(pathLength)])
-            offset += Int(pathLength)
+        if pathByteLen > 0 {
+            guard payload.count >= offset + pathByteLen else { return nil }
+            pathNodes = Array(payload[offset..<offset + pathByteLen])
+            offset += pathByteLen
         }
 
         // Remaining bytes are packet payload
         let packetPayload = payload.count > offset ? Data(payload[offset...]) : Data()
 
         // Extract dest and src hashes for direct text messages
-        // Payload format: [dest: 1B] [src: 1B] [MAC + encrypted content]
-        // dest = recipient pubkey hash, src = sender pubkey hash
+        // Payload format: [dest: hashSize B] [src: hashSize B] [MAC + encrypted content]
+        let hashSize = decodePathLen(pathLength)?.hashSize ?? 1
         var senderPubkeyPrefix: Data?
         var recipientPubkeyPrefix: Data?
-        if (routeType == .direct || routeType == .tcDirect) && payloadType == .textMessage && packetPayload.count >= 2 {
-            senderPubkeyPrefix = Data([packetPayload[1]])      // src is byte 1
-            recipientPubkeyPrefix = Data([packetPayload[0]])   // dest is byte 0
+        if (routeType == .direct || routeType == .tcDirect) && payloadType == .textMessage && packetPayload.count >= hashSize * 2 {
+            recipientPubkeyPrefix = Data(packetPayload[0..<hashSize])
+            senderPubkeyPrefix = Data(packetPayload[hashSize..<hashSize * 2])
         }
 
         return ParsedRxLogData(

@@ -63,6 +63,9 @@ public final class Device {
     /// Whether client repeat mode is enabled (v9+ firmware)
     public var clientRepeat: Bool = false
 
+    /// Path hash mode (0=1-byte, 1=2-byte, 2=3-byte hashes). Firmware v10+.
+    public var pathHashMode: UInt8 = 0
+
     /// Cached radio settings from before repeat mode was enabled, for restoration on disable.
     /// All 4 fields are set together when enabling repeat mode, and cleared together when disabling.
     public var preRepeatFrequency: UInt32?
@@ -129,6 +132,7 @@ public final class Device {
         longitude: Double = 0,
         blePin: UInt32 = 0,
         clientRepeat: Bool = false,
+        pathHashMode: UInt8 = 0,
         preRepeatFrequency: UInt32? = nil,
         preRepeatBandwidth: UInt32? = nil,
         preRepeatSpreadingFactor: UInt8? = nil,
@@ -166,6 +170,7 @@ public final class Device {
         self.longitude = longitude
         self.blePin = blePin
         self.clientRepeat = clientRepeat
+        self.pathHashMode = pathHashMode
         self.preRepeatFrequency = preRepeatFrequency
         self.preRepeatBandwidth = preRepeatBandwidth
         self.preRepeatSpreadingFactor = preRepeatSpreadingFactor
@@ -205,6 +210,7 @@ public final class Device {
         longitude = dto.longitude
         blePin = dto.blePin
         clientRepeat = dto.clientRepeat
+        pathHashMode = dto.pathHashMode
         preRepeatFrequency = dto.preRepeatFrequency
         preRepeatBandwidth = dto.preRepeatBandwidth
         preRepeatSpreadingFactor = dto.preRepeatSpreadingFactor
@@ -248,6 +254,11 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public var longitude: Double
     public var blePin: UInt32
     public var clientRepeat: Bool
+    public var pathHashMode: UInt8
+
+    /// The hash size per hop in bytes (1, 2, or 3), derived from ``pathHashMode``.
+    public var hashSize: Int { Int(pathHashMode) + 1 }
+
     public var preRepeatFrequency: UInt32?
     public var preRepeatBandwidth: UInt32?
     public var preRepeatSpreadingFactor: UInt8?
@@ -300,6 +311,9 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     /// Whether this device supports client repeat mode (firmware v9+)
     public var supportsClientRepeat: Bool { firmwareVersion >= 9 }
 
+    /// Whether this device supports path hash mode configuration (firmware v10+)
+    public var supportsPathHashMode: Bool { firmwareVersion >= 10 }
+
     /// Whether pre-repeat radio settings are saved for restoration.
     public var hasPreRepeatSettings: Bool {
         preRepeatFrequency != nil && preRepeatBandwidth != nil &&
@@ -326,6 +340,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         longitude: Double,
         blePin: UInt32,
         clientRepeat: Bool = false,
+        pathHashMode: UInt8 = 0,
         preRepeatFrequency: UInt32? = nil,
         preRepeatBandwidth: UInt32? = nil,
         preRepeatSpreadingFactor: UInt8? = nil,
@@ -363,6 +378,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.longitude = longitude
         self.blePin = blePin
         self.clientRepeat = clientRepeat
+        self.pathHashMode = pathHashMode
         self.preRepeatFrequency = preRepeatFrequency
         self.preRepeatBandwidth = preRepeatBandwidth
         self.preRepeatSpreadingFactor = preRepeatSpreadingFactor
@@ -402,6 +418,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.longitude = device.longitude
         self.blePin = device.blePin
         self.clientRepeat = device.clientRepeat
+        self.pathHashMode = device.pathHashMode
         self.preRepeatFrequency = device.preRepeatFrequency
         self.preRepeatBandwidth = device.preRepeatBandwidth
         self.preRepeatSpreadingFactor = device.preRepeatSpreadingFactor

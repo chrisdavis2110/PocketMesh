@@ -80,7 +80,7 @@ try await session.updateContact(
     publicKey: publicKey,
     type: 0,
     flags: 0,
-    outPathLength: -1,  // Flood routing
+    outPathLength: 0xFF,  // Flood routing (OUT_PATH_UNKNOWN)
     outPath: Data(),
     advertisedName: "New Contact",
     lastAdvertisement: Date(),

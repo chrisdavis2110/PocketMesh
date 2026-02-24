@@ -104,6 +104,8 @@ public enum CommandCode: UInt8, Sendable {
     case getAutoAddConfig = 0x3B
     /// Gets the allowed frequency ranges for client repeat mode (v9+).
     case getRepeatFreq = 0x3C
+    /// Sets the path hash mode (0=1-byte, 1=2-byte, 2=3-byte hashes).
+    case setPathHashMode = 0x3D
 }
 
 /// Defines the response codes received from the mesh device.

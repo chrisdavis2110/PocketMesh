@@ -312,6 +312,27 @@
 /* Footer explaining repeat mode in advanced radio */
 "advancedRadio.repeatMode.footer" = "在专用频率上打开转发。适用于徒步旅行和偏远地区。有效频率：433、869、918 MHz。";
 
+// MARK: - Path Hash Mode Section
+
+/* Section header for path hash mode */
+"pathHashMode.header" = "路径哈希大小";
+
+/* Label for path hash mode picker */
+"pathHashMode.label" = "哈希大小";
+
+/* Path hash mode option: 1 byte */
+"pathHashMode.oneByte" = "1 字节";
+
+/* Path hash mode option: 2 bytes */
+"pathHashMode.twoBytes" = "2 字节";
+
+/* Path hash mode option: 3 bytes */
+"pathHashMode.threeBytes" = "3 字节";
+
+/* Footer explaining path hash mode tradeoff */
+"pathHashMode.footer" = "较大的哈希值可减少路由冲突，但会限制每条路径的最大跳数。";
+
+
 // MARK: - Battery Curve Section
 
 /* Accessibility label for voltage text field - %d is percentage level */

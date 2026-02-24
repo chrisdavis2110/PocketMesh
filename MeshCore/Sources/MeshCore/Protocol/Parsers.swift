@@ -39,6 +39,8 @@ enum PacketSize {
     static let radioStatsMinimum = 12
     /// Minimum size for packet counters.
     static let packetStatsMinimum = 24
+    /// Size for packet counters with receive errors field.
+    static let packetStatsWithReceiveErrors = 28
     /// Minimum size for channel configuration info.
     static let channelInfoMinimum = 49
     /// Size of the public key in contact deleted notifications.
@@ -74,6 +76,49 @@ enum PacketSize {
 
 private let parserLogger = Logger(subsystem: "MeshCore", category: "Parsers")
 
+// MARK: - Path Encoding Utilities
+
+/// Decoded components of a multibyte-encoded path length byte.
+public struct PathLenDecoded: Sendable {
+    /// Bytes per hop hash (1, 2, or 3).
+    public let hashSize: Int
+    /// Number of hops in the path (0-63).
+    public let hopCount: Int
+    /// Total path byte length (hashSize * hopCount).
+    public let byteLength: Int
+}
+
+/// Decodes a multibyte-encoded path length byte.
+///
+/// The encoding packs two fields into a single byte:
+/// - Bits 7-6: hash size mode (0=1-byte, 1=2-byte, 2=3-byte, 3=reserved)
+/// - Bits 5-0: hop count (0-63)
+///
+/// - Parameter encoded: The raw path length byte from the wire.
+/// - Returns: Decoded components, or `nil` if mode 3 (reserved).
+public func decodePathLen(_ encoded: UInt8) -> PathLenDecoded? {
+    let mode = encoded >> 6
+    guard mode < 3 else { return nil }  // mode 3 is reserved
+    let hashSize = Int(mode) + 1
+    let hopCount = Int(encoded & 63)
+    return PathLenDecoded(hashSize: hashSize, hopCount: hopCount, byteLength: hashSize * hopCount)
+}
+
+/// Encodes hash size and hop count into a single path length byte.
+///
+/// This is the inverse of ``decodePathLen(_:)``.
+///
+/// - Parameters:
+///   - hashSize: Bytes per hop (1, 2, or 3).
+///   - hopCount: Number of hops (0-63).
+/// - Returns: The encoded path length byte.
+public func encodePathLen(hashSize: Int, hopCount: Int) -> UInt8 {
+    precondition(1...3 ~= hashSize, "hashSize must be 1, 2, or 3")
+    let mode = UInt8(hashSize - 1)
+    let hops = UInt8(min(hopCount, 63))
+    return (mode << 6) | hops
+}
+
 /// Namespace for complex protocol parsers.
 ///
 /// This enum contains specialized parsers for various mesh protocol data structures.
@@ -90,7 +135,7 @@ public enum Parsers {
     /// - Offset 0 (32 bytes): Public Key
     /// - Offset 32 (1 byte): Contact Type
     /// - Offset 33 (1 byte): Flags
-    /// - Offset 34 (1 byte): Path Length (signed Int8)
+    /// - Offset 34 (1 byte): Path Length (encoded: upper 2 bits = hash mode, lower 6 bits = hop count; 0xFF = flood)
     /// - Offset 35 (64 bytes): Routing Path
     /// - Offset 99 (32 bytes): Advertised Name (UTF-8, padded)
     /// - Offset 131 (4 bytes): Last Advertisement Time (UInt32 LE)
@@ -104,8 +149,8 @@ public enum Parsers {
         let publicKey = Data(data[offset..<offset+32]); offset += 32
         let type = ContactType(rawValue: data[offset]) ?? .chat; offset += 1
         let flags = ContactFlags(rawValue: data[offset]); offset += 1
-        let pathLen = Int8(bitPattern: data[offset]); offset += 1
-        let actualPathLen = pathLen == -1 ? 0 : Int(pathLen)
+        let pathLen = data[offset]; offset += 1
+        let actualPathLen = (pathLen == 0xFF) ? 0 : (decodePathLen(pathLen)?.byteLength ?? 0)
         // Read full 64-byte path field, but only use first actualPathLen bytes
         let pathBytes = Data(data[offset..<offset+64])
         let path = actualPathLen > 0 ? Data(pathBytes.prefix(actualPathLen)) : Data()
@@ -277,6 +322,13 @@ public enum Parsers {
             var clientRepeat = false
             if fwVer >= 9 && data.count > offset {
                 clientRepeat = data[offset] != 0
+                offset += 1
+            }
+
+            // v10+: path_hash_mode byte after client_repeat
+            var pathHashMode: UInt8 = 0
+            if fwVer >= 10 && data.count > offset {
+                pathHashMode = data[offset]
             }
 
             return .deviceInfo(DeviceCapabilities(
@@ -287,7 +339,8 @@ public enum Parsers {
                 firmwareBuild: fwBuild ?? "",
                 model: model ?? "",
                 version: version ?? "",
-                clientRepeat: clientRepeat
+                clientRepeat: clientRepeat,
+                pathHashMode: pathHashMode
             ))
         }
     }
@@ -781,22 +834,24 @@ public enum Parsers {
             var outPath = Data()
             var inPath = Data()
 
-            // Parse outbound path
+            // Parse outbound path (multibyte encoded)
             if data.count > offset {
-                let pathLen = Int(data[offset])
+                let rawLen = data[offset]
                 offset += 1
-                if pathLen > 0 && data.count >= offset + pathLen {
-                    outPath = Data(data[offset..<offset + pathLen])
-                    offset += pathLen
+                if let decoded = decodePathLen(rawLen), decoded.byteLength > 0,
+                   data.count >= offset + decoded.byteLength {
+                    outPath = Data(data[offset..<offset + decoded.byteLength])
+                    offset += decoded.byteLength
                 }
             }
 
-            // Parse inbound path
+            // Parse inbound path (multibyte encoded)
             if data.count > offset {
-                let pathLen = Int(data[offset])
+                let rawLen = data[offset]
                 offset += 1
-                if pathLen > 0 && data.count >= offset + pathLen {
-                    inPath = Data(data[offset..<offset + pathLen])
+                if let decoded = decodePathLen(rawLen), decoded.byteLength > 0,
+                   data.count >= offset + decoded.byteLength {
+                    inPath = Data(data[offset..<offset + decoded.byteLength])
                 }
             }
 
@@ -947,7 +1002,7 @@ public enum Parsers {
 
     /// Parser for packet counters.
     enum PacketStats {
-        /// Parses total sent/received and flood/direct packet counts.
+        /// Parses total sent/received, flood/direct packet counts, and receive errors.
         static func parse(_ data: Data) -> MeshEvent {
             guard data.count >= PacketSize.packetStatsMinimum else {
                 return .parseFailure(
@@ -955,13 +1010,16 @@ public enum Parsers {
                     reason: "PacketStats too short: \(data.count) < \(PacketSize.packetStatsMinimum)"
                 )
             }
+            let receiveErrors: UInt32 = data.count >= PacketSize.packetStatsWithReceiveErrors
+                ? data.readUInt32LE(at: 24) : 0
             return .statsPackets(MeshCore.PacketStats(
                 received: data.readUInt32LE(at: 0),
                 sent: data.readUInt32LE(at: 4),
                 floodTx: data.readUInt32LE(at: 8),
                 directTx: data.readUInt32LE(at: 12),
                 floodRx: data.readUInt32LE(at: 16),
-                directRx: data.readUInt32LE(at: 20)
+                directRx: data.readUInt32LE(at: 20),
+                receiveErrors: receiveErrors
             ))
         }
     }
@@ -1266,7 +1324,8 @@ public enum Parsers {
 
             let timestamp = data.readUInt32LE(at: 0)
             let pathLen = data[4]
-            let path = Data(data.dropFirst(5).prefix(Int(pathLen)))
+            let byteLen = decodePathLen(pathLen)?.byteLength ?? 0
+            let path = Data(data.dropFirst(5).prefix(byteLen))
 
             return .advertPathResponse(MeshCore.AdvertPathResponse(
                 recvTimestamp: timestamp,

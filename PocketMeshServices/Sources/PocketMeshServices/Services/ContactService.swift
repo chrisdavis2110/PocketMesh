@@ -264,7 +264,7 @@ public actor ContactService {
                     publicKey: contact.publicKey,
                     type: contact.type,
                     flags: contact.flags,
-                    outPathLength: -1,  // Flood routing
+                    outPathLength: 0xFF,  // Flood routing
                     outPath: Data(),
                     name: contact.name,
                     lastAdvertTimestamp: contact.lastAdvertTimestamp,
@@ -307,8 +307,8 @@ public actor ContactService {
     ///   - deviceID: The device ID
     ///   - publicKey: The contact's 32-byte public key
     ///   - path: The path data (repeater hashes)
-    ///   - pathLength: The path length (-1 for flood, 0 for direct, >0 for routed)
-    public func setPath(deviceID: UUID, publicKey: Data, path: Data, pathLength: Int8) async throws {
+    ///   - pathLength: Encoded path length byte (0xFF for flood, 0 for direct, >0 for routed)
+    public func setPath(deviceID: UUID, publicKey: Data, path: Data, pathLength: UInt8) async throws {
         // Get current contact to preserve other fields
         guard let existingContact = try await dataStore.fetchContact(deviceID: deviceID, publicKey: publicKey) else {
             throw ContactServiceError.contactNotFound

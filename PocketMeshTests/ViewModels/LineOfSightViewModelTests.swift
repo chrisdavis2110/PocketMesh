@@ -123,8 +123,8 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func clearChannelUnreadCount(channelID: UUID) async throws {}
     func fetchSavedTracePaths(deviceID: UUID) async throws -> [SavedTracePathDTO] { [] }
     func fetchSavedTracePath(id: UUID) async throws -> SavedTracePathDTO? { nil }
-    func createSavedTracePath(deviceID: UUID, name: String, pathBytes: Data, initialRun: TracePathRunDTO?) async throws -> SavedTracePathDTO {
-        SavedTracePathDTO(id: UUID(), deviceID: deviceID, name: name, pathBytes: pathBytes, createdDate: Date(), runs: [])
+    func createSavedTracePath(deviceID: UUID, name: String, pathBytes: Data, hashSize: Int, initialRun: TracePathRunDTO?) async throws -> SavedTracePathDTO {
+        SavedTracePathDTO(id: UUID(), deviceID: deviceID, name: name, pathBytes: pathBytes, hashSize: hashSize, createdDate: Date(), runs: [])
     }
     func updateSavedTracePathName(id: UUID, name: String) async throws {}
     func deleteSavedTracePath(id: UUID) async throws {}

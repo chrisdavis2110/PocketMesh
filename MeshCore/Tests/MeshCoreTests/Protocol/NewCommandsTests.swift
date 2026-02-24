@@ -66,4 +66,20 @@ struct NewCommandsTests {
         #expect(packet.count == 1)
         #expect(packet[0] == 0x2B, "Command code")
     }
+
+    // MARK: - setPathHashMode
+
+    @Test("setPathHashMode mode 0 (1-byte hashes)", arguments: [
+        (mode: UInt8(0), label: "1-byte hashes"),
+        (mode: UInt8(1), label: "2-byte hashes"),
+        (mode: UInt8(2), label: "3-byte hashes"),
+    ])
+    func setPathHashModeFormat(mode: UInt8, label: String) {
+        let packet = PacketBuilder.setPathHashMode(mode)
+
+        #expect(packet.count == 3, "Packet should be exactly 3 bytes: cmd + reserved + mode")
+        #expect(packet[0] == 0x3D, "Command code should be setPathHashMode (0x3D)")
+        #expect(packet[1] == 0x00, "Reserved byte at offset 1 should be 0x00")
+        #expect(packet[2] == mode, "Mode byte at offset 2 should be \(mode) (\(label))")
+    }
 }

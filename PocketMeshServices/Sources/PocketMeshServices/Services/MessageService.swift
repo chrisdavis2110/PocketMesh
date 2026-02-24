@@ -784,7 +784,7 @@ public actor MessageService {
         publicKey: Data,
         contactID: UUID,
         deviceID: UUID,
-        initialPathLength: Int8
+        initialPathLength: UInt8
     ) async {
         do {
             // Fetch fresh contact state from device
@@ -802,7 +802,7 @@ public actor MessageService {
                 _ = try await dataStore.saveContact(deviceID: deviceID, from: updatedContact.toContactFrame())
 
                 // Notify UI of routing change
-                let isNowFlood = newPathLength < 0
+                let isNowFlood = newPathLength == 0xFF
                 await routingChangedHandler?(contactID, isNowFlood)
             }
         } catch {

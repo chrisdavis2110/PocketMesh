@@ -57,7 +57,7 @@ struct RepeaterResolverTests {
         )
 
         let userLocation = CLLocation(latitude: 37.0005, longitude: -122.0005)
-        let match = RepeaterResolver.bestMatch(for: 0x3F, in: [repeaterA, repeaterB], userLocation: userLocation)
+        let match = RepeaterResolver.bestMatch(for: Data([0x3F]), in: [repeaterA, repeaterB], userLocation: userLocation)
 
         #expect(match?.displayName == "Near")
     }
@@ -83,7 +83,7 @@ struct RepeaterResolverTests {
 
         let userLocation = CLLocation(latitude: 37.0005, longitude: -122.0005)
         // PathHop with full key of repeaterA - should match exactly despite repeaterB being closer/newer
-        let hop = PathHop(hashByte: 0x3F, publicKey: repeaterA.publicKey, resolvedName: "Target")
+        let hop = PathHop(hashBytes: Data([0x3F]), publicKey: repeaterA.publicKey, resolvedName: "Target")
         let match = RepeaterResolver.bestMatch(for: hop, in: [repeaterA, repeaterB], userLocation: userLocation)
 
         #expect(match?.displayName == "Target")
@@ -110,7 +110,7 @@ struct RepeaterResolverTests {
 
         let userLocation = CLLocation(latitude: 37.0005, longitude: -122.0005)
         // PathHop with nil publicKey - should fall back to proximity match
-        let hop = PathHop(hashByte: 0x3F, resolvedName: nil)
+        let hop = PathHop(hashBytes: Data([0x3F]), resolvedName: nil)
         let match = RepeaterResolver.bestMatch(for: hop, in: [repeaterA, repeaterB], userLocation: userLocation)
 
         #expect(match?.displayName == "Near")
@@ -129,7 +129,7 @@ struct RepeaterResolverTests {
 
         // PathHop has a key that doesn't match any current repeater (contact was deleted)
         let deletedKey = Data([0x3F, 0xFF] + Array(repeating: UInt8(0), count: 30))
-        let hop = PathHop(hashByte: 0x3F, publicKey: deletedKey, resolvedName: "Deleted")
+        let hop = PathHop(hashBytes: Data([0x3F]), publicKey: deletedKey, resolvedName: "Deleted")
         let match = RepeaterResolver.bestMatch(for: hop, in: [repeaterA], userLocation: nil)
 
         // Falls back to hash byte match
@@ -155,7 +155,7 @@ struct RepeaterResolverTests {
             longitude: 0
         )
 
-        let match = RepeaterResolver.bestMatch(for: 0x3F, in: [repeaterA, repeaterB], userLocation: nil)
+        let match = RepeaterResolver.bestMatch(for: Data([0x3F]), in: [repeaterA, repeaterB], userLocation: nil)
 
         #expect(match?.displayName == "Newer")
     }

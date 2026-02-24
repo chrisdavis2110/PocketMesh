@@ -325,17 +325,17 @@ struct TracePathHopRow: View {
         VStack(alignment: .leading) {
             if let name = hop.resolvedName {
                 Text(name)
-                Text(hop.hashByte.hexString)
+                Text(hop.hashHex)
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
             } else {
-                Text(hop.hashByte.hexString)
+                Text(hop.hashHex)
                     .font(.body.monospaced())
             }
         }
         .frame(minHeight: 44)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(L10n.Contacts.Contacts.Trace.List.hopLabel(hopNumber, hop.resolvedName ?? hop.hashByte.hexString))
+        .accessibilityLabel(L10n.Contacts.Contacts.Trace.List.hopLabel(hopNumber, hop.resolvedName ?? hop.hashHex))
         .accessibilityHint(L10n.Contacts.Contacts.Trace.List.hopHint)
     }
 }

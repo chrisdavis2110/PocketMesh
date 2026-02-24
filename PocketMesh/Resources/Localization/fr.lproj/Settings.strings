@@ -331,6 +331,27 @@
 /* Accessibility hint for voltage text field */
 "batteryCurve.accessibility.voltageHint" = "Entrez la tension attendue à ce niveau de charge";
 
+// MARK: - Path Hash Mode Section
+
+/* Section header for path hash mode */
+"pathHashMode.header" = "Taille du hash de chemin";
+
+/* Label for path hash mode picker */
+"pathHashMode.label" = "Taille du hash";
+
+/* Path hash mode option: 1 byte */
+"pathHashMode.oneByte" = "1 octet";
+
+/* Path hash mode option: 2 bytes */
+"pathHashMode.twoBytes" = "2 octets";
+
+/* Path hash mode option: 3 bytes */
+"pathHashMode.threeBytes" = "3 octets";
+
+/* Footer explaining path hash mode tradeoff */
+"pathHashMode.footer" = "Des hashes plus grands réduisent les collisions de routage, mais limitent le nombre maximum de sauts par chemin.";
+
+
 // MARK: - Battery Curve Section
 
 /* Section header for battery curve */

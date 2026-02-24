@@ -44,6 +44,11 @@ final class SavedPathDetailViewModel {
 
     private var appState: AppState?
 
+    /// Hash size per hop from when the path was saved (1, 2, or 3 bytes)
+    var hashSize: Int {
+        savedPath.hashSize
+    }
+
     func configure(appState: AppState) {
         self.appState = appState
     }

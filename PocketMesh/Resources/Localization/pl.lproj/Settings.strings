@@ -322,6 +322,27 @@
 "advancedRadio.repeatMode.footer" = "Tworzy lokalny repeater na wydzielonej częstotliwości. Przydatny podczas pieszych wędrówek i w odległych obszarach. Prawidłowe częstotliwości: 433, 869, 918 MHz.";
 
 
+// MARK: - Path Hash Mode Section
+
+/* Section header for path hash mode */
+"pathHashMode.header" = "Rozmiar hashu ścieżki";
+
+/* Label for path hash mode picker */
+"pathHashMode.label" = "Rozmiar hashu";
+
+/* Path hash mode option: 1 byte */
+"pathHashMode.oneByte" = "1 bajt";
+
+/* Path hash mode option: 2 bytes */
+"pathHashMode.twoBytes" = "2 bajty";
+
+/* Path hash mode option: 3 bytes */
+"pathHashMode.threeBytes" = "3 bajty";
+
+/* Footer explaining path hash mode tradeoff */
+"pathHashMode.footer" = "Większe hashe zmniejszają kolizje routingu, ale ograniczają maksymalną liczbę skoków na ścieżce.";
+
+
 // MARK: - Battery Curve Section
 
 /* Accessibility label for voltage text field - %d is the percentage level */

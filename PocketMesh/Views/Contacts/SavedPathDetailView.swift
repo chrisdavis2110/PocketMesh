@@ -30,7 +30,7 @@ struct SavedPathDetailView: View {
 
     private var pathSection: some View {
         Section(L10n.Contacts.Contacts.PathDetail.path) {
-            PathChipsView(pathBytes: viewModel.savedPath.pathHashBytes)
+            PathChipsView(pathData: viewModel.savedPath.pathBytes, hashSize: viewModel.hashSize)
         }
     }
 
@@ -107,19 +107,27 @@ struct SavedPathDetailView: View {
 // MARK: - Supporting Views
 
 private struct PathChipsView: View {
-    let pathBytes: [UInt8]
+    let pathData: Data
+    let hashSize: Int
+
+    private var hopHexStrings: [String] {
+        stride(from: 0, to: pathData.count, by: hashSize).map { start in
+            let end = min(start + hashSize, pathData.count)
+            return pathData[start..<end].hexString()
+        }
+    }
 
     var body: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 4) {
-                ForEach(Array(pathBytes.enumerated()), id: \.offset) { index, byte in
+                ForEach(Array(hopHexStrings.enumerated()), id: \.offset) { index, hex in
                     if index > 0 {
                         Image(systemName: "arrow.right")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
 
-                    Text(byte.hexString)
+                    Text(hex)
                         .font(.caption.monospaced())
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)

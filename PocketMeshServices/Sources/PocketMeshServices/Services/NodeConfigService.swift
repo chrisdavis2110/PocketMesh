@@ -7,6 +7,7 @@ import OSLog
 public enum NodeConfigServiceError: Error, LocalizedError, Sendable {
     case invalidChannelSecret(index: Int, hexLength: Int)
     case invalidContactPublicKey(name: String)
+    case invalidPathHashMode(name: String, mode: UInt8)
     case invalidPrivateKey(hexLength: Int)
     case noAvailableChannelSlot(name: String)
 
@@ -16,6 +17,8 @@ public enum NodeConfigServiceError: Error, LocalizedError, Sendable {
             "Channel \(index) has invalid secret (\(hexLength) hex chars, expected 32)"
         case .invalidContactPublicKey(let name):
             "Contact \"\(name)\" has an invalid public key"
+        case .invalidPathHashMode(let name, let mode):
+            "Contact \"\(name)\" has unsupported path hash mode \(mode) (expected 0, 1, or 2)"
         case .invalidPrivateKey(let hexLength):
             "Invalid private key (\(hexLength) hex chars, expected \(ProtocolLimits.privateKeySize * 2))"
         case .noAvailableChannelSlot(let name):
@@ -327,14 +330,24 @@ public actor NodeConfigService {
             }
 
             let outPath: Data
-            let outPathLength: Int8
+            let outPathLength: UInt8
             if let pathHex = contact.outPath, !pathHex.isEmpty,
                let pathData = Data(hexString: pathHex) {
+                let mode = contact.pathHashMode ?? 0
+                guard mode <= 2 else {
+                    throw NodeConfigServiceError.invalidPathHashMode(name: contact.name, mode: mode)
+                }
+                let hashSize = Int(mode) + 1
+                let hopCount = pathData.count / hashSize
+                outPathLength = encodePathLen(hashSize: hashSize, hopCount: hopCount)
                 outPath = pathData
-                outPathLength = Int8(clamping: pathData.count)
+            } else if contact.outPath != nil {
+                // Direct contact: outPathLength must be 0 regardless of pathHashMode.
+                outPath = Data()
+                outPathLength = 0
             } else {
                 outPath = Data()
-                outPathLength = -1
+                outPathLength = 0xFF
             }
 
             let meshContact = MeshContact(
@@ -418,13 +431,16 @@ extension NodeConfigService {
     /// Builds a contact config from a MeshContact.
     static func buildContactConfig(from contact: MeshContact) -> MeshCoreNodeConfig.ContactConfig {
         let outPath: String?
-        if contact.outPathLength > 0 && !contact.outPath.isEmpty {
-            outPath = contact.outPath.prefix(Int(contact.outPathLength)).hexString().lowercased()
-        } else if contact.outPathLength == 0 {
-            outPath = ""
-        } else {
+        if contact.isFloodPath {
             outPath = nil
+        } else if contact.pathByteLength > 0 && !contact.outPath.isEmpty {
+            outPath = contact.outPath.prefix(contact.pathByteLength).hexString().lowercased()
+        } else {
+            outPath = ""
         }
+
+        // Extract hash mode from encoded outPathLength (upper 2 bits)
+        let pathHashMode: UInt8? = contact.isFloodPath ? nil : contact.outPathLength >> 6
 
         return MeshCoreNodeConfig.ContactConfig(
             type: contact.type.rawValue,
@@ -435,7 +451,8 @@ extension NodeConfigService {
             longitude: String(contact.longitude),
             lastAdvert: UInt32(contact.lastAdvertisement.timeIntervalSince1970),
             lastModified: UInt32(contact.lastModified.timeIntervalSince1970),
-            outPath: outPath
+            outPath: outPath,
+            pathHashMode: pathHashMode
         )
     }
 }

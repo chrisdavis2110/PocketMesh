@@ -75,11 +75,11 @@ struct RepeatRowView: View {
 
     /// Resolve repeater name from repeaters list or show placeholder
     private var repeaterName: String {
-        guard let repeaterByte = repeatEntry.repeaterByte else {
+        guard let repeaterHash = repeatEntry.repeaterHash else {
             return L10n.Chats.Chats.Repeats.unknownRepeater
         }
 
-        if let repeater = RepeaterResolver.bestMatch(for: repeaterByte, in: repeaters, userLocation: userLocation) {
+        if let repeater = RepeaterResolver.bestMatch(for: repeaterHash, in: repeaters, userLocation: userLocation) {
             return repeater.displayName
         }
 

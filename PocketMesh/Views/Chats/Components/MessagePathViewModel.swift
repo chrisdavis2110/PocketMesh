@@ -51,8 +51,8 @@ final class MessagePathViewModel {
         return String(format: "%02X", firstByte)
     }
 
-    func repeaterName(for hopByte: UInt8, userLocation: CLLocation?) -> String {
-        if let match = RepeaterResolver.bestMatch(for: hopByte, in: repeaters, userLocation: userLocation) {
+    func repeaterName(for hashBytes: Data, userLocation: CLLocation?) -> String {
+        if let match = RepeaterResolver.bestMatch(for: hashBytes, in: repeaters, userLocation: userLocation) {
             return match.displayName
         }
         return L10n.Chats.Chats.Path.Hop.unknown

@@ -266,6 +266,10 @@ public final class AppState {
                     await MainActor.run {
                         self.connectionManager.updateClientRepeat(enabled)
                     }
+                case .pathHashModeUpdated(let mode):
+                    await MainActor.run {
+                        self.connectionManager.updatePathHashMode(mode)
+                    }
                 case .allowedRepeatFreqUpdated(let ranges):
                     await MainActor.run {
                         self.connectionManager.allowedRepeatFreqRanges = ranges

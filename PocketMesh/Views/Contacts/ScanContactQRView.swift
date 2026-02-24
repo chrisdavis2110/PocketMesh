@@ -210,7 +210,7 @@ struct ScanContactQRView: View {
                 publicKey: contact.publicKey,
                 type: contact.type,
                 flags: 0,
-                outPathLength: -1,  // Flood routing
+                outPathLength: 0xFF,  // Flood routing
                 outPath: Data(),
                 name: contact.name,
                 lastAdvertTimestamp: 0,

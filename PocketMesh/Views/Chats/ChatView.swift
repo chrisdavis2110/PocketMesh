@@ -299,10 +299,9 @@ struct ChatView: View {
     private var connectionStatus: String {
         if contact.isFloodRouted {
             return L10n.Chats.Chats.ConnectionStatus.floodRouting
-        } else if contact.outPathLength >= 0 {
-            return L10n.Chats.Chats.ConnectionStatus.direct(Int(contact.outPathLength))
+        } else {
+            return L10n.Chats.Chats.ConnectionStatus.direct(contact.pathHopCount)
         }
-        return L10n.Chats.Chats.ConnectionStatus.unknown
     }
 
     private func setReplyText(_ text: String) {

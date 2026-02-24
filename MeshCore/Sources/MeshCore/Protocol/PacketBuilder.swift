@@ -543,7 +543,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 1 (32 bytes): Public key
     /// - Offset 33 (1 byte): Type
     /// - Offset 34 (1 byte): Flags
-    /// - Offset 35 (1 byte): Out path length (signed Int8 as UInt8)
+    /// - Offset 35 (1 byte): Out path length (encoded: upper 2 bits = hash mode, lower 6 bits = hop count; 0xFF = flood)
     /// - Offset 36 (64 bytes): Out path (zero-padded)
     /// - Offset 100 (32 bytes): Advertised name (UTF-8, zero-padded)
     /// - Offset 132 (4 bytes): Last advert timestamp (UInt32 LE)
@@ -557,7 +557,7 @@ public enum PacketBuilder: Sendable {
         data.append(contact.publicKey.paddedOrTruncated(to: 32))           // 32 bytes
         data.append(contact.type.rawValue)                                   // 1 byte
         data.append(contact.flags.rawValue)                                  // 1 byte
-        data.append(UInt8(bitPattern: contact.outPathLength))               // 1 byte
+        data.append(contact.outPathLength)                                    // 1 byte
         data.append(contact.outPath.paddedOrTruncated(to: 64))              // 64 bytes
         data.append(contact.advertisedName.utf8PaddedOrTruncated(to: 32))   // 32 bytes
 
@@ -778,6 +778,19 @@ public enum PacketBuilder: Sendable {
         var data = Data([CommandCode.setFloodScope.rawValue, 0x00])
         data.append(scopeKey.prefix(16))
         return data
+    }
+
+    /// Builds a setPathHashMode command to configure the path hash size.
+    ///
+    /// - Parameter mode: Hash mode (0=1-byte, 1=2-byte, 2=3-byte hashes).
+    /// - Returns: The command packet data.
+    ///
+    /// ### Binary Format
+    /// - Offset 0 (1 byte): Command code `0x3D`
+    /// - Offset 1 (1 byte): Reserved `0x00`
+    /// - Offset 2 (1 byte): Mode value (0, 1, or 2)
+    public static func setPathHashMode(_ mode: UInt8) -> Data {
+        Data([CommandCode.setPathHashMode.rawValue, 0x00, mode])
     }
 
     /// Builds a factoryReset command to wipe all settings and data from the device.

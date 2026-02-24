@@ -965,7 +965,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         savedTracePaths[id]
     }
 
-    public func createSavedTracePath(deviceID: UUID, name: String, pathBytes: Data, initialRun: TracePathRunDTO?) async throws -> SavedTracePathDTO {
+    public func createSavedTracePath(deviceID: UUID, name: String, pathBytes: Data, hashSize: Int, initialRun: TracePathRunDTO?) async throws -> SavedTracePathDTO {
         let id = UUID()
         let runs = initialRun.map { [$0] } ?? []
         let dto = SavedTracePathDTO(
@@ -973,6 +973,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             deviceID: deviceID,
             name: name,
             pathBytes: pathBytes,
+            hashSize: hashSize,
             createdDate: Date(),
             runs: runs
         )
@@ -987,6 +988,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 deviceID: path.deviceID,
                 name: name,
                 pathBytes: path.pathBytes,
+                hashSize: path.hashSize,
                 createdDate: path.createdDate,
                 runs: path.runs
             )
@@ -1006,6 +1008,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 deviceID: path.deviceID,
                 name: path.name,
                 pathBytes: path.pathBytes,
+                hashSize: path.hashSize,
                 createdDate: path.createdDate,
                 runs: runs
             )

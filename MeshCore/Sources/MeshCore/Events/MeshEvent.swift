@@ -675,6 +675,7 @@ public struct RadioStats: Sendable, Equatable {
 /// - Bytes 12-15: UInt32 - direct_tx
 /// - Bytes 16-19: UInt32 - flood_rx
 /// - Bytes 20-23: UInt32 - direct_rx
+/// - Bytes 24-27: UInt32 - recv_errors (optional, present when frame >= 28 bytes)
 public struct PacketStats: Sendable, Equatable {
     /// Total packets received.
     public let received: UInt32
@@ -688,6 +689,8 @@ public struct PacketStats: Sendable, Equatable {
     public let floodRx: UInt32
     /// Total direct packets received.
     public let directRx: UInt32
+    /// Total RadioLib receive errors (CRC failures, malformed packets).
+    public let receiveErrors: UInt32
 
     /// Initializes a new packet statistics object.
     public init(
@@ -696,7 +699,8 @@ public struct PacketStats: Sendable, Equatable {
         floodTx: UInt32,
         directTx: UInt32,
         floodRx: UInt32,
-        directRx: UInt32
+        directRx: UInt32,
+        receiveErrors: UInt32 = 0
     ) {
         self.received = received
         self.sent = sent
@@ -704,6 +708,7 @@ public struct PacketStats: Sendable, Equatable {
         self.directTx = directTx
         self.floodRx = floodRx
         self.directRx = directRx
+        self.receiveErrors = receiveErrors
     }
 }
 
