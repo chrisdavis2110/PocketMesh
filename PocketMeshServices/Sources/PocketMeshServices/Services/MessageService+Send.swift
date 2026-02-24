@@ -37,15 +37,7 @@ extension MessageService {
         textType: TextType = .plain,
         replyToID: UUID? = nil
     ) async throws -> MessageDTO {
-        // Prevent messaging repeaters
-        guard contact.type != .repeater else {
-            throw MessageServiceError.invalidRecipient
-        }
-
-        // Validate message length (byte count matches firmware buffer limits)
-        guard text.utf8.count <= ProtocolLimits.maxDirectMessageLength else {
-            throw MessageServiceError.messageTooLong
-        }
+        try validateDirectMessage(text: text, to: contact)
 
         let messageID = UUID()
         let timestamp = UInt32(Date().timeIntervalSince1970)
@@ -90,12 +82,8 @@ extension MessageService {
                 throw MessageServiceError.sendFailed("Failed to fetch saved message")
             }
             return message
-        } catch let error as MeshCoreError {
-            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
-            throw MessageServiceError.sessionError(error)
         } catch {
-            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
-            throw error
+            try await failMessageAndRethrow(error, messageID: messageID)
         }
     }
 
@@ -147,15 +135,7 @@ extension MessageService {
         timeout: TimeInterval = 0,
         onMessageCreated: (@Sendable (MessageDTO) async -> Void)? = nil
     ) async throws -> MessageDTO {
-        // Prevent messaging repeaters
-        guard contact.type != .repeater else {
-            throw MessageServiceError.invalidRecipient
-        }
-
-        // Validate message length (byte count matches firmware buffer limits)
-        guard text.utf8.count <= ProtocolLimits.maxDirectMessageLength else {
-            throw MessageServiceError.messageTooLong
-        }
+        try validateDirectMessage(text: text, to: contact)
 
         let messageID = UUID()
         let timestamp = UInt32(Date().timeIntervalSince1970)
@@ -190,41 +170,16 @@ extension MessageService {
                 timeout: timeout > 0 ? timeout : nil
             )
 
-            if let sentInfo {
-                // Message was ACKed
-                let ackCodeUInt32 = sentInfo.expectedAck.ackCodeUInt32
-
-                try await dataStore.updateMessageAck(
-                    id: messageID,
-                    ackCode: ackCodeUInt32,
-                    status: .delivered
-                )
-
-                // Update contact's last message date
-                try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
-            } else {
-                // All attempts exhausted
-                try await dataStore.updateMessageStatus(id: messageID, status: .failed)
-            }
-
-            // Check if routing changed during retry
-            await checkAndNotifyRoutingChange(
-                publicKey: contact.publicKey,
+            return try await finalizeSend(
+                messageID: messageID,
                 contactID: contact.id,
                 deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
+                sentInfo: sentInfo,
                 initialPathLength: initialPathLength
             )
-
-            guard let message = try await dataStore.fetchMessage(id: messageID) else {
-                throw MessageServiceError.sendFailed("Failed to fetch saved message")
-            }
-            return message
-        } catch let error as MeshCoreError {
-            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
-            throw MessageServiceError.sessionError(error)
         } catch {
-            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
-            throw error
+            try await failMessageAndRethrow(error, messageID: messageID)
         }
     }
 
@@ -246,13 +201,7 @@ extension MessageService {
         textType: TextType = .plain,
         replyToID: UUID? = nil
     ) async throws -> MessageDTO {
-        guard contact.type != .repeater else {
-            throw MessageServiceError.invalidRecipient
-        }
-
-        guard text.utf8.count <= ProtocolLimits.maxDirectMessageLength else {
-            throw MessageServiceError.messageTooLong
-        }
+        try validateDirectMessage(text: text, to: contact)
 
         let messageID = UUID()
         let timestamp = UInt32(Date().timeIntervalSince1970)
@@ -301,35 +250,16 @@ extension MessageService {
                 maxFloodAttempts: config.maxFloodAttempts
             )
 
-            if let sentInfo {
-                let ackCodeUInt32 = sentInfo.expectedAck.ackCodeUInt32
-                try await dataStore.updateMessageAck(
-                    id: messageID,
-                    ackCode: ackCodeUInt32,
-                    status: .delivered
-                )
-                try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
-            } else {
-                try await dataStore.updateMessageStatus(id: messageID, status: .failed)
-            }
-
-            await checkAndNotifyRoutingChange(
-                publicKey: contact.publicKey,
+            return try await finalizeSend(
+                messageID: messageID,
                 contactID: contact.id,
                 deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
+                sentInfo: sentInfo,
                 initialPathLength: initialPathLength
             )
-
-            guard let message = try await dataStore.fetchMessage(id: messageID) else {
-                throw MessageServiceError.sendFailed("Failed to fetch message after send")
-            }
-            return message
-        } catch let error as MeshCoreError {
-            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
-            throw MessageServiceError.sessionError(error)
         } catch {
-            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
-            throw error
+            try await failMessageAndRethrow(error, messageID: messageID)
         }
     }
 
@@ -388,38 +318,16 @@ extension MessageService {
                 timeout: nil
             )
 
-            if let sentInfo {
-                let ackCodeUInt32 = sentInfo.expectedAck.ackCodeUInt32
-
-                try await dataStore.updateMessageAck(
-                    id: messageID,
-                    ackCode: ackCodeUInt32,
-                    status: .delivered
-                )
-
-                try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
-            } else {
-                try await dataStore.updateMessageStatus(id: messageID, status: .failed)
-            }
-
-            // Check if routing changed during retry
-            await checkAndNotifyRoutingChange(
-                publicKey: contact.publicKey,
+            return try await finalizeSend(
+                messageID: messageID,
                 contactID: contact.id,
                 deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
+                sentInfo: sentInfo,
                 initialPathLength: initialPathLength
             )
-
-            guard let message = try await dataStore.fetchMessage(id: messageID) else {
-                throw MessageServiceError.sendFailed("Failed to fetch message")
-            }
-            return message
-        } catch let error as MeshCoreError {
-            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
-            throw MessageServiceError.sessionError(error)
         } catch {
-            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
-            throw error
+            try await failMessageAndRethrow(error, messageID: messageID)
         }
     }
 
@@ -691,6 +599,49 @@ extension MessageService {
             timeout: timeout
         )
         pendingAcks[ackCode] = pending
+    }
+
+    private func validateDirectMessage(text: String, to contact: ContactDTO) throws {
+        guard contact.type != .repeater else { throw MessageServiceError.invalidRecipient }
+        guard text.utf8.count <= ProtocolLimits.maxDirectMessageLength else { throw MessageServiceError.messageTooLong }
+    }
+
+    private func failMessageAndRethrow(_ error: Error, messageID: UUID) async throws -> Never {
+        try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+        if let meshError = error as? MeshCoreError {
+            throw MessageServiceError.sessionError(meshError)
+        }
+        throw error
+    }
+
+    private func finalizeSend(
+        messageID: UUID,
+        contactID: UUID,
+        deviceID: UUID,
+        publicKey: Data,
+        sentInfo: MessageSentInfo?,
+        initialPathLength: UInt8
+    ) async throws -> MessageDTO {
+        if let sentInfo {
+            try await dataStore.updateMessageAck(
+                id: messageID,
+                ackCode: sentInfo.expectedAck.ackCodeUInt32,
+                status: .delivered
+            )
+            try await dataStore.updateContactLastMessage(contactID: contactID, date: Date())
+        } else {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+        }
+        await checkAndNotifyRoutingChange(
+            publicKey: publicKey,
+            contactID: contactID,
+            deviceID: deviceID,
+            initialPathLength: initialPathLength
+        )
+        guard let message = try await dataStore.fetchMessage(id: messageID) else {
+            throw MessageServiceError.sendFailed("Failed to fetch message")
+        }
+        return message
     }
 
     private func createOutgoingMessage(
