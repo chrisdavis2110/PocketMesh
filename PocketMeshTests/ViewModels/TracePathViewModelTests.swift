@@ -1311,7 +1311,7 @@ struct RepeatersWithoutLocationTests {
 @MainActor
 struct CodeInputParsingTests {
 
-    private func createRepeater(prefix: UInt8, name: String) -> ContactDTO {
+    private func createContact(prefix: UInt8, name: String) -> ContactDTO {
         let contact = Contact(
             id: UUID(),
             deviceID: UUID(),
@@ -1333,9 +1333,9 @@ struct CodeInputParsingTests {
     func parsesValidCodes() {
         let viewModel = TracePathViewModel()
         viewModel.availableRepeaters = [
-            createRepeater(prefix: 0xA3, name: "Alpha"),
-            createRepeater(prefix: 0xB7, name: "Bravo"),
-            createRepeater(prefix: 0xF2, name: "Foxtrot")
+            createContact(prefix: 0xA3, name: "Alpha"),
+            createContact(prefix: 0xB7, name: "Bravo"),
+            createContact(prefix: 0xF2, name: "Foxtrot")
         ]
 
         let result = viewModel.addRepeatersFromCodes("A3, B7")
@@ -1352,7 +1352,7 @@ struct CodeInputParsingTests {
     func caseInsensitive() {
         let viewModel = TracePathViewModel()
         viewModel.availableRepeaters = [
-            createRepeater(prefix: 0xA3, name: "Alpha")
+            createContact(prefix: 0xA3, name: "Alpha")
         ]
 
         let result = viewModel.addRepeatersFromCodes("a3")
@@ -1365,8 +1365,8 @@ struct CodeInputParsingTests {
     func noSpacesAfterCommas() {
         let viewModel = TracePathViewModel()
         viewModel.availableRepeaters = [
-            createRepeater(prefix: 0xA3, name: "Alpha"),
-            createRepeater(prefix: 0xB7, name: "Bravo")
+            createContact(prefix: 0xA3, name: "Alpha"),
+            createContact(prefix: 0xB7, name: "Bravo")
         ]
 
         let result = viewModel.addRepeatersFromCodes("A3,B7")
@@ -1379,7 +1379,7 @@ struct CodeInputParsingTests {
     func reportsNotFound() {
         let viewModel = TracePathViewModel()
         viewModel.availableRepeaters = [
-            createRepeater(prefix: 0xA3, name: "Alpha")
+            createContact(prefix: 0xA3, name: "Alpha")
         ]
 
         let result = viewModel.addRepeatersFromCodes("A3, 11, FF")
@@ -1392,7 +1392,7 @@ struct CodeInputParsingTests {
     @Test("reports codes already in outbound path")
     func reportsAlreadyInPath() {
         let viewModel = TracePathViewModel()
-        let alpha = createRepeater(prefix: 0xA3, name: "Alpha")
+        let alpha = createContact(prefix: 0xA3, name: "Alpha")
         viewModel.availableRepeaters = [alpha]
         viewModel.addRepeater(alpha)
 
@@ -1407,7 +1407,7 @@ struct CodeInputParsingTests {
     func deduplicatesInput() {
         let viewModel = TracePathViewModel()
         viewModel.availableRepeaters = [
-            createRepeater(prefix: 0xA3, name: "Alpha")
+            createContact(prefix: 0xA3, name: "Alpha")
         ]
 
         let result = viewModel.addRepeatersFromCodes("A3, A3, a3")
@@ -1420,7 +1420,7 @@ struct CodeInputParsingTests {
     func reportsInvalidFormat() {
         let viewModel = TracePathViewModel()
         viewModel.availableRepeaters = [
-            createRepeater(prefix: 0xA3, name: "Alpha")
+            createContact(prefix: 0xA3, name: "Alpha")
         ]
 
         let result = viewModel.addRepeatersFromCodes("A3, ZZ, 123, X")
@@ -1453,7 +1453,7 @@ struct CodeInputParsingTests {
     func hasErrorsWhenNoErrors() {
         let viewModel = TracePathViewModel()
         viewModel.availableRepeaters = [
-            createRepeater(prefix: 0xA3, name: "Alpha")
+            createContact(prefix: 0xA3, name: "Alpha")
         ]
 
         let result = viewModel.addRepeatersFromCodes("A3")
@@ -1476,7 +1476,7 @@ struct CodeInputParsingTests {
     @Test("errorMessage formats multiple error types with separator")
     func errorMessageFormatsMultipleTypes() {
         let viewModel = TracePathViewModel()
-        let alpha = createRepeater(prefix: 0xA3, name: "Alpha")
+        let alpha = createContact(prefix: 0xA3, name: "Alpha")
         viewModel.availableRepeaters = [alpha]
         viewModel.addRepeater(alpha)
 
@@ -1491,7 +1491,7 @@ struct CodeInputParsingTests {
     func clearsSavedPathStateOnSuccess() {
         let viewModel = TracePathViewModel()
         viewModel.availableRepeaters = [
-            createRepeater(prefix: 0xA3, name: "Alpha")
+            createContact(prefix: 0xA3, name: "Alpha")
         ]
         viewModel.activeSavedPath = createTestSavedPath(runs: [])
 
@@ -1728,5 +1728,84 @@ struct OutboundPathNameResolutionTests {
 
         // Should fall back to contact lookup since outboundPath is empty
         #expect(result.hops[1].resolvedName == "Test Tower")
+    }
+}
+
+// MARK: - Room Support Tests
+
+@Suite("Room Support")
+@MainActor
+struct RoomSupportTests {
+
+    private func createContact(prefix: UInt8, name: String, type: ContactType = .repeater) -> ContactDTO {
+        let contact = Contact(
+            id: UUID(),
+            deviceID: UUID(),
+            publicKey: Data([prefix] + Array(repeating: UInt8(0x00), count: 31)),
+            name: name,
+            typeRawValue: type.rawValue,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 0,
+            longitude: 0,
+            lastModified: 0
+        )
+        return ContactDTO(from: contact)
+    }
+
+    @Test("setContactsForTesting populates both availableRepeaters and availableRooms")
+    func setContactsPopulatesBothLists() {
+        let viewModel = TracePathViewModel()
+        let repeater = createContact(prefix: 0xA1, name: "Repeater")
+        let room = createContact(prefix: 0xB2, name: "Room", type: .room)
+
+        viewModel.setContactsForTesting([repeater, room])
+
+        #expect(viewModel.availableRepeaters.count == 1)
+        #expect(viewModel.availableRepeaters[0].name == "Repeater")
+        #expect(viewModel.availableRooms.count == 1)
+        #expect(viewModel.availableRooms[0].name == "Room")
+    }
+
+    @Test("availableNodes returns union of repeaters and rooms")
+    func availableNodesReturnsUnion() {
+        let viewModel = TracePathViewModel()
+        let repeater = createContact(prefix: 0xA1, name: "Repeater")
+        let room = createContact(prefix: 0xB2, name: "Room", type: .room)
+
+        viewModel.setContactsForTesting([repeater, room])
+
+        #expect(viewModel.availableNodes.count == 2)
+        #expect(viewModel.availableNodes.contains { $0.name == "Repeater" })
+        #expect(viewModel.availableNodes.contains { $0.name == "Room" })
+    }
+
+    @Test("addRepeater works with a room contact")
+    func addRepeaterWorksWithRoom() {
+        let viewModel = TracePathViewModel()
+        let room = createContact(prefix: 0xB2, name: "Room Server", type: .room)
+
+        viewModel.addRepeater(room)
+
+        #expect(viewModel.outboundPath.count == 1)
+        #expect(viewModel.outboundPath[0].resolvedName == "Room Server")
+        #expect(viewModel.outboundPath[0].hashBytes == Data([0xB2]))
+    }
+
+    @Test("addRepeatersFromCodes finds rooms via availableNodes")
+    func addRepeatersFromCodesFindsRooms() {
+        let viewModel = TracePathViewModel()
+        let room = createContact(prefix: 0xB2, name: "Room Server", type: .room)
+
+        viewModel.setContactsForTesting([room])
+
+        let result = viewModel.addRepeatersFromCodes("B2")
+
+        #expect(result.added == ["B2"])
+        #expect(result.notFound.isEmpty)
+        #expect(viewModel.outboundPath.count == 1)
+        #expect(viewModel.outboundPath[0].resolvedName == "Room Server")
     }
 }

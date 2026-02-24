@@ -1678,6 +1678,8 @@ public enum L10n {
           public static func hopLabel(_ p1: Int, _ p2: Any) -> String {
             return L10n.tr("Contacts", "contacts.trace.list.hopLabel", p1, String(describing: p2), fallback: "Hop %d: %@")
           }
+          /// Location: TracePathListView.swift - Purpose: Toggle to include room servers in the list
+          public static let includeRooms = L10n.tr("Contacts", "contacts.trace.list.includeRooms", fallback: "Include Rooms")
           /// Location: TracePathListView.swift - Purpose: Outbound path section header
           public static let outboundPath = L10n.tr("Contacts", "contacts.trace.list.outboundPath", fallback: "Outbound Path")
           /// Location: TracePathListView.swift - Purpose: Paste button

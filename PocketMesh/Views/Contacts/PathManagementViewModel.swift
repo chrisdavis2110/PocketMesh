@@ -72,7 +72,13 @@ final class PathManagementViewModel {
     var showingPathEditor = false
     var editablePath: [PathHop] = []  // Current path being edited (stable identifiers)
     var availableRepeaters: [ContactDTO] = []  // Known repeaters to add
+    var availableRooms: [ContactDTO] = []  // Known rooms (may act as repeaters)
     var allContacts: [ContactDTO] = []  // All contacts for name resolution
+
+    /// Combined repeaters and rooms for resolution
+    var availableNodes: [ContactDTO] {
+        availableRepeaters + availableRooms
+    }
 
     /// Repeaters available to add (allows duplicates for paths like A → B → A)
     var filteredAvailableRepeaters: [ContactDTO] {
@@ -141,9 +147,11 @@ final class PathManagementViewModel {
             let contacts = try await dataStore.fetchContacts(deviceID: deviceID)
             allContacts = contacts
             availableRepeaters = contacts.filter { $0.type == .repeater }
+            availableRooms = contacts.filter { $0.type == .room }
         } catch {
             allContacts = []
             availableRepeaters = []
+            availableRooms = []
         }
     }
 

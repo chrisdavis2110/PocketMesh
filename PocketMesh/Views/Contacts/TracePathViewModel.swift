@@ -123,8 +123,14 @@ final class TracePathViewModel {
 
     var outboundPath: [PathHop] = []
     var availableRepeaters: [ContactDTO] = []
+    var availableRooms: [ContactDTO] = []
     var autoReturnPath = true
     private var allContacts: [ContactDTO] = []
+
+    /// Combined repeaters and rooms for resolution (hex codes, map pins, etc.)
+    var availableNodes: [ContactDTO] {
+        availableRepeaters + availableRooms
+    }
 
     // MARK: - Execution State
 
@@ -431,11 +437,11 @@ final class TracePathViewModel {
     }
 
     private func bestRepeaterMatch(for hop: PathHop) -> ContactDTO? {
-        RepeaterResolver.bestMatch(for: hop, in: availableRepeaters, userLocation: currentUserLocation)
+        RepeaterResolver.bestMatch(for: hop, in: availableNodes, userLocation: currentUserLocation)
     }
 
     private func bestRepeaterMatch(for hashBytes: Data) -> ContactDTO? {
-        RepeaterResolver.bestMatch(for: hashBytes, in: availableRepeaters, userLocation: currentUserLocation)
+        RepeaterResolver.bestMatch(for: hashBytes, in: availableNodes, userLocation: currentUserLocation)
     }
 
     // MARK: - Data Loading
@@ -448,10 +454,12 @@ final class TracePathViewModel {
             let contacts = try await dataStore.fetchContacts(deviceID: deviceID)
             allContacts = contacts
             availableRepeaters = contacts.filter { $0.type == .repeater }
+            availableRooms = contacts.filter { $0.type == .room }
         } catch {
             logger.error("Failed to load contacts: \(error.localizedDescription)")
             allContacts = []
             availableRepeaters = []
+            availableRooms = []
         }
     }
 
@@ -1236,6 +1244,7 @@ final class TracePathViewModel {
     func setContactsForTesting(_ contacts: [ContactDTO]) {
         allContacts = contacts
         availableRepeaters = contacts.filter { $0.type == .repeater }
+        availableRooms = contacts.filter { $0.type == .room }
     }
     #endif
 }

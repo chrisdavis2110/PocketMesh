@@ -20,11 +20,17 @@ struct TracePathListView: View {
     @State private var codeInputError: String?
     @State private var pastedSuccessfully = false
     @AppStorage("tracePathShowOnlyFavorites") private var showOnlyFavorites = false
+    @AppStorage("tracePathIncludeRooms") private var includeRooms = false
 
     private var filteredRepeaters: [ContactDTO] {
-        showOnlyFavorites
-            ? viewModel.availableRepeaters.filter(\.isFavorite)
-            : viewModel.availableRepeaters
+        var nodes = viewModel.availableRepeaters
+        if includeRooms {
+            nodes += viewModel.availableRooms
+        }
+        if showOnlyFavorites {
+            nodes = nodes.filter(\.isFavorite)
+        }
+        return nodes
     }
 
     var body: some View {
@@ -105,6 +111,7 @@ struct TracePathListView: View {
         Section {
             DisclosureGroup(isExpanded: $isRepeatersExpanded) {
                 Toggle(L10n.Contacts.Contacts.Trace.List.favoritesOnly, isOn: $showOnlyFavorites)
+                Toggle(L10n.Contacts.Contacts.Trace.List.includeRooms, isOn: $includeRooms)
 
                 if filteredRepeaters.isEmpty {
                     if showOnlyFavorites {
@@ -129,7 +136,17 @@ struct TracePathListView: View {
                         } label: {
                             HStack {
                                 VStack(alignment: .leading) {
-                                    Text(repeater.displayName)
+                                    HStack {
+                                        Text(repeater.displayName)
+                                        if repeater.type == .room {
+                                            Text(L10n.Contacts.Contacts.NodeKind.room)
+                                                .font(.caption2.weight(.medium))
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(.blue.opacity(0.15), in: .capsule)
+                                                .foregroundStyle(.blue)
+                                        }
+                                    }
                                     Text(repeater.publicKey.hexString())
                                         .font(.caption.monospaced())
                                         .foregroundStyle(.secondary)

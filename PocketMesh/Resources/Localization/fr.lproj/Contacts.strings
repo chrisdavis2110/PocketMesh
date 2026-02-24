@@ -846,6 +846,9 @@
 /* Location: TracePathListView.swift - Purpose: Favorites filter toggle label */
 "contacts.trace.list.favoritesOnly" = "Favoris uniquement";
 
+/* Location: TracePathListView.swift - Purpose: Toggle to include room servers in the list */
+"contacts.trace.list.includeRooms" = "Inclure les salons";
+
 /* Location: TracePathListView.swift - Purpose: No favorite repeaters empty title */
 "contacts.trace.list.noFavorites.title" = "Aucun répéteur favori";
 

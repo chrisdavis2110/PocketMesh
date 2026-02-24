@@ -816,6 +816,9 @@
 /* Location: TracePathListView.swift - Purpose: Favorites filter toggle label */
 "contacts.trace.list.favoritesOnly" = "仅收藏";
 
+/* Location: TracePathListView.swift - Purpose: Toggle to include room servers in the list */
+"contacts.trace.list.includeRooms" = "包含聊天室";
+
 /* Location: TracePathListView.swift - Purpose: No favorite repeaters empty title */
 "contacts.trace.list.noFavorites.title" = "无收藏的转发节点";
 

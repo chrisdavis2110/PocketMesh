@@ -80,9 +80,9 @@ final class TracePathMapViewModel {
 
     // MARK: - Computed Properties
 
-    /// Repeaters to display on map
+    /// Repeaters and rooms to display on map
     var repeatersWithLocation: [ContactDTO] {
-        traceViewModel?.availableRepeaters.filter { $0.hasLocation } ?? []
+        traceViewModel?.availableNodes.filter { $0.hasLocation } ?? []
     }
 
     /// Whether a path has been built (at least one hop)
@@ -124,9 +124,9 @@ final class TracePathMapViewModel {
 
     // MARK: - Path Building
 
-    /// Find the repeater for a hop using full public key or RepeaterResolver fallback.
+    /// Find the repeater or room for a hop using full public key or RepeaterResolver fallback.
     private func findRepeater(for hop: PathHop) -> ContactDTO? {
-        RepeaterResolver.bestMatch(for: hop, in: traceViewModel?.availableRepeaters ?? [], userLocation: userLocation)
+        RepeaterResolver.bestMatch(for: hop, in: traceViewModel?.availableNodes ?? [], userLocation: userLocation)
     }
 
     /// Whether a hop matches a specific repeater.
