@@ -9,22 +9,11 @@ import Testing
 @MainActor
 struct ConnectionManagerBLEHealthTests {
 
-    // MARK: - Test Helpers
-
-    private func createTestManager(
-        mockStateMachine: MockBLEStateMachine? = nil
-    ) throws -> (ConnectionManager, MockBLEStateMachine) {
-        let container = try PersistenceStore.createContainer(inMemory: true)
-        let mock = mockStateMachine ?? MockBLEStateMachine()
-        let manager = ConnectionManager(modelContainer: container, stateMachine: mock)
-        return (manager, mock)
-    }
-
     // MARK: - Early Return Tests
 
     @Test("returns early when transport type is WiFi")
     func returnsEarlyForWiFiTransport() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
 
         manager.setTestState(
             connectionState: .ready,
@@ -41,7 +30,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("returns early when shouldBeConnected is false")
     func returnsEarlyWhenNotExpectingConnection() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
 
         manager.setTestState(
             connectionState: .ready,
@@ -58,7 +47,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("returns early when no lastConnectedDeviceID")
     func returnsEarlyWhenNoLastDevice() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
 
         manager.setTestState(
             connectionState: .ready,
@@ -75,7 +64,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("returns early when BLE is actually connected")
     func returnsEarlyWhenBLEConnected() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
 
         await mock.setStubbedIsConnected(true)
 
@@ -94,7 +83,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("skips reconnect during iOS auto-reconnect")
     func skipsWhenAutoReconnecting() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
 
         await mock.setStubbedIsConnected(false)
         await mock.setStubbedIsAutoReconnecting(true)
@@ -114,7 +103,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("health check skips reconnection when Bluetooth is powered off")
     func healthCheckSkipsReconnectionWhenPoweredOff() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
         await mock.setStubbedIsBluetoothPoweredOff(true)
         await mock.setStubbedIsAutoReconnecting(false)
         manager.setTestState(
@@ -134,7 +123,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("detects stale state when connectionState is .ready but BLE disconnected")
     func detectsStaleReadyState() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
         let deviceID = UUID()
 
         // BLE is actually disconnected
@@ -158,7 +147,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("detects stale state when connectionState is .connected but BLE disconnected")
     func detectsStaleConnectedState() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
         let deviceID = UUID()
 
         // BLE is actually disconnected
@@ -182,7 +171,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("does not trigger cleanup when already disconnected")
     func noCleanupWhenAlreadyDisconnected() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
         let deviceID = UUID()
 
         await mock.setStubbedIsConnected(false)
@@ -207,7 +196,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("calls onConnectionLost when stale state detected")
     func callsOnConnectionLostForStaleState() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
         let deviceID = UUID()
 
         await mock.setStubbedIsConnected(false)
@@ -236,7 +225,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("preserves wantsConnection intent after resyncFailed disconnect")
     func preservesIntentAfterResyncFailed() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
         let deviceID = UUID()
 
         await mock.setStubbedIsConnected(false)
@@ -272,7 +261,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("appDidEnterBackground forwards to state machine")
     func appDidEnterBackgroundForwardsToStateMachine() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
 
         await manager.appDidEnterBackground()
 
@@ -282,7 +271,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("appDidBecomeActive forwards to state machine and triggers health check")
     func appDidBecomeActiveForwardsToStateMachine() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
 
         await manager.appDidBecomeActive()
 
@@ -292,7 +281,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("appDidEnterBackground stops running watchdog")
     func appDidEnterBackgroundStopsWatchdog() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
         await mock.setStubbedIsAutoReconnecting(false)
         manager.setTestState(
             connectionState: .disconnected,
@@ -311,7 +300,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("appDidBecomeActive re-arms watchdog when disconnected and wants connection")
     func appDidBecomeActiveRearmsWatchdogWhenDisconnected() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
 
         await mock.setStubbedIsAutoReconnecting(false)
         manager.setTestState(
@@ -329,7 +318,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("appDidBecomeActive does not arm watchdog when user does not want connection")
     func appDidBecomeActiveDoesNotArmWatchdogWhenIntentOff() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
 
         await mock.setStubbedIsAutoReconnecting(false)
         manager.setTestState(
@@ -345,7 +334,7 @@ struct ConnectionManagerBLEHealthTests {
 
     @Test("appDidBecomeActive does not arm watchdog during auto-reconnect")
     func appDidBecomeActiveDoesNotArmWatchdogDuringAutoReconnect() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
 
         await mock.setStubbedIsAutoReconnecting(true)
         manager.setTestState(
@@ -367,29 +356,5 @@ private actor ConnectionLostTracker {
 
     func markConnectionLost() {
         connectionLostCalled = true
-    }
-}
-
-// MARK: - MockBLEStateMachine Test Helper Extensions
-
-extension MockBLEStateMachine {
-    func setStubbedIsConnected(_ value: Bool) {
-        stubbedIsConnected = value
-    }
-
-    func setStubbedIsAutoReconnecting(_ value: Bool) {
-        stubbedIsAutoReconnecting = value
-    }
-
-    func setStubbedIsDeviceConnectedToSystem(_ value: Bool) {
-        stubbedIsDeviceConnectedToSystem = value
-    }
-
-    func setStubbedIsBluetoothPoweredOff(_ value: Bool) {
-        stubbedIsBluetoothPoweredOff = value
-    }
-
-    func setStubbedDidStartAdoptingSystemConnectedPeripheral(_ value: Bool) {
-        stubbedDidStartAdoptingSystemConnectedPeripheral = value
     }
 }

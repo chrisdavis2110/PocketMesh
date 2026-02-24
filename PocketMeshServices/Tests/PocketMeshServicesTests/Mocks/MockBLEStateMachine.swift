@@ -158,3 +158,27 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
         deviceDiscoveredHandler?(id, rssi)
     }
 }
+
+// MARK: - Stubbed Property Setters
+
+extension MockBLEStateMachine {
+    func setStubbedIsConnected(_ value: Bool) {
+        stubbedIsConnected = value
+    }
+
+    func setStubbedIsAutoReconnecting(_ value: Bool) {
+        stubbedIsAutoReconnecting = value
+    }
+
+    func setStubbedIsDeviceConnectedToSystem(_ value: Bool) {
+        stubbedIsDeviceConnectedToSystem = value
+    }
+
+    func setStubbedIsBluetoothPoweredOff(_ value: Bool) {
+        stubbedIsBluetoothPoweredOff = value
+    }
+
+    func setStubbedDidStartAdoptingSystemConnectedPeripheral(_ value: Bool) {
+        stubbedDidStartAdoptingSystemConnectedPeripheral = value
+    }
+}

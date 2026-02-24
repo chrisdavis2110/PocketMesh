@@ -12,17 +12,10 @@ struct ConnectionManagerDisconnectDiagnosticsTests {
         defaults = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
     }
 
-    private func createTestManager() throws -> (ConnectionManager, MockBLEStateMachine) {
-        let container = try PersistenceStore.createContainer(inMemory: true)
-        let mock = MockBLEStateMachine()
-        let manager = ConnectionManager(modelContainer: container, defaults: defaults, stateMachine: mock)
-        return (manager, mock)
-    }
-
     @Test("auto-reconnect entry persists disconnect diagnostic with error info")
     func autoReconnectEntryPersistsDisconnectDiagnostic() async throws {
 
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting(defaults: defaults)
         let deviceID = UUID()
         manager.setTestState(
             connectionState: .ready,
@@ -55,7 +48,7 @@ struct ConnectionManagerDisconnectDiagnosticsTests {
 
     @Test("health check preserves intent and persists diagnostic when other app is connected")
     func healthCheckPersistsDiagnosticWhenOtherAppConnected() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting(defaults: defaults)
         let deviceID = UUID()
 
         await mock.setStubbedIsConnected(false)
@@ -83,7 +76,7 @@ struct ConnectionManagerDisconnectDiagnosticsTests {
 
     @Test("health check adopts system-connected last device when adoption can start")
     func healthCheckAdoptsSystemConnectedPeripheral() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting(defaults: defaults)
         let deviceID = UUID()
 
         await mock.setStubbedIsConnected(false)
@@ -114,7 +107,7 @@ struct ConnectionManagerDisconnectDiagnosticsTests {
 
     @Test("manual connect adopts system-connected last device instead of throwing deviceConnectedToOtherApp")
     func manualConnectAdoptsSystemConnectedPeripheral() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting(defaults: defaults)
         let deviceID = UUID()
 
         await mock.setStubbedIsConnected(false)

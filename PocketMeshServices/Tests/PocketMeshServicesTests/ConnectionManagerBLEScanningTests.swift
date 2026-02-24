@@ -6,16 +6,9 @@ import Testing
 @MainActor
 struct ConnectionManagerBLEScanningTests {
 
-    private func createTestManager() throws -> (ConnectionManager, MockBLEStateMachine) {
-        let container = try PersistenceStore.createContainer(inMemory: true)
-        let mock = MockBLEStateMachine()
-        let manager = ConnectionManager(modelContainer: container, stateMachine: mock)
-        return (manager, mock)
-    }
-
     @Test("startBLEScanning starts scan and forwards discoveries")
     func startBLEScanningForwardsDiscoveries() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
         let stream = manager.startBLEScanning()
 
         let expectedID = UUID()
@@ -38,7 +31,7 @@ struct ConnectionManagerBLEScanningTests {
 
     @Test("terminated scan stream does not leave scanning active")
     func terminatedStreamDoesNotLeakScanning() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
         let stream = manager.startBLEScanning()
 
         let consumeTask = Task {
@@ -57,7 +50,7 @@ struct ConnectionManagerBLEScanningTests {
 
     @Test("older stream termination does not stop newer scan")
     func oldStreamTerminationDoesNotStopNewScan() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
 
         let stream1 = manager.startBLEScanning()
         let consumeTask1 = Task {

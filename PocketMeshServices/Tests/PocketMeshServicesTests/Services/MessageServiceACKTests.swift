@@ -6,22 +6,13 @@ import MeshCoreTestSupport
 @Suite("MessageService ACK Tests")
 struct MessageServiceACKTests {
 
-    private func createTestService() async throws -> (MessageService, PersistenceStore) {
-        let container = try PersistenceStore.createContainer(inMemory: true)
-        let dataStore = PersistenceStore(modelContainer: container)
-        let transport = SimulatorMockTransport()
-        let session = MeshCoreSession(transport: transport)
-        let service = MessageService(session: session, dataStore: dataStore)
-        return (service, dataStore)
-    }
-
     private let testDeviceID = UUID()
 
     // MARK: - ACK Expiry Checking Toggle
 
     @Test("isAckExpiryCheckingActive toggles correctly")
     func ackExpiryCheckingToggles() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
 
         #expect(await !service.isAckExpiryCheckingActive)
 
@@ -34,7 +25,7 @@ struct MessageServiceACKTests {
 
     @Test("stopAckExpiryChecking cancels the background task")
     func stopCancelsTask() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
 
         await service.startAckExpiryChecking()
         #expect(await service.isAckExpiryCheckingActive)
@@ -52,7 +43,7 @@ struct MessageServiceACKTests {
 
     @Test("checkExpiredAcks marks expired non-retry-managed ACK as failed")
     func expiredAckMarkedFailed() async throws {
-        let (service, dataStore) = try await createTestService()
+        let (service, dataStore) = try await MessageService.createForTesting()
         let messageID = UUID()
 
         // Save a message so updateMessageStatus can find it
@@ -92,7 +83,7 @@ struct MessageServiceACKTests {
 
     @Test("checkExpiredAcks preserves non-expired ACK")
     func nonExpiredAckSurvives() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
 
         let ackCode = Data([0x05, 0x06, 0x07, 0x08])
         let fresh = PendingAck(
@@ -110,7 +101,7 @@ struct MessageServiceACKTests {
 
     @Test("checkExpiredAcks skips retry-managed ACK")
     func retryManagedAckSkipped() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
 
         let ackCode = Data([0x09, 0x0A, 0x0B, 0x0C])
         let retryManaged = PendingAck(
@@ -129,7 +120,7 @@ struct MessageServiceACKTests {
 
     @Test("checkExpiredAcks skips already-delivered ACK")
     func deliveredAckSkipped() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
 
         let ackCode = Data([0x0D, 0x0E, 0x0F, 0x10])
         var delivered = PendingAck(
@@ -150,7 +141,7 @@ struct MessageServiceACKTests {
 
     @Test("cleanupDeliveredAcks removes delivered entries and preserves non-delivered")
     func cleanupRemovesDelivered() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
 
         // Add a delivered ACK
         let deliveredCode = Data([0x01, 0x02, 0x03, 0x04])
@@ -184,7 +175,7 @@ struct MessageServiceACKTests {
 
     @Test("failAllPendingMessages fails all non-delivered and calls handler")
     func failAllPending() async throws {
-        let (service, dataStore) = try await createTestService()
+        let (service, dataStore) = try await MessageService.createForTesting()
         let messageID1 = UUID()
         let messageID2 = UUID()
 
@@ -231,7 +222,7 @@ struct MessageServiceACKTests {
 
     @Test("failAllPendingMessages skips already-delivered")
     func failAllSkipsDelivered() async throws {
-        let (service, dataStore) = try await createTestService()
+        let (service, dataStore) = try await MessageService.createForTesting()
         let deliveredID = UUID()
         let pendingID = UUID()
 
@@ -263,7 +254,7 @@ struct MessageServiceACKTests {
 
     @Test("stopAndFailAllPending stops checking and fails all pending")
     func stopAndFailAll() async throws {
-        let (service, dataStore) = try await createTestService()
+        let (service, dataStore) = try await MessageService.createForTesting()
         let messageID = UUID()
 
         try await dataStore.saveMessage(
@@ -290,7 +281,7 @@ struct MessageServiceACKTests {
 
     @Test("pendingAckCount reflects count correctly")
     func pendingAckCountReflectsCorrectly() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
 
         #expect(await service.pendingAckCount == 0)
 
@@ -308,21 +299,4 @@ struct MessageServiceACKTests {
         )
         #expect(await service.pendingAckCount == 2)
     }
-}
-
-// MARK: - Test Helpers
-
-extension MessageService {
-    func setPendingAckForTest(ackCode: Data, tracking: PendingAck) {
-        pendingAcks[ackCode] = tracking
-    }
-
-    func setMessageFailedHandlerForTest(_ handler: @escaping @Sendable (UUID) async -> Void) {
-        messageFailedHandler = handler
-    }
-}
-
-actor FailedMessageTracker {
-    var failedIDs: [UUID] = []
-    func record(_ id: UUID) { failedIDs.append(id) }
 }

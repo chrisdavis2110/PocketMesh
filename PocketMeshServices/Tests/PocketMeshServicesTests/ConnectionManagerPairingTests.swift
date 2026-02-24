@@ -6,20 +6,11 @@ import Testing
 @MainActor
 struct ConnectionManagerPairingTests {
 
-    // MARK: - Test Helpers
-
-    private func createTestManager() throws -> (ConnectionManager, MockBLEStateMachine) {
-        let container = try PersistenceStore.createContainer(inMemory: true)
-        let mock = MockBLEStateMachine()
-        let manager = ConnectionManager(modelContainer: container, stateMachine: mock)
-        return (manager, mock)
-    }
-
     // MARK: - State Guard Tests
 
     @Test("unfavoritedNodeCount throws when not connected")
     func unfavoritedNodeCountThrowsWhenDisconnected() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
 
         try await #expect {
             _ = try await manager.unfavoritedNodeCount()
@@ -31,7 +22,7 @@ struct ConnectionManagerPairingTests {
 
     @Test("removeUnfavoritedNodes throws when not connected")
     func removeUnfavoritedNodesThrowsWhenDisconnected() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
 
         try await #expect {
             _ = try await manager.removeUnfavoritedNodes()
@@ -43,7 +34,7 @@ struct ConnectionManagerPairingTests {
 
     @Test("removeStaleNodes throws when not connected")
     func removeStaleNodesThrowsWhenDisconnected() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
 
         try await #expect {
             _ = try await manager.removeStaleNodes(olderThanDays: 30)
@@ -57,7 +48,7 @@ struct ConnectionManagerPairingTests {
 
     @Test("updateDevice(with:) updates connectedDevice")
     func updateDeviceWithDTO() throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         let device = DeviceDTO.testDevice(nodeName: "NewDevice")
 
         manager.updateDevice(with: device)
@@ -68,7 +59,7 @@ struct ConnectionManagerPairingTests {
 
     @Test("updateAutoAddConfig updates config when connected")
     func updateAutoAddConfigWhenConnected() throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         let device = DeviceDTO.testDevice()
         manager.updateDevice(with: device)
 
@@ -79,7 +70,7 @@ struct ConnectionManagerPairingTests {
 
     @Test("updateAutoAddConfig does nothing when not connected")
     func updateAutoAddConfigWhenDisconnected() throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
 
         manager.updateAutoAddConfig(5)
 
@@ -88,7 +79,7 @@ struct ConnectionManagerPairingTests {
 
     @Test("updateClientRepeat updates repeat flag when connected")
     func updateClientRepeatWhenConnected() throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         let device = DeviceDTO.testDevice()
         manager.updateDevice(with: device)
 
@@ -99,7 +90,7 @@ struct ConnectionManagerPairingTests {
 
     @Test("updatePathHashMode updates hash mode when connected")
     func updatePathHashModeWhenConnected() throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         let device = DeviceDTO.testDevice()
         manager.updateDevice(with: device)
 
@@ -112,7 +103,7 @@ struct ConnectionManagerPairingTests {
 
     @Test("savePreRepeatSettings changes connectedDevice")
     func savePreRepeatSettingsChangesDevice() throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         let device = DeviceDTO.testDevice(
             frequency: 915_000,
             bandwidth: 250_000,
@@ -131,7 +122,7 @@ struct ConnectionManagerPairingTests {
 
     @Test("clearPreRepeatSettings clears saved settings")
     func clearPreRepeatSettingsClears() throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         let device = DeviceDTO.testDevice()
         manager.updateDevice(with: device)
 
@@ -148,7 +139,7 @@ struct ConnectionManagerPairingTests {
 
     @Test("fetchSavedDevices returns empty array when no devices saved")
     func fetchSavedDevicesEmpty() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
 
         let devices = try await manager.fetchSavedDevices()
 
@@ -157,7 +148,7 @@ struct ConnectionManagerPairingTests {
 
     @Test("deleteDevice completes without error for non-existent device")
     func deleteDeviceNonExistent() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
 
         try await manager.deleteDevice(id: UUID())
     }

@@ -6,20 +6,11 @@ import Testing
 @MainActor
 struct ConnectionManagerSessionTests {
 
-    // MARK: - Test Helpers
-
-    private func createTestManager() throws -> (ConnectionManager, MockBLEStateMachine) {
-        let container = try PersistenceStore.createContainer(inMemory: true)
-        let mock = MockBLEStateMachine()
-        let manager = ConnectionManager(modelContainer: container, stateMachine: mock)
-        return (manager, mock)
-    }
-
     // MARK: - setConnectionState Tests
 
     @Test("setConnectionState updates to connected")
     func setConnectionStateConnected() throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         manager.setTestState(connectionIntent: .wantsConnection())
 
         manager.setConnectionState(.connected)
@@ -29,7 +20,7 @@ struct ConnectionManagerSessionTests {
 
     @Test("setConnectionState updates to disconnected")
     func setConnectionStateDisconnected() throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         manager.setTestState(connectionState: .connected, connectionIntent: .wantsConnection())
 
         manager.setConnectionState(.disconnected)
@@ -41,7 +32,7 @@ struct ConnectionManagerSessionTests {
 
     @Test("setConnectedDevice sets device")
     func setConnectedDeviceSets() throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         let device = DeviceDTO.testDevice(nodeName: "TestDevice")
 
         manager.setConnectedDevice(device)
@@ -51,7 +42,7 @@ struct ConnectionManagerSessionTests {
 
     @Test("setConnectedDevice sets nil")
     func setConnectedDeviceSetsNil() throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         let device = DeviceDTO.testDevice()
         manager.setConnectedDevice(device)
         #expect(manager.connectedDevice != nil)
@@ -65,9 +56,8 @@ struct ConnectionManagerSessionTests {
 
     @Test("isTransportAutoReconnecting delegates to stateMachine")
     func isTransportAutoReconnectingDelegates() async throws {
-        let (manager, mock) = try createTestManager()
+        let (manager, mock) = try ConnectionManager.createForTesting()
 
-        // setStubbedIsAutoReconnecting is defined in ConnectionManagerBLEHealthTests
         await mock.setStubbedIsAutoReconnecting(false)
         var result = await manager.isTransportAutoReconnecting()
         #expect(!result)
@@ -81,7 +71,7 @@ struct ConnectionManagerSessionTests {
 
     @Test("handleReconnectionFailure clears state and sets disconnected")
     func handleReconnectionFailureClearsState() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         manager.updateDevice(with: DeviceDTO.testDevice())
         manager.setTestState(
             connectionState: .connected,
@@ -99,7 +89,7 @@ struct ConnectionManagerSessionTests {
 
     @Test("checkWiFiConnectionHealth returns early when reconnect in progress")
     func wifiHealthCheckReturnsEarlyWhenReconnecting() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         manager.setTestState(
             connectionState: .ready,
             currentTransportType: .wifi,
@@ -118,7 +108,7 @@ struct ConnectionManagerSessionTests {
 
     @Test("checkWiFiConnectionHealth returns early when disconnected without intent")
     func wifiHealthCheckReturnsEarlyWhenNoIntent() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         manager.setTestState(
             connectionState: .disconnected,
             currentTransportType: nil,
@@ -132,7 +122,7 @@ struct ConnectionManagerSessionTests {
 
     @Test("checkWiFiConnectionHealth returns early when transport is bluetooth")
     func wifiHealthCheckReturnsEarlyWhenBluetooth() async throws {
-        let (manager, _) = try createTestManager()
+        let (manager, _) = try ConnectionManager.createForTesting()
         manager.setTestState(
             connectionState: .ready,
             currentTransportType: .bluetooth,

@@ -6,22 +6,13 @@ import MeshCoreTestSupport
 @Suite("MessageService Send Tests")
 struct MessageServiceSendTests {
 
-    private func createTestService() async throws -> (MessageService, PersistenceStore) {
-        let container = try PersistenceStore.createContainer(inMemory: true)
-        let dataStore = PersistenceStore(modelContainer: container)
-        let transport = SimulatorMockTransport()
-        let session = MeshCoreSession(transport: transport)
-        let service = MessageService(session: session, dataStore: dataStore)
-        return (service, dataStore)
-    }
-
     private let testDeviceID = UUID()
 
     // MARK: - sendDirectMessage
 
     @Test("sendDirectMessage throws invalidRecipient for repeater contacts")
     func sendDirectMessageRejectsRepeater() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
         let repeater = ContactDTO.testContact(
             deviceID: testDeviceID,
             typeRawValue: ContactType.repeater.rawValue
@@ -37,7 +28,7 @@ struct MessageServiceSendTests {
 
     @Test("sendDirectMessage throws messageTooLong for oversized text")
     func sendDirectMessageRejectsLongText() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
         let contact = ContactDTO.testContact(deviceID: testDeviceID)
         let longText = String(repeating: "a", count: ProtocolLimits.maxDirectMessageLength + 1)
 
@@ -51,7 +42,7 @@ struct MessageServiceSendTests {
 
     @Test("sendDirectMessage saves message to dataStore before send attempt")
     func sendDirectMessageSavesFirst() async throws {
-        let (service, dataStore) = try await createTestService()
+        let (service, dataStore) = try await MessageService.createForTesting()
         let contact = ContactDTO.testContact(deviceID: testDeviceID)
         do {
             _ = try await service.sendDirectMessage(text: "Hello", to: contact)
@@ -69,7 +60,7 @@ struct MessageServiceSendTests {
 
     @Test("sendMessageWithRetry throws invalidRecipient for repeater contacts")
     func sendMessageWithRetryRejectsRepeater() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
         let repeater = ContactDTO.testContact(
             deviceID: testDeviceID,
             typeRawValue: ContactType.repeater.rawValue
@@ -85,7 +76,7 @@ struct MessageServiceSendTests {
 
     @Test("sendMessageWithRetry throws messageTooLong for oversized text")
     func sendMessageWithRetryRejectsLongText() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
         let contact = ContactDTO.testContact(deviceID: testDeviceID)
         let longText = String(repeating: "a", count: ProtocolLimits.maxDirectMessageLength + 1)
 
@@ -101,7 +92,7 @@ struct MessageServiceSendTests {
 
     @Test("createPendingMessage creates message with pending status")
     func createPendingMessageStatus() async throws {
-        let (service, dataStore) = try await createTestService()
+        let (service, dataStore) = try await MessageService.createForTesting()
         let contact = ContactDTO.testContact(deviceID: testDeviceID)
 
         let message = try await service.createPendingMessage(text: "Pending", to: contact)
@@ -118,7 +109,7 @@ struct MessageServiceSendTests {
 
     @Test("createPendingMessage throws invalidRecipient for repeater")
     func createPendingMessageRejectsRepeater() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
         let repeater = ContactDTO.testContact(
             deviceID: testDeviceID,
             typeRawValue: ContactType.repeater.rawValue
@@ -134,7 +125,7 @@ struct MessageServiceSendTests {
 
     @Test("createPendingMessage throws messageTooLong for oversized text")
     func createPendingMessageRejectsLongText() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
         let contact = ContactDTO.testContact(deviceID: testDeviceID)
         let longText = String(repeating: "a", count: ProtocolLimits.maxDirectMessageLength + 1)
 
@@ -148,7 +139,7 @@ struct MessageServiceSendTests {
 
     @Test("createPendingMessage returns DTO with correct fields")
     func createPendingMessageFields() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
         let contactID = UUID()
         let contact = ContactDTO.testContact(id: contactID, deviceID: testDeviceID)
 
@@ -170,7 +161,7 @@ struct MessageServiceSendTests {
 
     @Test("sendExistingMessage throws when message not found")
     func sendExistingMessageThrowsWhenNotFound() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
         let contact = ContactDTO.testContact(deviceID: testDeviceID)
 
         try await #expect {
@@ -185,7 +176,7 @@ struct MessageServiceSendTests {
 
     @Test("retryDirectMessage rejects concurrent retry for same messageID")
     func retryDirectMessageRejectsConcurrent() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
         let contact = ContactDTO.testContact(deviceID: testDeviceID)
         let messageID = UUID()
 
@@ -201,7 +192,7 @@ struct MessageServiceSendTests {
 
     @Test("retryDirectMessage throws when message not found")
     func retryDirectMessageThrowsWhenNotFound() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
         let contact = ContactDTO.testContact(deviceID: testDeviceID)
 
         try await #expect {
@@ -216,7 +207,7 @@ struct MessageServiceSendTests {
 
     @Test("sendChannelMessage throws messageTooLong for oversized text")
     func sendChannelMessageRejectsLongText() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
         let longText = String(repeating: "a", count: ProtocolLimits.maxChannelMessageTotalLength + 1)
 
         try await #expect {
@@ -235,7 +226,7 @@ struct MessageServiceSendTests {
 
     @Test("resendChannelMessage throws when message not found")
     func resendChannelMessageThrowsWhenNotFound() async throws {
-        let (service, _) = try await createTestService()
+        let (service, _) = try await MessageService.createForTesting()
 
         try await #expect {
             try await service.resendChannelMessage(messageID: UUID())
@@ -247,7 +238,7 @@ struct MessageServiceSendTests {
 
     @Test("resendChannelMessage throws when message is not a channel message")
     func resendChannelMessageRejectsNonChannel() async throws {
-        let (service, dataStore) = try await createTestService()
+        let (service, dataStore) = try await MessageService.createForTesting()
         let messageID = UUID()
 
         let dm = MessageDTO.testDirectMessage(id: messageID, deviceID: testDeviceID)
@@ -259,13 +250,5 @@ struct MessageServiceSendTests {
             guard let e = error as? MessageServiceError, case .sendFailed = e else { return false }
             return true
         }
-    }
-}
-
-// MARK: - Test Helpers
-
-extension MessageService {
-    func insertInFlightRetryForTest(_ messageID: UUID) {
-        inFlightRetries.insert(messageID)
     }
 }
