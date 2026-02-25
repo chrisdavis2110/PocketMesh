@@ -1077,14 +1077,15 @@ extension BLEStateMachine {
         let deviceID = peripheral.identifier
 
         if isReconnecting {
-            handleAutoReconnectDisconnect(peripheral: peripheral, deviceID: deviceID, errorInfo: errorInfo)
+            handleAutoReconnectDisconnect(peripheral: peripheral, errorInfo: errorInfo)
         } else {
-            handleFullDisconnect(peripheral: peripheral, deviceID: deviceID, error: error)
+            handleFullDisconnect(deviceID: deviceID, error: error)
         }
     }
 
     /// Handles a disconnect where iOS is auto-reconnecting the peripheral.
-    private func handleAutoReconnectDisconnect(peripheral: CBPeripheral, deviceID: UUID, errorInfo: String) {
+    private func handleAutoReconnectDisconnect(peripheral: CBPeripheral, errorInfo: String) {
+        let deviceID = peripheral.identifier
         logger.info("[BLE] iOS auto-reconnect started: \(deviceID.uuidString.prefix(8)), will attempt automatic reconnection")
 
         // C1/C2: Clean up pending operations before transitioning.
@@ -1123,7 +1124,7 @@ extension BLEStateMachine {
     }
 
     /// Handles a full (non-reconnecting) disconnection.
-    private func handleFullDisconnect(peripheral: CBPeripheral, deviceID: UUID, error: Error?) {
+    private func handleFullDisconnect(deviceID: UUID, error: Error?) {
         switch phase {
         case .disconnecting:
             // Expected disconnection, transition handled by disconnect()
