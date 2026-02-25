@@ -41,22 +41,14 @@ final class ChatViewModel {
     /// Favorite conversations sorted by last message date
     var favoriteConversations: [Conversation] {
         rebuildConversationCacheIfNeeded()
-        // Touch source arrays to maintain observation dependencies even when cache is valid.
-        // Without this, SwiftUI won't track changes after initial render because
-        // @ObservationIgnored cache properties don't register dependencies.
-        _ = conversations.count
-        _ = channels.count
-        _ = roomSessions.count
+        touchObservationDependencies()
         return cachedFavoriteConversations
     }
 
     /// Non-favorite conversations sorted by last message date
     var nonFavoriteConversations: [Conversation] {
         rebuildConversationCacheIfNeeded()
-        // Touch source arrays to maintain observation dependencies
-        _ = conversations.count
-        _ = channels.count
-        _ = roomSessions.count
+        touchObservationDependencies()
         return cachedNonFavoriteConversations
     }
 
@@ -66,9 +58,21 @@ final class ChatViewModel {
     @ObservationIgnored private var cachedNonFavoriteConversations: [Conversation] = []
     @ObservationIgnored private var conversationCacheValid = false
 
+    /// Fallback date for conversations with no messages, used to sort them to the end.
+    private static let noMessageSentinel = Date.distantPast
+
     /// Invalidates the conversation cache, forcing rebuild on next access
     func invalidateConversationCache() {
         conversationCacheValid = false
+    }
+
+    /// Touch source arrays to maintain observation dependencies even when cache is valid.
+    /// Without this, SwiftUI won't track changes after initial render because
+    /// @ObservationIgnored cache properties don't register dependencies.
+    private func touchObservationDependencies() {
+        _ = conversations.count
+        _ = channels.count
+        _ = roomSessions.count
     }
 
     private func rebuildConversationCacheIfNeeded() {
@@ -83,14 +87,15 @@ final class ChatViewModel {
         let roomConversations = roomSessions.map { Conversation.room($0) }
         let all = contactConversations + channelConversations + roomConversations
 
-        cachedFavoriteConversations = all
-            .filter { $0.isFavorite }
-            .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
-        cachedNonFavoriteConversations = all
-            .filter { !$0.isFavorite }
-            .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
+        cachedFavoriteConversations = sortedByLastMessage(all.filter { $0.isFavorite })
+        cachedNonFavoriteConversations = sortedByLastMessage(all.filter { !$0.isFavorite })
 
         conversationCacheValid = true
+    }
+
+    /// Sorts conversations by last message date, most recent first.
+    private func sortedByLastMessage(_ items: [Conversation]) -> [Conversation] {
+        items.sorted { ($0.lastMessageDate ?? Self.noMessageSentinel) > ($1.lastMessageDate ?? Self.noMessageSentinel) }
     }
 
     /// Messages for the current conversation

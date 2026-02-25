@@ -43,72 +43,15 @@ extension ChatViewModel {
         switch conversation {
         case .direct(let contact):
             if let index = conversations.firstIndex(where: { $0.id == contact.id }) {
-                let updated = conversations[index]
-                conversations[index] = ContactDTO(
-                    id: updated.id,
-                    deviceID: updated.deviceID,
-                    publicKey: updated.publicKey,
-                    name: updated.name,
-                    typeRawValue: updated.typeRawValue,
-                    flags: updated.flags,
-                    outPathLength: updated.outPathLength,
-                    outPath: updated.outPath,
-                    lastAdvertTimestamp: updated.lastAdvertTimestamp,
-                    latitude: updated.latitude,
-                    longitude: updated.longitude,
-                    lastModified: updated.lastModified,
-                    nickname: updated.nickname,
-                    isBlocked: updated.isBlocked,
-                    isMuted: level == .muted,
-                    isFavorite: updated.isFavorite,
-                    lastMessageDate: updated.lastMessageDate,
-                    unreadCount: updated.unreadCount,
-                    ocvPreset: updated.ocvPreset,
-                    customOCVArrayString: updated.customOCVArrayString
-                )
+                conversations[index] = conversations[index].with(isMuted: level == .muted)
             }
         case .channel(let channel):
             if let index = channels.firstIndex(where: { $0.id == channel.id }) {
-                let updated = channels[index]
-                channels[index] = ChannelDTO(
-                    id: updated.id,
-                    deviceID: updated.deviceID,
-                    index: updated.index,
-                    name: updated.name,
-                    secret: updated.secret,
-                    isEnabled: updated.isEnabled,
-                    lastMessageDate: updated.lastMessageDate,
-                    unreadCount: updated.unreadCount,
-                    unreadMentionCount: updated.unreadMentionCount,
-                    notificationLevel: level,
-                    isFavorite: updated.isFavorite
-                )
+                channels[index] = channels[index].with(notificationLevel: level)
             }
         case .room(let session):
             if let index = roomSessions.firstIndex(where: { $0.id == session.id }) {
-                let updated = roomSessions[index]
-                roomSessions[index] = RemoteNodeSessionDTO(
-                    id: updated.id,
-                    deviceID: updated.deviceID,
-                    publicKey: updated.publicKey,
-                    name: updated.name,
-                    role: updated.role,
-                    latitude: updated.latitude,
-                    longitude: updated.longitude,
-                    isConnected: updated.isConnected,
-                    permissionLevel: updated.permissionLevel,
-                    lastConnectedDate: updated.lastConnectedDate,
-                    lastBatteryMillivolts: updated.lastBatteryMillivolts,
-                    lastUptimeSeconds: updated.lastUptimeSeconds,
-                    lastNoiseFloor: updated.lastNoiseFloor,
-                    unreadCount: updated.unreadCount,
-                    notificationLevel: level,
-                    isFavorite: updated.isFavorite,
-                    lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
-                    neighborCount: updated.neighborCount,
-                    lastSyncTimestamp: updated.lastSyncTimestamp,
-                    lastMessageDate: updated.lastMessageDate
-                )
+                roomSessions[index] = roomSessions[index].with(notificationLevel: level)
             }
         }
     }
@@ -225,72 +168,15 @@ extension ChatViewModel {
         switch conversation {
         case .direct(let contact):
             if let index = conversations.firstIndex(where: { $0.id == contact.id }) {
-                let updated = conversations[index]
-                conversations[index] = ContactDTO(
-                    id: updated.id,
-                    deviceID: updated.deviceID,
-                    publicKey: updated.publicKey,
-                    name: updated.name,
-                    typeRawValue: updated.typeRawValue,
-                    flags: updated.flags,
-                    outPathLength: updated.outPathLength,
-                    outPath: updated.outPath,
-                    lastAdvertTimestamp: updated.lastAdvertTimestamp,
-                    latitude: updated.latitude,
-                    longitude: updated.longitude,
-                    lastModified: updated.lastModified,
-                    nickname: updated.nickname,
-                    isBlocked: updated.isBlocked,
-                    isMuted: updated.isMuted,
-                    isFavorite: isFavorite,
-                    lastMessageDate: updated.lastMessageDate,
-                    unreadCount: updated.unreadCount,
-                    ocvPreset: updated.ocvPreset,
-                    customOCVArrayString: updated.customOCVArrayString
-                )
+                conversations[index] = conversations[index].with(isFavorite: isFavorite)
             }
         case .channel(let channel):
             if let index = channels.firstIndex(where: { $0.id == channel.id }) {
-                let updated = channels[index]
-                channels[index] = ChannelDTO(
-                    id: updated.id,
-                    deviceID: updated.deviceID,
-                    index: updated.index,
-                    name: updated.name,
-                    secret: updated.secret,
-                    isEnabled: updated.isEnabled,
-                    lastMessageDate: updated.lastMessageDate,
-                    unreadCount: updated.unreadCount,
-                    unreadMentionCount: updated.unreadMentionCount,
-                    notificationLevel: updated.notificationLevel,
-                    isFavorite: isFavorite
-                )
+                channels[index] = channels[index].with(isFavorite: isFavorite)
             }
         case .room(let session):
             if let index = roomSessions.firstIndex(where: { $0.id == session.id }) {
-                let updated = roomSessions[index]
-                roomSessions[index] = RemoteNodeSessionDTO(
-                    id: updated.id,
-                    deviceID: updated.deviceID,
-                    publicKey: updated.publicKey,
-                    name: updated.name,
-                    role: updated.role,
-                    latitude: updated.latitude,
-                    longitude: updated.longitude,
-                    isConnected: updated.isConnected,
-                    permissionLevel: updated.permissionLevel,
-                    lastConnectedDate: updated.lastConnectedDate,
-                    lastBatteryMillivolts: updated.lastBatteryMillivolts,
-                    lastUptimeSeconds: updated.lastUptimeSeconds,
-                    lastNoiseFloor: updated.lastNoiseFloor,
-                    unreadCount: updated.unreadCount,
-                    notificationLevel: updated.notificationLevel,
-                    isFavorite: isFavorite,
-                    lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
-                    neighborCount: updated.neighborCount,
-                    lastSyncTimestamp: updated.lastSyncTimestamp,
-                    lastMessageDate: updated.lastMessageDate
-                )
+                roomSessions[index] = roomSessions[index].with(isFavorite: isFavorite)
             }
         }
     }
