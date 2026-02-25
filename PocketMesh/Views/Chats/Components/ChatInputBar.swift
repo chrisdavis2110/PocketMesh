@@ -10,6 +10,8 @@ struct ChatInputBar: View {
     let maxBytes: Int
     let onSend: () -> Void
 
+    @State private var isCoolingDown = false
+
     private var byteCount: Int {
         text.utf8.count
     }
@@ -65,7 +67,7 @@ struct ChatInputBar: View {
     @ViewBuilder
     private var sendButton: some View {
         if #available(iOS 26.0, *) {
-            Button(action: onSend) {
+            Button(action: send) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
                     .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
@@ -75,7 +77,7 @@ struct ChatInputBar: View {
             .accessibilityLabel(sendAccessibilityLabel)
             .accessibilityHint(sendAccessibilityHint)
         } else {
-            Button(action: onSend) {
+            Button(action: send) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title)
                     .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
@@ -108,8 +110,18 @@ struct ChatInputBar: View {
     }
 
     private var canSend: Bool {
+        !isCoolingDown &&
         appState.connectionState == .ready &&
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isOverLimit
+    }
+
+    private func send() {
+        isCoolingDown = true
+        onSend()
+        Task {
+            try? await Task.sleep(for: .seconds(1))
+            isCoolingDown = false
+        }
     }
 }
 
