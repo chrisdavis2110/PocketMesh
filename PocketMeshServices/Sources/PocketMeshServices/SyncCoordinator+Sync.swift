@@ -134,34 +134,14 @@ extension SyncCoordinator {
 
             await wireDiscoveryHandlers(services: services, deviceID: deviceID)
 
-            let pendingHandlerDrainTimeout: Duration = .seconds(30)
-            let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
-            if !didDrainPendingHandlers {
-                logger.warning("Resync: some handlers did not complete in time")
-            }
-
-            cancelSuppressionWatchdog()
-            await MainActor.run {
-                logger.info("Resuming message notifications (resync complete)")
-                services.notificationService.isSuppressingNotifications = false
-            }
+            await drainHandlersAndResumeNotifications(services: services, context: "resync complete")
             logger.info("[Sync] Resuming auto-fetch after resync")
             await services.messagePollingService.resumeAutoFetch()
 
             logger.info("Resync succeeded")
             return true
         } catch {
-            let pendingHandlerDrainTimeout: Duration = .seconds(30)
-            let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
-            if !didDrainPendingHandlers {
-                logger.warning("Resync: some handlers did not complete in time (error path)")
-            }
-
-            cancelSuppressionWatchdog()
-            await MainActor.run {
-                logger.info("Resuming message notifications (resync failed)")
-                services.notificationService.isSuppressingNotifications = false
-            }
+            await drainHandlersAndResumeNotifications(services: services, context: "resync failed")
             await services.messagePollingService.resumeAutoFetch()
 
             logger.warning("Resync failed: \(error.localizedDescription)")
