@@ -370,6 +370,34 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable, RepeaterR
         publicKey.hexString()
     }
 
+    /// Returns a copy with only `isMuted` changed.
+    public func with(isMuted: Bool) -> ContactDTO {
+        ContactDTO(
+            id: id, deviceID: deviceID, publicKey: publicKey, name: name,
+            typeRawValue: typeRawValue, flags: flags, outPathLength: outPathLength,
+            outPath: outPath, lastAdvertTimestamp: lastAdvertTimestamp,
+            latitude: latitude, longitude: longitude, lastModified: lastModified,
+            nickname: nickname, isBlocked: isBlocked, isMuted: isMuted,
+            isFavorite: isFavorite, lastMessageDate: lastMessageDate,
+            unreadCount: unreadCount, unreadMentionCount: unreadMentionCount,
+            ocvPreset: ocvPreset, customOCVArrayString: customOCVArrayString
+        )
+    }
+
+    /// Returns a copy with only `isFavorite` changed.
+    public func with(isFavorite: Bool) -> ContactDTO {
+        ContactDTO(
+            id: id, deviceID: deviceID, publicKey: publicKey, name: name,
+            typeRawValue: typeRawValue, flags: flags, outPathLength: outPathLength,
+            outPath: outPath, lastAdvertTimestamp: lastAdvertTimestamp,
+            latitude: latitude, longitude: longitude, lastModified: lastModified,
+            nickname: nickname, isBlocked: isBlocked, isMuted: isMuted,
+            isFavorite: isFavorite, lastMessageDate: lastMessageDate,
+            unreadCount: unreadCount, unreadMentionCount: unreadMentionCount,
+            ocvPreset: ocvPreset, customOCVArrayString: customOCVArrayString
+        )
+    }
+
     /// The active OCV array for this contact (preset or custom)
     public var activeOCVArray: [Int] {
         // If custom preset with valid custom string, parse it

@@ -194,6 +194,26 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         self.isFavorite = isFavorite
     }
 
+    /// Returns a copy with only `notificationLevel` changed.
+    public func with(notificationLevel: NotificationLevel) -> ChannelDTO {
+        ChannelDTO(
+            id: id, deviceID: deviceID, index: index, name: name,
+            secret: secret, isEnabled: isEnabled, lastMessageDate: lastMessageDate,
+            unreadCount: unreadCount, unreadMentionCount: unreadMentionCount,
+            notificationLevel: notificationLevel, isFavorite: isFavorite
+        )
+    }
+
+    /// Returns a copy with only `isFavorite` changed.
+    public func with(isFavorite: Bool) -> ChannelDTO {
+        ChannelDTO(
+            id: id, deviceID: deviceID, index: index, name: name,
+            secret: secret, isEnabled: isEnabled, lastMessageDate: lastMessageDate,
+            unreadCount: unreadCount, unreadMentionCount: unreadMentionCount,
+            notificationLevel: notificationLevel, isFavorite: isFavorite
+        )
+    }
+
     public var isPublicChannel: Bool {
         index == 0
     }

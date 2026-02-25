@@ -294,6 +294,38 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         self.lastMessageDate = lastMessageDate
     }
 
+    /// Returns a copy with only `notificationLevel` changed.
+    public func with(notificationLevel: NotificationLevel) -> RemoteNodeSessionDTO {
+        RemoteNodeSessionDTO(
+            id: id, deviceID: deviceID, publicKey: publicKey, name: name,
+            role: role, latitude: latitude, longitude: longitude,
+            isConnected: isConnected, permissionLevel: permissionLevel,
+            lastConnectedDate: lastConnectedDate,
+            lastBatteryMillivolts: lastBatteryMillivolts,
+            lastUptimeSeconds: lastUptimeSeconds, lastNoiseFloor: lastNoiseFloor,
+            unreadCount: unreadCount, notificationLevel: notificationLevel,
+            isFavorite: isFavorite, lastRxAirtimeSeconds: lastRxAirtimeSeconds,
+            neighborCount: neighborCount, lastSyncTimestamp: lastSyncTimestamp,
+            lastMessageDate: lastMessageDate
+        )
+    }
+
+    /// Returns a copy with only `isFavorite` changed.
+    public func with(isFavorite: Bool) -> RemoteNodeSessionDTO {
+        RemoteNodeSessionDTO(
+            id: id, deviceID: deviceID, publicKey: publicKey, name: name,
+            role: role, latitude: latitude, longitude: longitude,
+            isConnected: isConnected, permissionLevel: permissionLevel,
+            lastConnectedDate: lastConnectedDate,
+            lastBatteryMillivolts: lastBatteryMillivolts,
+            lastUptimeSeconds: lastUptimeSeconds, lastNoiseFloor: lastNoiseFloor,
+            unreadCount: unreadCount, notificationLevel: notificationLevel,
+            isFavorite: isFavorite, lastRxAirtimeSeconds: lastRxAirtimeSeconds,
+            neighborCount: neighborCount, lastSyncTimestamp: lastSyncTimestamp,
+            lastMessageDate: lastMessageDate
+        )
+    }
+
     public var publicKeyPrefix: Data { publicKey.prefix(6) }
 
     public var publicKeyHex: String {
