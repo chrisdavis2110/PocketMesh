@@ -190,7 +190,10 @@
 "deviceSelection.accessibility.connectedElsewhereHint" = "Dit apparaat wordt gebruikt door een andere app. Verbinden kan communicatieproblemen veroorzaken.";
 
 /* Accessibility hint for selectable device */
-"deviceSelection.accessibility.selectHint" = "Dubbeltik om te selecteren";
+"deviceSelection.accessibility.selectHint" = "Dubbeltik om te verbinden";
+
+/* Accessibility hint for a device that is out of Bluetooth range */
+"deviceSelection.accessibility.outOfRangeHint" = "Apparaat is buiten Bluetooth-bereik";
 
 /* Label shown when device is connected to another app */
 "deviceSelection.connectedElsewhere" = "Elders verbonden";

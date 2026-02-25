@@ -52,13 +52,11 @@ struct DeviceSelectionSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var devices: [SelectableDevice] = []
-    @State private var selectedDevice: SelectableDevice?
     @State private var showingWiFiConnection = false
     @State private var editingWiFiDevice: SelectableDevice?
     @State private var devicesConnectedElsewhere: Set<UUID> = []
     @State private var deviceRSSI: [UUID: (rssi: Int, lastSeen: Date)] = [:]
     @State private var deviceSignalTier: [UUID: Int] = [:]
-    @State private var scanSettled = false
 
     var body: some View {
         NavigationStack {
@@ -77,31 +75,6 @@ struct DeviceSelectionSheet: View {
                         dismiss()
                     }
                 }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.Settings.DeviceSelection.connect) {
-                        guard let device = selectedDevice else { return }
-                        dismiss()
-                        Task {
-                            logger.info("[UI] User tapped Connect for device: \(device.id.uuidString.prefix(8)), name: \(device.name)")
-                            do {
-                                if case .wifi(let host, let port, _) = device.primaryConnectionMethod {
-                                    try await appState.connectViaWiFi(host: host, port: port, forceFullSync: true)
-                                } else {
-                                    try await appState.connectionManager.connect(to: device.id, forceFullSync: true, forceReconnect: true)
-                                }
-                            } catch BLEError.deviceConnectedToOtherApp {
-                                appState.connectionUI.otherAppWarningDeviceID = device.id
-                            } catch {
-                                appState.connectionUI.connectionFailedMessage = error.localizedDescription
-                                appState.connectionUI.showingConnectionFailedAlert = true
-                            }
-                        }
-                    }
-                    .bold()
-                    .tint(.blue)
-                    .disabled(selectedDevice == nil)
-                }
             }
             .task {
                 await loadDevices()
@@ -117,42 +90,38 @@ struct DeviceSelectionSheet: View {
             Section {
                 ForEach(devices) { device in
                     let tier = device.isWiFiOnly ? nil : deviceSignalTier[device.id]
-                    let isDisabledByBLE = !device.isWiFiOnly && scanSettled && deviceRSSI[device.id] == nil
+                    let isDisabledByBLE = !device.isWiFiOnly && deviceRSSI[device.id] == nil
                     Button {
-                        selectedDevice = device
+                        guard !isDisabledByBLE else { return }
+                        connectToDevice(device)
                     } label: {
                         DeviceRow(
                             device: device,
-                            isSelected: selectedDevice?.id == device.id,
+                            isWiFiOnly: device.isWiFiOnly,
                             isConnectedElsewhere: devicesConnectedElsewhere.contains(device.id),
-                            signalTier: tier,
-                            scanSettled: device.isWiFiOnly ? false : scanSettled
+                            signalTier: tier
                         )
                         .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
-                    .disabled(isDisabledByBLE)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                deleteDevice(device)
-                            } label: {
-                                Label(L10n.Localizable.Common.delete, systemImage: "trash")
-                            }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            deleteDevice(device)
+                        } label: {
+                            Label(L10n.Localizable.Common.delete, systemImage: "trash")
+                        }
 
-                            if device.primaryConnectionMethod?.isWiFi == true {
-                                Button {
-                                    editingWiFiDevice = device
-                                } label: {
-                                    Label(L10n.Localizable.Common.edit, systemImage: "pencil")
-                                }
-                                .tint(.orange)
+                        if device.primaryConnectionMethod?.isWiFi == true {
+                            Button {
+                                editingWiFiDevice = device
+                            } label: {
+                                Label(L10n.Localizable.Common.edit, systemImage: "pencil")
                             }
                         }
+                    }
                 }
             } header: {
                 Text(L10n.Settings.DeviceSelection.previouslyPaired)
-            } footer: {
-                Text(L10n.Settings.DeviceSelection.selectToReconnect)
             }
 
             Section {
@@ -212,19 +181,6 @@ struct DeviceSelectionSheet: View {
     private func startBLEScanning() async {
         let stream = appState.connectionManager.startBLEScanning()
 
-        // Settle after 3 seconds — devices not found by then are grayed out
-        Task {
-            try? await Task.sleep(for: .seconds(3))
-            scanSettled = true
-
-            // If selected device became unreachable, clear selection
-            if let selected = selectedDevice,
-               !selected.isWiFiOnly,
-               deviceRSSI[selected.id] == nil {
-                selectedDevice = nil
-            }
-        }
-
         // Expire stale RSSI entries every 2 seconds
         Task {
             while !Task.isCancelled {
@@ -233,12 +189,6 @@ struct DeviceSelectionSheet: View {
                 for (id, entry) in deviceRSSI where entry.lastSeen < cutoff {
                     deviceRSSI.removeValue(forKey: id)
                     deviceSignalTier.removeValue(forKey: id)
-                }
-                // Clear selection if the selected device became stale
-                if let selected = selectedDevice,
-                   !selected.isWiFiOnly,
-                   deviceRSSI[selected.id] == nil {
-                    selectedDevice = nil
                 }
             }
         }
@@ -328,18 +278,32 @@ struct DeviceSelectionSheet: View {
         }
     }
 
+    private func connectToDevice(_ device: SelectableDevice) {
+        dismiss()
+        Task {
+            logger.info("[UI] User tapped Connect for device: \(device.id.uuidString.prefix(8)), name: \(device.name)")
+            do {
+                if case .wifi(let host, let port, _) = device.primaryConnectionMethod {
+                    try await appState.connectViaWiFi(host: host, port: port, forceFullSync: true)
+                } else {
+                    try await appState.connectionManager.connect(to: device.id, forceFullSync: true, forceReconnect: true)
+                }
+            } catch BLEError.deviceConnectedToOtherApp {
+                appState.connectionUI.otherAppWarningDeviceID = device.id
+            } catch {
+                appState.connectionUI.connectionFailedMessage = error.localizedDescription
+                appState.connectionUI.showingConnectionFailedAlert = true
+            }
+        }
+    }
+
     private func deleteDevice(_ device: SelectableDevice) {
         guard case .saved(let deviceDTO) = device else { return }
 
         Task {
             do {
                 try await appState.connectionManager.deleteDevice(id: deviceDTO.id)
-                // Remove from local list
                 devices.removeAll { $0.id == device.id }
-                // Clear selection if deleted device was selected
-                if selectedDevice?.id == device.id {
-                    selectedDevice = nil
-                }
             } catch {
                 logger.error("Failed to delete device: \(error)")
             }
@@ -351,13 +315,12 @@ struct DeviceSelectionSheet: View {
 
 private struct DeviceRow: View {
     let device: SelectableDevice
-    let isSelected: Bool
+    let isWiFiOnly: Bool
     let isConnectedElsewhere: Bool
     let signalTier: Int?
-    let scanSettled: Bool
 
     private var isUnreachable: Bool {
-        scanSettled && signalTier == nil
+        !isWiFiOnly && signalTier == nil
     }
 
     private var transportIcon: String {
@@ -414,22 +377,19 @@ private struct DeviceRow: View {
                     .foregroundStyle(signalColor)
                     .font(.body)
             }
-
-            if isSelected {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.tint)
-                    .font(.title3)
-            }
         }
         .padding(.vertical, 4)
         .contentShape(.rect)
         .opacity(isConnectedElsewhere || isUnreachable ? 0.4 : 1.0)
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel(isConnectedElsewhere
             ? L10n.Settings.DeviceSelection.Accessibility.connectedElsewhereLabel(device.name)
             : L10n.Settings.DeviceSelection.Accessibility.deviceLabel(device.name, connectionDescription))
         .accessibilityHint(isConnectedElsewhere
             ? L10n.Settings.DeviceSelection.Accessibility.connectedElsewhereHint
+            : isUnreachable
+            ? L10n.Settings.DeviceSelection.Accessibility.outOfRangeHint
             : L10n.Settings.DeviceSelection.Accessibility.selectHint)
     }
 

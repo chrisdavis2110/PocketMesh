@@ -190,7 +190,10 @@
 "deviceSelection.accessibility.connectedElsewhereHint" = "Este dispositivo está en uso por otra aplicación. Conectarse puede causar problemas de comunicación.";
 
 /* Accessibility hint for selecting a device */
-"deviceSelection.accessibility.selectHint" = "Pulsa dos veces para seleccionar";
+"deviceSelection.accessibility.selectHint" = "Pulsa dos veces para conectar";
+
+/* Accessibility hint for a device that is out of Bluetooth range */
+"deviceSelection.accessibility.outOfRangeHint" = "El dispositivo está fuera del alcance de Bluetooth";
 
 /* Label shown when device is connected to another app */
 "deviceSelection.connectedElsewhere" = "Conectado en otro lugar";

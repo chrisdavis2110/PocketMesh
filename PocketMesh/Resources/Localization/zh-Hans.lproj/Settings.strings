@@ -185,7 +185,10 @@
 "deviceSelection.accessibility.connectedElsewhereHint" = "此设备正被其他应用使用。连接可能会导致通信问题。";
 
 /* Accessibility hint for selecting a device */
-"deviceSelection.accessibility.selectHint" = "双击以选择";
+"deviceSelection.accessibility.selectHint" = "双击以连接";
+
+/* Accessibility hint for a device that is out of Bluetooth range */
+"deviceSelection.accessibility.outOfRangeHint" = "设备不在蓝牙范围内";
 
 /* Label shown when device is connected to another app */
 "deviceSelection.connectedElsewhere" = "已连接到其他位置";

@@ -190,7 +190,10 @@
 "deviceSelection.accessibility.connectedElsewhereHint" = "Цей пристрій використовується іншим додатком. Підключення може спричинити проблеми зі зв'язком.";
 
 /* Accessibility hint for selecting a device */
-"deviceSelection.accessibility.selectHint" = "Натисніть двічі, щоб вибрати";
+"deviceSelection.accessibility.selectHint" = "Натисніть двічі, щоб підключити";
+
+/* Accessibility hint for a device that is out of Bluetooth range */
+"deviceSelection.accessibility.outOfRangeHint" = "Пристрій поза зоною дії Bluetooth";
 
 /* Label shown when device is connected to another app */
 "deviceSelection.connectedElsewhere" = "Підключено до іншого застосунку";

@@ -175,7 +175,10 @@
 "deviceSelection.accessibility.connectedElsewhereHint" = "Dieses Gerät wird von einer anderen App verwendet. Das Verbinden kann zu Kommunikationsproblemen führen.";
 
 /* Accessibility hint for selecting a device */
-"deviceSelection.accessibility.selectHint" = "Doppeltippen zum Auswählen";
+"deviceSelection.accessibility.selectHint" = "Doppeltippen zum Verbinden";
+
+/* Accessibility hint for a device that is out of Bluetooth range */
+"deviceSelection.accessibility.outOfRangeHint" = "Gerät ist außerhalb der Bluetooth-Reichweite";
 
 /* Button to connect via WiFi */
 "deviceSelection.connectViaWifi" = "Über WLAN verbinden";

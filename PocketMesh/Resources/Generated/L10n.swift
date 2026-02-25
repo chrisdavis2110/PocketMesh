@@ -3239,8 +3239,10 @@ public enum L10n {
         public static func deviceLabel(_ p1: Any, _ p2: Any) -> String {
           return L10n.tr("Settings", "deviceSelection.accessibility.deviceLabel", String(describing: p1), String(describing: p2), fallback: "%1$@, %2$@")
         }
+        /// Accessibility hint for a device that is out of Bluetooth range
+        public static let outOfRangeHint = L10n.tr("Settings", "deviceSelection.accessibility.outOfRangeHint", fallback: "Device is out of Bluetooth range")
         /// Accessibility hint for selecting a device
-        public static let selectHint = L10n.tr("Settings", "deviceSelection.accessibility.selectHint", fallback: "Double tap to select")
+        public static let selectHint = L10n.tr("Settings", "deviceSelection.accessibility.selectHint", fallback: "Double tap to connect")
       }
     }
     public enum Diagnostics {
