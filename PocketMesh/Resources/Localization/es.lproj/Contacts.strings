@@ -46,6 +46,9 @@
 /* Location: Multiple files - Purpose: Room contact type label */
 "contacts.nodeKind.room" = "Sala";
 
+/* Location: TracePathListView.swift, PathEditingSheet.swift - Purpose: Badge label for discovered nodes */
+"contacts.nodeKind.discovered" = "Descubierto";
+
 /* Location: ContactsListView.swift - Purpose: Contact label in search results */
 "contacts.nodeKind.contact" = "Contacto";
 
@@ -848,6 +851,9 @@
 
 /* Location: TracePathListView.swift - Purpose: Toggle to include room servers in the list */
 "contacts.trace.list.includeRooms" = "Incluir salas";
+
+/* Location: TracePathListView.swift, PathEditingSheet.swift - Purpose: Toggle to include discovered repeaters */
+"contacts.trace.list.includeDiscovered" = "Incluir descubiertos";
 
 /* Location: TracePathListView.swift - Purpose: No favorite repeaters empty title */
 "contacts.trace.list.noFavorites.title" = "Sin repetidores favoritos";

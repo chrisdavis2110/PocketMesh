@@ -46,6 +46,9 @@
 /* Location: Multiple files - Purpose: Room contact type label */
 "contacts.nodeKind.room" = "房间";
 
+/* Location: TracePathListView.swift, PathEditingSheet.swift - Purpose: Badge label for discovered nodes */
+"contacts.nodeKind.discovered" = "已发现";
+
 /* Location: ContactsListView.swift - Purpose: Contact label in search results */
 "contacts.nodeKind.contact" = "联系人";
 
@@ -818,6 +821,9 @@
 
 /* Location: TracePathListView.swift - Purpose: Toggle to include room servers in the list */
 "contacts.trace.list.includeRooms" = "包含聊天室";
+
+/* Location: TracePathListView.swift, PathEditingSheet.swift - Purpose: Toggle to include discovered repeaters */
+"contacts.trace.list.includeDiscovered" = "包含已发现";
 
 /* Location: TracePathListView.swift - Purpose: No favorite repeaters empty title */
 "contacts.trace.list.noFavorites.title" = "无收藏的转发节点";

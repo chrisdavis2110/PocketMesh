@@ -126,6 +126,7 @@ final class TracePathViewModel {
     var availableRooms: [ContactDTO] = []
     var autoReturnPath = true
     private var allContacts: [ContactDTO] = []
+    var discoveredRepeaters: [DiscoveredNodeDTO] = []
 
     /// Combined repeaters and rooms for resolution (hex codes, map pins, etc.)
     var availableNodes: [ContactDTO] {
@@ -429,7 +430,10 @@ final class TracePathViewModel {
 
     /// Resolve hash bytes to the best matching repeater name
     func resolveHashToName(_ hashBytes: Data) -> String? {
-        bestRepeaterMatch(for: hashBytes)?.displayName
+        if let contact = bestRepeaterMatch(for: hashBytes) {
+            return contact.displayName
+        }
+        return bestDiscoveredMatch(for: hashBytes)?.name
     }
 
     private var currentUserLocation: CLLocation? {
@@ -444,6 +448,14 @@ final class TracePathViewModel {
         RepeaterResolver.bestMatch(for: hashBytes, in: availableNodes, userLocation: currentUserLocation)
     }
 
+    private func bestDiscoveredMatch(for hop: PathHop) -> DiscoveredNodeDTO? {
+        RepeaterResolver.bestMatch(for: hop, in: discoveredRepeaters, userLocation: currentUserLocation)
+    }
+
+    private func bestDiscoveredMatch(for hashBytes: Data) -> DiscoveredNodeDTO? {
+        RepeaterResolver.bestMatch(for: hashBytes, in: discoveredRepeaters, userLocation: currentUserLocation)
+    }
+
     // MARK: - Data Loading
 
     /// Load contacts for name resolution and available repeaters
@@ -455,11 +467,14 @@ final class TracePathViewModel {
             allContacts = contacts
             availableRepeaters = contacts.filter { $0.type == .repeater }
             availableRooms = contacts.filter { $0.type == .room }
+            let nodes = try await dataStore.fetchDiscoveredNodes(deviceID: deviceID)
+            discoveredRepeaters = nodes.filter { $0.nodeType == .repeater }
         } catch {
             logger.error("Failed to load contacts: \(error.localizedDescription)")
             allContacts = []
             availableRepeaters = []
             availableRooms = []
+            discoveredRepeaters = []
         }
     }
 
@@ -470,6 +485,17 @@ final class TracePathViewModel {
         clearError()
         let hashBytes = Data(repeater.publicKey.prefix(hashSize))
         let hop = PathHop(hashBytes: hashBytes, publicKey: repeater.publicKey, resolvedName: repeater.displayName)
+        outboundPath.append(hop)
+        activeSavedPath = nil
+        pendingPathHash = nil
+        result = nil
+    }
+
+    /// Add a discovered repeater to the outbound path
+    func addDiscoveredRepeater(_ node: DiscoveredNodeDTO) {
+        clearError()
+        let hashBytes = Data(node.publicKey.prefix(hashSize))
+        let hop = PathHop(hashBytes: hashBytes, publicKey: node.publicKey, resolvedName: node.name)
         outboundPath.append(hop)
         activeSavedPath = nil
         pendingPathHash = nil
@@ -525,6 +551,10 @@ final class TracePathViewModel {
             // Find matching repeater (prefer closer or more recent on collisions)
             if let repeater = bestRepeaterMatch(for: hashData) {
                 let hop = PathHop(hashBytes: hashData, publicKey: repeater.publicKey, resolvedName: repeater.displayName)
+                outboundPath.append(hop)
+                result.added.append(code)
+            } else if let node = bestDiscoveredMatch(for: hashData) {
+                let hop = PathHop(hashBytes: hashData, publicKey: node.publicKey, resolvedName: node.name)
                 outboundPath.append(hop)
                 result.added.append(code)
             } else {
@@ -697,10 +727,22 @@ final class TracePathViewModel {
             let end = min(start + size, fullPath.count)
             let hashBytes = Data(fullPath[start..<end])
             let matchedRepeater = bestRepeaterMatch(for: hashBytes)
+            let resolvedName: String?
+            let publicKey: Data?
+            if let matchedRepeater {
+                resolvedName = matchedRepeater.displayName
+                publicKey = matchedRepeater.publicKey
+            } else if let discoveredMatch = bestDiscoveredMatch(for: hashBytes) {
+                resolvedName = discoveredMatch.name
+                publicKey = discoveredMatch.publicKey
+            } else {
+                resolvedName = nil
+                publicKey = nil
+            }
             outboundPath.append(PathHop(
                 hashBytes: hashBytes,
-                publicKey: matchedRepeater?.publicKey,
-                resolvedName: matchedRepeater?.displayName
+                publicKey: publicKey,
+                resolvedName: resolvedName
             ))
         }
 
@@ -1129,11 +1171,27 @@ final class TracePathViewModel {
                 } else {
                     bestMatch = bestRepeaterMatch(for: bytes)
                 }
-                resolvedName = bestMatch?.displayName ?? matchingHop?.resolvedName
 
-                if let bestMatch, bestMatch.hasLocation {
-                    latitude = bestMatch.latitude
-                    longitude = bestMatch.longitude
+                if let bestMatch {
+                    resolvedName = bestMatch.displayName
+                    if bestMatch.hasLocation {
+                        latitude = bestMatch.latitude
+                        longitude = bestMatch.longitude
+                    }
+                } else if let hop = matchingHop, let discoveredMatch = bestDiscoveredMatch(for: hop) {
+                    resolvedName = discoveredMatch.name
+                    if discoveredMatch.hasLocation {
+                        latitude = discoveredMatch.latitude
+                        longitude = discoveredMatch.longitude
+                    }
+                } else if let discoveredMatch = bestDiscoveredMatch(for: bytes) {
+                    resolvedName = discoveredMatch.name
+                    if discoveredMatch.hasLocation {
+                        latitude = discoveredMatch.latitude
+                        longitude = discoveredMatch.longitude
+                    }
+                } else {
+                    resolvedName = matchingHop?.resolvedName
                 }
             } else {
                 resolvedName = nil

@@ -74,10 +74,16 @@ final class PathManagementViewModel {
     var availableRepeaters: [ContactDTO] = []  // Known repeaters to add
     var availableRooms: [ContactDTO] = []  // Known rooms (may act as repeaters)
     var allContacts: [ContactDTO] = []  // All contacts for name resolution
+    var discoveredNodes: [DiscoveredNodeDTO] = []
 
     /// Combined repeaters and rooms for resolution
     var availableNodes: [ContactDTO] {
         availableRepeaters + availableRooms
+    }
+
+    /// Discovered repeaters available to add
+    var discoveredRepeaters: [DiscoveredNodeDTO] {
+        discoveredNodes.filter { $0.nodeType == .repeater }
     }
 
     /// Repeaters available to add (allows duplicates for paths like A → B → A)
@@ -118,11 +124,18 @@ final class PathManagementViewModel {
     // MARK: - Name Resolution
 
     /// Resolve path hash bytes to a contact name if possible
-    /// Returns the contact name if exactly one contact matches, otherwise nil
+    /// Returns the contact name if exactly one contact matches, otherwise falls back to discovered nodes
     func resolveHashToName(_ hashBytes: Data) -> String? {
         let matches = allContacts.filter { $0.publicKey.prefix(hashBytes.count) == hashBytes }
         if matches.count == 1 {
             return matches[0].displayName
+        }
+        // Fall back to discovered nodes with same single-match rule
+        if matches.isEmpty {
+            let discoveredMatches = discoveredNodes.filter { $0.publicKey.prefix(hashBytes.count) == hashBytes }
+            if discoveredMatches.count == 1 {
+                return discoveredMatches[0].name
+            }
         }
         return nil  // Ambiguous (multiple matches) or unknown
     }
@@ -148,10 +161,13 @@ final class PathManagementViewModel {
             allContacts = contacts
             availableRepeaters = contacts.filter { $0.type == .repeater }
             availableRooms = contacts.filter { $0.type == .room }
+            let nodes = try await dataStore.fetchDiscoveredNodes(deviceID: deviceID)
+            discoveredNodes = nodes
         } catch {
             allContacts = []
             availableRepeaters = []
             availableRooms = []
+            discoveredNodes = []
         }
     }
 
@@ -171,6 +187,13 @@ final class PathManagementViewModel {
     func addRepeater(_ repeater: ContactDTO) {
         let hashBytes = Data(repeater.publicKey.prefix(hashSize))
         let hop = PathHop(hashBytes: hashBytes, publicKey: repeater.publicKey, resolvedName: repeater.displayName)
+        editablePath.append(hop)
+    }
+
+    /// Add a discovered repeater to the path using its public key prefix
+    func addDiscoveredRepeater(_ node: DiscoveredNodeDTO) {
+        let hashBytes = Data(node.publicKey.prefix(hashSize))
+        let hop = PathHop(hashBytes: hashBytes, publicKey: node.publicKey, resolvedName: node.name)
         editablePath.append(hop)
     }
 

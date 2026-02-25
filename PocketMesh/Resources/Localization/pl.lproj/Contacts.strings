@@ -46,6 +46,9 @@
 /* Location: Multiple files - Purpose: Room contact type label */
 "contacts.nodeKind.room" = "Pokój";
 
+/* Location: TracePathListView.swift, PathEditingSheet.swift - Purpose: Badge label for discovered nodes */
+"contacts.nodeKind.discovered" = "Odkryty";
+
 /* Location: ContactsListView.swift - Purpose: Contact label in search results */
 "contacts.nodeKind.contact" = "Kontakt";
 
@@ -835,6 +838,9 @@
 
 /* Location: TracePathListView.swift - Purpose: Toggle to include room servers in the list */
 "contacts.trace.list.includeRooms" = "Uwzględnij pokoje";
+
+/* Location: TracePathListView.swift, PathEditingSheet.swift - Purpose: Toggle to include discovered repeaters */
+"contacts.trace.list.includeDiscovered" = "Uwzględnij odkryte";
 
 /* Location: TracePathListView.swift - Purpose: No favorite repeaters empty title */
 "contacts.trace.list.noFavorites.title" = "Brak ulubionych przekaźników";

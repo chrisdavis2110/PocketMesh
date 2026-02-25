@@ -2,6 +2,47 @@ import SwiftUI
 import UIKit
 import PocketMeshServices
 
+/// Unified node type for the repeater picker list
+enum PickerNode: Identifiable {
+    case contact(ContactDTO)
+    case discovered(DiscoveredNodeDTO)
+
+    var id: UUID {
+        switch self {
+        case .contact(let c): c.id
+        case .discovered(let d): d.id
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .contact(let c): c.displayName
+        case .discovered(let d): d.name
+        }
+    }
+
+    var publicKeyHex: String {
+        switch self {
+        case .contact(let c): c.publicKey.hexString()
+        case .discovered(let d): d.publicKey.hexString()
+        }
+    }
+
+    var isRoom: Bool {
+        switch self {
+        case .contact(let c): c.type == .room
+        case .discovered: false
+        }
+    }
+
+    var isDiscovered: Bool {
+        switch self {
+        case .contact: false
+        case .discovered: true
+        }
+    }
+}
+
 /// List-based view for building trace paths
 struct TracePathListView: View {
     @Environment(\.appState) private var appState
@@ -21,14 +62,28 @@ struct TracePathListView: View {
     @State private var pastedSuccessfully = false
     @AppStorage("tracePathShowOnlyFavorites") private var showOnlyFavorites = false
     @AppStorage("tracePathIncludeRooms") private var includeRooms = false
+    @AppStorage("tracePathIncludeDiscovered") private var includeDiscovered = false
 
-    private var filteredRepeaters: [ContactDTO] {
-        var nodes = viewModel.availableRepeaters
+    private var filteredNodes: [PickerNode] {
+        var nodes: [PickerNode] = viewModel.availableRepeaters.map { .contact($0) }
         if includeRooms {
-            nodes += viewModel.availableRooms
+            nodes += viewModel.availableRooms.map { .contact($0) }
+        }
+        if includeDiscovered {
+            let contactKeys = Set(nodes.compactMap {
+                if case .contact(let c) = $0 { c.publicKey } else { nil }
+            })
+            nodes += viewModel.discoveredRepeaters
+                .filter { !contactKeys.contains($0.publicKey) }
+                .map { .discovered($0) }
         }
         if showOnlyFavorites {
-            nodes = nodes.filter(\.isFavorite)
+            nodes = nodes.filter {
+                switch $0 {
+                case .contact(let c): c.isFavorite
+                case .discovered: false
+                }
+            }
         }
         return nodes
     }
@@ -112,8 +167,11 @@ struct TracePathListView: View {
             DisclosureGroup(isExpanded: $isRepeatersExpanded) {
                 Toggle(L10n.Contacts.Contacts.Trace.List.favoritesOnly, isOn: $showOnlyFavorites)
                 Toggle(L10n.Contacts.Contacts.Trace.List.includeRooms, isOn: $includeRooms)
+                if !showOnlyFavorites {
+                    Toggle(L10n.Contacts.Contacts.Trace.List.includeDiscovered, isOn: $includeDiscovered)
+                }
 
-                if filteredRepeaters.isEmpty {
+                if filteredNodes.isEmpty {
                     if showOnlyFavorites {
                         ContentUnavailableView(
                             L10n.Contacts.Contacts.Trace.List.NoFavorites.title,
@@ -128,18 +186,29 @@ struct TracePathListView: View {
                         )
                     }
                 } else {
-                    ForEach(filteredRepeaters) { repeater in
+                    ForEach(filteredNodes) { node in
                         Button {
-                            recentlyAddedRepeaterID = repeater.id
+                            recentlyAddedRepeaterID = node.id
                             addHapticTrigger += 1
-                            viewModel.addRepeater(repeater)
+                            switch node {
+                            case .contact(let c): viewModel.addRepeater(c)
+                            case .discovered(let d): viewModel.addDiscoveredRepeater(d)
+                            }
                         } label: {
                             HStack {
                                 VStack(alignment: .leading) {
                                     HStack {
-                                        Text(repeater.displayName)
-                                        if repeater.type == .room {
+                                        Text(node.displayName)
+                                        if node.isRoom {
                                             Text(L10n.Contacts.Contacts.NodeKind.room)
+                                                .font(.caption2.weight(.medium))
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(.orange.opacity(0.15), in: .capsule)
+                                                .foregroundStyle(.orange)
+                                        }
+                                        if node.isDiscovered {
+                                            Text(L10n.Contacts.Contacts.NodeKind.discovered)
                                                 .font(.caption2.weight(.medium))
                                                 .padding(.horizontal, 6)
                                                 .padding(.vertical, 2)
@@ -147,29 +216,34 @@ struct TracePathListView: View {
                                                 .foregroundStyle(.blue)
                                         }
                                     }
-                                    Text(repeater.publicKey.hexString())
+                                    Text(node.publicKeyHex)
                                         .font(.caption.monospaced())
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
                                         .truncationMode(.middle)
                                 }
                                 Spacer()
-                                Image(systemName: recentlyAddedRepeaterID == repeater.id ? "checkmark.circle.fill" : "plus.circle")
-                                    .foregroundStyle(recentlyAddedRepeaterID == repeater.id ? Color.green : Color.accentColor)
+                                Image(systemName: recentlyAddedRepeaterID == node.id ? "checkmark.circle.fill" : "plus.circle")
+                                    .foregroundStyle(recentlyAddedRepeaterID == node.id ? Color.green : Color.accentColor)
                                     .contentTransition(.symbolEffect(.replace))
                             }
                         }
-                        .id(repeater.id)
+                        .id(node.id)
                         .foregroundStyle(.primary)
-                        .accessibilityLabel(L10n.Contacts.Contacts.PathEdit.addToPath(repeater.displayName))
+                        .accessibilityLabel(L10n.Contacts.Contacts.PathEdit.addToPath(node.displayName))
                     }
                 }
             } label: {
                 HStack {
                     Text(L10n.Contacts.Contacts.Trace.List.repeaters)
                     Spacer()
-                    Text("\(filteredRepeaters.count)")
+                    Text("\(filteredNodes.count)")
                         .foregroundStyle(.secondary)
+                }
+            }
+            .onChange(of: showOnlyFavorites) { _, newValue in
+                if newValue {
+                    includeDiscovered = false
                 }
             }
         }

@@ -10,8 +10,22 @@ struct PathEditingSheet: View {
     // Haptic feedback triggers (SwiftUI native approach)
     @State private var dragHapticTrigger = 0
     @State private var addHapticTrigger = 0
+    @AppStorage("pathEditIncludeDiscovered") private var includeDiscovered = false
 
     private var hashSize: Int { viewModel.hashSize }
+
+    private var filteredNodes: [PickerNode] {
+        var nodes: [PickerNode] = viewModel.filteredAvailableRepeaters.map { .contact($0) }
+        if includeDiscovered {
+            let contactKeys = Set(nodes.compactMap {
+                if case .contact(let c) = $0 { c.publicKey } else { nil }
+            })
+            nodes += viewModel.discoveredRepeaters
+                .filter { !contactKeys.contains($0.publicKey) }
+                .map { .discovered($0) }
+        }
+        return nodes
+    }
 
     var body: some View {
         NavigationStack {
@@ -88,22 +102,37 @@ struct PathEditingSheet: View {
 
     private var addRepeaterSection: some View {
         Section {
-            if viewModel.filteredAvailableRepeaters.isEmpty {
+            Toggle(L10n.Contacts.Contacts.Trace.List.includeDiscovered, isOn: $includeDiscovered)
+
+            if filteredNodes.isEmpty {
                 ContentUnavailableView(
                     L10n.Contacts.Contacts.PathEdit.NoRepeaters.title,
                     systemImage: "antenna.radiowaves.left.and.right.slash",
                     description: Text(L10n.Contacts.Contacts.PathEdit.NoRepeaters.description)
                 )
             } else {
-                ForEach(viewModel.filteredAvailableRepeaters) { repeater in
+                ForEach(filteredNodes) { node in
                     Button {
                         addHapticTrigger += 1
-                        viewModel.addRepeater(repeater)
+                        switch node {
+                        case .contact(let c): viewModel.addRepeater(c)
+                        case .discovered(let d): viewModel.addDiscoveredRepeater(d)
+                        }
                     } label: {
                         HStack {
                             VStack(alignment: .leading) {
-                                Text(repeater.displayName)
-                                Text(repeater.publicKey.prefix(hashSize).hexString())
+                                HStack {
+                                    Text(node.displayName)
+                                    if node.isDiscovered {
+                                        Text(L10n.Contacts.Contacts.NodeKind.discovered)
+                                            .font(.caption2.weight(.medium))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(.blue.opacity(0.15), in: .capsule)
+                                            .foregroundStyle(.blue)
+                                    }
+                                }
+                                Text(node.publicKeyHex)
                                     .font(.caption.monospaced())
                                     .foregroundStyle(.secondary)
                             }
@@ -113,13 +142,13 @@ struct PathEditingSheet: View {
                         }
                     }
                     .foregroundStyle(.primary)
-                    .accessibilityLabel(L10n.Contacts.Contacts.PathEdit.addToPath(repeater.displayName))
+                    .accessibilityLabel(L10n.Contacts.Contacts.PathEdit.addToPath(node.displayName))
                 }
             }
         } header: {
             Text(L10n.Contacts.Contacts.PathEdit.addRepeater)
         } footer: {
-            if !viewModel.filteredAvailableRepeaters.isEmpty {
+            if !filteredNodes.isEmpty {
                 Text(L10n.Contacts.Contacts.PathEdit.addFooter)
             }
         }

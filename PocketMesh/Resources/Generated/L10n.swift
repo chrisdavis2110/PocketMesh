@@ -1251,6 +1251,8 @@ public enum L10n {
         public static let chatContact = L10n.tr("Contacts", "contacts.nodeKind.chatContact", fallback: "Chat Contact")
         /// Location: ContactsListView.swift - Purpose: Contact label in search results
         public static let contact = L10n.tr("Contacts", "contacts.nodeKind.contact", fallback: "Contact")
+        /// Location: TracePathListView.swift, PathEditingSheet.swift - Purpose: Badge label for discovered nodes
+        public static let discovered = L10n.tr("Contacts", "contacts.nodeKind.discovered", fallback: "Discovered")
         /// Location: Multiple files - Purpose: Repeater contact type label
         public static let repeater = L10n.tr("Contacts", "contacts.nodeKind.repeater", fallback: "Repeater")
         /// Location: Multiple files - Purpose: Room contact type label
@@ -1678,6 +1680,8 @@ public enum L10n {
           public static func hopLabel(_ p1: Int, _ p2: Any) -> String {
             return L10n.tr("Contacts", "contacts.trace.list.hopLabel", p1, String(describing: p2), fallback: "Hop %d: %@")
           }
+          /// Location: TracePathListView.swift, PathEditingSheet.swift - Purpose: Toggle to include discovered repeaters
+          public static let includeDiscovered = L10n.tr("Contacts", "contacts.trace.list.includeDiscovered", fallback: "Include Discovered")
           /// Location: TracePathListView.swift - Purpose: Toggle to include room servers in the list
           public static let includeRooms = L10n.tr("Contacts", "contacts.trace.list.includeRooms", fallback: "Include Rooms")
           /// Location: TracePathListView.swift - Purpose: Outbound path section header
