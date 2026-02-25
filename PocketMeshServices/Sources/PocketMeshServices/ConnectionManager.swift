@@ -103,6 +103,7 @@ public enum DevicePlatform: Sendable {
         return .unknown
     }
 
+    // Ordering matters: first match wins in detect(from:). More specific patterns must precede general ones within each platform group.
     private static let platformRules: [(substring: String, platform: DevicePlatform)] = [
         // ESP32 — Heltec
         ("Heltec V2", .esp32),
@@ -330,6 +331,7 @@ public final class ConnectionManager {
             }
             return false
         case .halfOpen:
+            // Half-open: allow a single probe attempt to determine if the connection can be restored.
             return true
         }
     }
