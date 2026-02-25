@@ -64,29 +64,20 @@ struct ChatInputBar: View {
             .accessibilityLabel(L10n.Chats.Chats.Input.characterCount(byteCount, maxBytes))
     }
 
-    @ViewBuilder
     private var sendButton: some View {
-        if #available(iOS 26.0, *) {
-            Button(action: send) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
-            }
-            .buttonStyle(.glass)
-            .disabled(!canSend)
-            .accessibilityLabel(sendAccessibilityLabel)
-            .accessibilityHint(sendAccessibilityHint)
-        } else {
-            Button(action: send) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.title)
-                    .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
-            }
-            .padding(.vertical, 4)
-            .disabled(!canSend)
-            .accessibilityLabel(sendAccessibilityLabel)
-            .accessibilityHint(sendAccessibilityHint)
+        Button(action: send) {
+            Image(systemName: "arrow.up.circle.fill")
+                .font(sendButtonFont)
+                .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
         }
+        .sendButtonStyle()
+        .disabled(!canSend)
+        .accessibilityLabel(sendAccessibilityLabel)
+        .accessibilityHint(sendAccessibilityHint)
+    }
+
+    private var sendButtonFont: Font {
+        if #available(iOS 26.0, *) { .title2 } else { .title }
     }
 
     private var sendAccessibilityLabel: String {
@@ -128,6 +119,15 @@ struct ChatInputBar: View {
 // MARK: - Platform-Conditional Styling
 
 private extension View {
+    @ViewBuilder
+    func sendButtonStyle() -> some View {
+        if #available(iOS 26.0, *) {
+            self.buttonStyle(.glass)
+        } else {
+            self.padding(.vertical, 4)
+        }
+    }
+
     @ViewBuilder
     func textFieldBackground() -> some View {
         if #available(iOS 26.0, *) {

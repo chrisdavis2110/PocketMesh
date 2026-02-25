@@ -349,12 +349,11 @@ struct ChatView: View {
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        MentionInputBar(
+        ChatInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: L10n.Chats.Chats.Input.Placeholder.directMessage,
-            maxBytes: ProtocolLimits.maxDirectMessageLength,
-            contacts: viewModel.allContacts
+            maxBytes: ProtocolLimits.maxDirectMessageLength
         ) {
             let text = viewModel.composingText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return }

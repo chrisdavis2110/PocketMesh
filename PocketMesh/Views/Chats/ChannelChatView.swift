@@ -606,12 +606,11 @@ struct ChannelChatView: View {
     }
 
     private var inputBar: some View {
-        MentionInputBar(
+        ChatInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? L10n.Chats.Chats.Channel.typePublic : L10n.Chats.Chats.Channel.typePrivate,
-            maxBytes: maxChannelMessageLength,
-            contacts: viewModel.allContacts
+            maxBytes: maxChannelMessageLength
         ) {
             let text = viewModel.composingText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return }
