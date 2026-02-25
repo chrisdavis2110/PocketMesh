@@ -232,8 +232,45 @@ public final class AppState {
         // Store syncCoordinator reference
         syncCoordinator = services.syncCoordinator
 
-        // Wire data change callbacks for SwiftUI observation
-        // (actors don't participate in SwiftUI's observation system, so we need callbacks)
+        await wireDataChangeCallbacks(services: services)
+        wireSettingsEventStream(services: services)
+        await wireDeviceUpdateCallbacks(services: services)
+        await wireMessageBroadcasting(services: services)
+
+        // Increment version to trigger UI refresh in views observing this
+        servicesVersion += 1
+
+        // Set up notification center delegate, wire localized strings, then register categories
+        UNUserNotificationCenter.current().delegate = services.notificationService
+        services.notificationService.setStringProvider(NotificationStringProviderImpl())
+        await services.notificationService.setup()
+
+        // Configure badge count callback
+        services.notificationService.getBadgeCount = { [weak self, dataStore = services.dataStore] in
+            let deviceID = await MainActor.run { self?.currentDeviceID }
+            guard let deviceID else {
+                return (contacts: 0, channels: 0, rooms: 0)
+            }
+            do {
+                return try await dataStore.getTotalUnreadCounts(deviceID: deviceID)
+            } catch {
+                return (contacts: 0, channels: 0, rooms: 0)
+            }
+        }
+
+        // Configure notification interaction handlers
+        configureNotificationHandlers()
+
+        // Defer battery bootstrap so connection setup is not blocked by device request timeouts.
+        batteryMonitor.start(services: services, device: connectedDevice)
+
+    }
+
+    // MARK: - Service Wiring Helpers
+
+    /// Wire data change callbacks for SwiftUI observation
+    /// (actors don't participate in SwiftUI's observation system, so we need callbacks)
+    private func wireDataChangeCallbacks(services: ServiceContainer) async {
         await services.syncCoordinator.setDataChangeCallbacks(
             onContactsChanged: { @MainActor [weak self] in
                 self?.contactsVersion += 1
@@ -242,9 +279,11 @@ public final class AppState {
                 self?.conversationsVersion += 1
             }
         )
+    }
 
-        // Consume settings service event stream
-        // Updates connectedDevice when settings are changed via SettingsService
+    /// Consume settings service event stream.
+    /// Updates connectedDevice when settings are changed via SettingsService.
+    private func wireSettingsEventStream(services: ServiceContainer) {
         settingsEventsTask?.cancel()
         settingsEventsTask = Task { [weak self] in
             guard let self else { return }
@@ -277,9 +316,12 @@ public final class AppState {
                 }
             }
         }
+    }
 
-        // Wire device update callback for device data changes
-        // Updates connectedDevice when local device settings (like OCV) are changed via DeviceService
+    /// Wire device update and contact change callbacks.
+    /// Updates connectedDevice when local device settings (like OCV) are changed via DeviceService,
+    /// and handles contact updates/deletions for real-time Discover page updates.
+    private func wireDeviceUpdateCallbacks(services: ServiceContainer) async {
         await services.deviceService.setDeviceUpdateCallback { [weak self] deviceDTO in
             await MainActor.run {
                 self?.connectionManager.updateDevice(with: deviceDTO)
@@ -299,8 +341,10 @@ public final class AppState {
             await self.services?.notificationService.removeDeliveredNotifications(forContactID: contactID)
             await self.services?.notificationService.updateBadgeCount()
         }
+    }
 
-        // Wire message event broadcaster callbacks
+    /// Wire message event broadcaster callbacks for conversation and reaction updates.
+    private func wireMessageBroadcasting(services: ServiceContainer) async {
         await messageEventBroadcaster.wireServices(
             services,
             onConversationsChanged: { [weak self] in
@@ -310,34 +354,6 @@ public final class AppState {
                 await self?.handleReactionNotification(messageID: messageID)
             }
         )
-
-        // Increment version to trigger UI refresh in views observing this
-        servicesVersion += 1
-
-        // Set up notification center delegate, wire localized strings, then register categories
-        UNUserNotificationCenter.current().delegate = services.notificationService
-        services.notificationService.setStringProvider(NotificationStringProviderImpl())
-        await services.notificationService.setup()
-
-        // Configure badge count callback
-        services.notificationService.getBadgeCount = { [weak self, dataStore = services.dataStore] in
-            let deviceID = await MainActor.run { self?.currentDeviceID }
-            guard let deviceID else {
-                return (contacts: 0, channels: 0, rooms: 0)
-            }
-            do {
-                return try await dataStore.getTotalUnreadCounts(deviceID: deviceID)
-            } catch {
-                return (contacts: 0, channels: 0, rooms: 0)
-            }
-        }
-
-        // Configure notification interaction handlers
-        configureNotificationHandlers()
-
-        // Defer battery bootstrap so connection setup is not blocked by device request timeouts.
-        batteryMonitor.start(services: services, device: connectedDevice)
-
     }
 
     // MARK: - Stale Node Cleanup
@@ -588,103 +604,112 @@ public final class AppState {
             connectedDevice: { [weak self] in self?.connectedDevice }
         )
 
-        // Quick reply handler
         services.notificationService.onQuickReply = { [weak self] contactID, text in
             guard let self else { return }
-
-            guard let contact = try? await services.dataStore.fetchContact(id: contactID) else { return }
-
-            if self.connectionState == .ready {
-                do {
-                    _ = try await services.messageService.sendDirectMessage(text: text, to: contact)
-
-                    // Clear unread state - user replied so they've seen the chat
-                    try? await services.dataStore.clearUnreadCount(contactID: contactID)
-                    await services.notificationService.removeDeliveredNotifications(forContactID: contactID)
-                    await services.notificationService.updateBadgeCount()
-                    self.syncCoordinator?.notifyConversationsChanged()
-                    return
-                } catch {
-                    // Fall through to draft handling
-                }
-            }
-
-            services.notificationService.saveDraft(for: contactID, text: text)
-            await services.notificationService.postQuickReplyFailedNotification(
-                contactName: contact.displayName,
-                contactID: contactID
-            )
+            await self.handleQuickReply(services: services, contactID: contactID, text: text)
         }
 
-        // Channel quick reply handler
         services.notificationService.onChannelQuickReply = { [weak self] deviceID, channelIndex, text in
             guard let self else { return }
-
-            // Fetch channel for display name in failure notification
-            let channel = try? await services.dataStore.fetchChannel(deviceID: deviceID, index: channelIndex)
-            let channelName = channel?.name ?? "Channel \(channelIndex)"
-
-            guard self.connectionState == .ready else {
-                await services.notificationService.postChannelQuickReplyFailedNotification(
-                    channelName: channelName,
-                    deviceID: deviceID,
-                    channelIndex: channelIndex
-                )
-                return
-            }
-
-            do {
-                _ = try await services.messageService.sendChannelMessage(
-                    text: text,
-                    channelIndex: channelIndex,
-                    deviceID: deviceID
-                )
-
-                // Clear unread state - user replied so they've seen the channel
-                try? await services.dataStore.clearChannelUnreadCount(deviceID: deviceID, index: channelIndex)
-                await services.notificationService.removeDeliveredNotifications(
-                    forChannelIndex: channelIndex,
-                    deviceID: deviceID
-                )
-                await services.notificationService.updateBadgeCount()
-                self.syncCoordinator?.notifyConversationsChanged()
-            } catch {
-                await services.notificationService.postChannelQuickReplyFailedNotification(
-                    channelName: channelName,
-                    deviceID: deviceID,
-                    channelIndex: channelIndex
-                )
-            }
+            await self.handleChannelQuickReply(services: services, deviceID: deviceID, channelIndex: channelIndex, text: text)
         }
 
-        // Mark as read handler
         services.notificationService.onMarkAsRead = { [weak self] contactID, messageID in
             guard let self else { return }
-            do {
-                try await services.dataStore.markMessageAsRead(id: messageID)
-                try await services.dataStore.clearUnreadCount(contactID: contactID)
-                services.notificationService.removeDeliveredNotification(messageID: messageID)
-                await services.notificationService.updateBadgeCount()
-                self.syncCoordinator?.notifyConversationsChanged()
-            } catch {
-                // Silently ignore
-            }
+            await self.handleMarkAsRead(services: services, contactID: contactID, messageID: messageID)
         }
 
-        // Channel mark as read handler
         services.notificationService.onChannelMarkAsRead = { [weak self] deviceID, channelIndex, messageID in
             guard let self else { return }
+            await self.handleChannelMarkAsRead(services: services, deviceID: deviceID, channelIndex: channelIndex, messageID: messageID)
+        }
+    }
+
+    private func handleQuickReply(services: ServiceContainer, contactID: UUID, text: String) async {
+        guard let contact = try? await services.dataStore.fetchContact(id: contactID) else { return }
+
+        if connectionState == .ready {
             do {
-                try await services.dataStore.markMessageAsRead(id: messageID)
-                try await services.dataStore.clearChannelUnreadCount(deviceID: deviceID, index: channelIndex)
-                services.notificationService.removeDeliveredNotification(messageID: messageID)
+                _ = try await services.messageService.sendDirectMessage(text: text, to: contact)
+
+                // Clear unread state - user replied so they've seen the chat
+                try? await services.dataStore.clearUnreadCount(contactID: contactID)
+                await services.notificationService.removeDeliveredNotifications(forContactID: contactID)
                 await services.notificationService.updateBadgeCount()
-                self.syncCoordinator?.notifyConversationsChanged()
+                syncCoordinator?.notifyConversationsChanged()
+                return
             } catch {
-                // Silently ignore
+                // Fall through to draft handling
             }
         }
 
+        services.notificationService.saveDraft(for: contactID, text: text)
+        await services.notificationService.postQuickReplyFailedNotification(
+            contactName: contact.displayName,
+            contactID: contactID
+        )
+    }
+
+    private func handleChannelQuickReply(services: ServiceContainer, deviceID: UUID, channelIndex: UInt8, text: String) async {
+        // Fetch channel for display name in failure notification
+        let channel = try? await services.dataStore.fetchChannel(deviceID: deviceID, index: channelIndex)
+        let channelName = channel?.name ?? "Channel \(channelIndex)"
+
+        guard connectionState == .ready else {
+            await services.notificationService.postChannelQuickReplyFailedNotification(
+                channelName: channelName,
+                deviceID: deviceID,
+                channelIndex: channelIndex
+            )
+            return
+        }
+
+        do {
+            _ = try await services.messageService.sendChannelMessage(
+                text: text,
+                channelIndex: channelIndex,
+                deviceID: deviceID
+            )
+
+            // Clear unread state - user replied so they've seen the channel
+            try? await services.dataStore.clearChannelUnreadCount(deviceID: deviceID, index: channelIndex)
+            await services.notificationService.removeDeliveredNotifications(
+                forChannelIndex: channelIndex,
+                deviceID: deviceID
+            )
+            await services.notificationService.updateBadgeCount()
+            syncCoordinator?.notifyConversationsChanged()
+        } catch {
+            await services.notificationService.postChannelQuickReplyFailedNotification(
+                channelName: channelName,
+                deviceID: deviceID,
+                channelIndex: channelIndex
+            )
+        }
+    }
+
+    private func handleMarkAsRead(services: ServiceContainer, contactID: UUID, messageID: UUID) async {
+        do {
+            try await services.dataStore.markMessageAsRead(id: messageID)
+            try await services.dataStore.clearUnreadCount(contactID: contactID)
+            services.notificationService.removeDeliveredNotification(messageID: messageID)
+            await services.notificationService.updateBadgeCount()
+            syncCoordinator?.notifyConversationsChanged()
+        } catch {
+            // Silently ignore
+        }
+    }
+
+    private func handleChannelMarkAsRead(services: ServiceContainer, deviceID: UUID, channelIndex: UInt8, messageID: UUID) async {
+        do {
+            try await services.dataStore.markMessageAsRead(id: messageID)
+            try await services.dataStore.clearChannelUnreadCount(deviceID: deviceID, index: channelIndex)
+            services.notificationService.removeDeliveredNotification(messageID: messageID)
+            await services.notificationService.updateBadgeCount()
+            syncCoordinator?.notifyConversationsChanged()
+        } catch {
+            // Silently ignore
+        }
     }
 
     /// Handle posting a notification when someone reacts to the user's message
