@@ -202,6 +202,18 @@
 /* Location: RepeaterSettingsView.swift - Security footer text */
 "remoteNodes.settings.securityFooter" = "Change the admin authentication password.";
 
+/* Location: RepeaterSettingsView.swift - Device info section footer */
+"remoteNodes.settings.deviceInfoFooter" = "Firmware version and device clock.";
+
+/* Location: RepeaterSettingsView.swift - Radio settings section footer */
+"remoteNodes.settings.radioFooter" = "Frequency, bandwidth, spreading factor, coding rate, and transmit power.";
+
+/* Location: RepeaterSettingsView.swift - Identity section footer */
+"remoteNodes.settings.identityFooter" = "Repeater name and GPS coordinates for map display.";
+
+/* Location: RepeaterSettingsView.swift - Behavior section footer */
+"remoteNodes.settings.behaviorFooter" = "Advertisement intervals, flood hops, and repeater mode.";
+
 /* Location: RepeaterSettingsView.swift - Device actions section header */
 "remoteNodes.settings.deviceActions" = "Device Actions";
 

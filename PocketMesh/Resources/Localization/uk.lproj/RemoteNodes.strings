@@ -199,6 +199,18 @@
 /* Location: RepeaterSettingsView.swift - Security footer text */
 "remoteNodes.settings.securityFooter" = "Змінити пароль автентифікації адміністратора.";
 
+/* Location: RepeaterSettingsView.swift - Device info section footer */
+"remoteNodes.settings.deviceInfoFooter" = "Версія прошивки та годинник пристрою.";
+
+/* Location: RepeaterSettingsView.swift - Radio settings section footer */
+"remoteNodes.settings.radioFooter" = "Частота, смуга пропускання, коефіцієнт розширення, швидкість кодування та потужність передачі.";
+
+/* Location: RepeaterSettingsView.swift - Identity section footer */
+"remoteNodes.settings.identityFooter" = "Назва ретранслятора та GPS-координати для відображення на карті.";
+
+/* Location: RepeaterSettingsView.swift - Behavior section footer */
+"remoteNodes.settings.behaviorFooter" = "Інтервали оголошень, переходи розсилки та режим ретранслятора.";
+
 /* Location: RepeaterSettingsView.swift - Device actions section header */
 "remoteNodes.settings.deviceActions" = "Дії з пристроєм";
 

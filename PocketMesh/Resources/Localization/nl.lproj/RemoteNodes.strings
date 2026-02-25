@@ -202,6 +202,18 @@
 /* Location: RepeaterSettingsView.swift - Security footer text */
 "remoteNodes.settings.securityFooter" = "Wijzig het authenticatiewachtwoord voor beheerders.";
 
+/* Location: RepeaterSettingsView.swift - Device info section footer */
+"remoteNodes.settings.deviceInfoFooter" = "Firmwareversie en apparaatklok.";
+
+/* Location: RepeaterSettingsView.swift - Radio settings section footer */
+"remoteNodes.settings.radioFooter" = "Frequentie, bandbreedte, spreidingsfactor, coderingssnelheid en zendvermogen.";
+
+/* Location: RepeaterSettingsView.swift - Identity section footer */
+"remoteNodes.settings.identityFooter" = "Repeaternaam en GPS-coördinaten voor kaartweergave.";
+
+/* Location: RepeaterSettingsView.swift - Behavior section footer */
+"remoteNodes.settings.behaviorFooter" = "Advertentie-intervallen, flood-sprongen en repeatermodus.";
+
 /* Location: RepeaterSettingsView.swift - Device actions section header */
 "remoteNodes.settings.deviceActions" = "Apparaatacties";
 

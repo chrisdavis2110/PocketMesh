@@ -2439,6 +2439,8 @@ public enum L10n {
         public static let bandwidthKHz = L10n.tr("RemoteNodes", "remoteNodes.settings.bandwidthKHz", fallback: "Bandwidth (kHz)")
         /// Location: RepeaterSettingsView.swift - Behavior section title
         public static let behavior = L10n.tr("RemoteNodes", "remoteNodes.settings.behavior", fallback: "Behavior")
+        /// Location: RepeaterSettingsView.swift - Behavior section footer
+        public static let behaviorFooter = L10n.tr("RemoteNodes", "remoteNodes.settings.behaviorFooter", fallback: "Advertisement intervals, flood hops, and repeater mode.")
         /// Location: RepeaterSettingsView.swift - Change password button
         public static let changePassword = L10n.tr("RemoteNodes", "remoteNodes.settings.changePassword", fallback: "Change Password")
         /// Location: RepeaterSettingsViewModel.swift - Clock ahead error
@@ -2455,6 +2457,8 @@ public enum L10n {
         public static let deviceActions = L10n.tr("RemoteNodes", "remoteNodes.settings.deviceActions", fallback: "Device Actions")
         /// Location: RepeaterSettingsView.swift - Device info section title
         public static let deviceInfo = L10n.tr("RemoteNodes", "remoteNodes.settings.deviceInfo", fallback: "Device Info")
+        /// Location: RepeaterSettingsView.swift - Device info section footer
+        public static let deviceInfoFooter = L10n.tr("RemoteNodes", "remoteNodes.settings.deviceInfoFooter", fallback: "Firmware version and device clock.")
         /// Location: RepeaterSettingsView.swift - Device time label
         public static let deviceTime = L10n.tr("RemoteNodes", "remoteNodes.settings.deviceTime", fallback: "Device Time")
         /// Location: RepeaterSettingsView.swift - Done button (used in multiple places)
@@ -2473,6 +2477,8 @@ public enum L10n {
         public static let hops = L10n.tr("RemoteNodes", "remoteNodes.settings.hops", fallback: "hops")
         /// Location: RepeaterSettingsView.swift - Hours unit
         public static let hrs = L10n.tr("RemoteNodes", "remoteNodes.settings.hrs", fallback: "hrs")
+        /// Location: RepeaterSettingsView.swift - Identity section footer
+        public static let identityFooter = L10n.tr("RemoteNodes", "remoteNodes.settings.identityFooter", fallback: "Repeater name and GPS coordinates for map display.")
         /// Location: RepeaterSettingsView.swift - Identity & location section title
         public static let identityLocation = L10n.tr("RemoteNodes", "remoteNodes.settings.identityLocation", fallback: "Identity & Location")
         /// Location: RepeaterSettingsView.swift - Lat placeholder
@@ -2513,6 +2519,8 @@ public enum L10n {
         public static let radioAppliedSuccess = L10n.tr("RemoteNodes", "remoteNodes.settings.radioAppliedSuccess", fallback: "Radio settings applied. Restart device to take effect.")
         /// Location: RepeaterSettingsViewModel.swift - Radio apply partial failure
         public static let radioApplyFailed = L10n.tr("RemoteNodes", "remoteNodes.settings.radioApplyFailed", fallback: "Some radio settings failed to apply")
+        /// Location: RepeaterSettingsView.swift - Radio settings section footer
+        public static let radioFooter = L10n.tr("RemoteNodes", "remoteNodes.settings.radioFooter", fallback: "Frequency, bandwidth, spreading factor, coding rate, and transmit power.")
         /// Location: RepeaterSettingsViewModel.swift - Radio not loaded error
         public static let radioNotLoaded = L10n.tr("RemoteNodes", "remoteNodes.settings.radioNotLoaded", fallback: "Radio settings not loaded")
         /// Location: RepeaterSettingsView.swift - Radio parameters section title

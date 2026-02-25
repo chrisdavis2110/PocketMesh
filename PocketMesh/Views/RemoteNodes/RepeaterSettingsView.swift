@@ -102,7 +102,8 @@ struct RepeaterSettingsView: View {
             isLoaded: { viewModel.deviceInfoLoaded },
             isLoading: $viewModel.isLoadingDeviceInfo,
             error: $viewModel.deviceInfoError,
-            onLoad: { await viewModel.fetchDeviceInfo() }
+            onLoad: { await viewModel.fetchDeviceInfo() },
+            footer: L10n.RemoteNodes.RemoteNodes.Settings.deviceInfoFooter
         ) {
             LabeledContent(L10n.RemoteNodes.RemoteNodes.Settings.firmware, value: viewModel.firmwareVersion ?? "\u{2014}")
             LabeledContent(L10n.RemoteNodes.RemoteNodes.Settings.deviceTime, value: viewModel.deviceTime ?? "\u{2014}")
@@ -119,7 +120,8 @@ struct RepeaterSettingsView: View {
             isLoaded: { viewModel.radioLoaded },
             isLoading: $viewModel.isLoadingRadio,
             error: $viewModel.radioError,
-            onLoad: { await viewModel.fetchRadioSettings() }
+            onLoad: { await viewModel.fetchRadioSettings() },
+            footer: L10n.RemoteNodes.RemoteNodes.Settings.radioFooter
         ) {
             // Restart warning banner (prominent, not just caption text)
             if viewModel.radioSettingsModified {
@@ -292,7 +294,8 @@ struct RepeaterSettingsView: View {
             isLoaded: { viewModel.identityLoaded },
             isLoading: $viewModel.isLoadingIdentity,
             error: $viewModel.identityError,
-            onLoad: { await viewModel.fetchIdentity() }
+            onLoad: { await viewModel.fetchIdentity() },
+            footer: L10n.RemoteNodes.RemoteNodes.Settings.identityFooter
         ) {
             if let name = viewModel.name {
                 TextField(L10n.RemoteNodes.RemoteNodes.name, text: Binding(
@@ -405,7 +408,8 @@ struct RepeaterSettingsView: View {
             isLoaded: { viewModel.behaviorLoaded },
             isLoading: $viewModel.isLoadingBehavior,
             error: $viewModel.behaviorError,
-            onLoad: { await viewModel.fetchBehaviorSettings() }
+            onLoad: { await viewModel.fetchBehaviorSettings() },
+            footer: L10n.RemoteNodes.RemoteNodes.Settings.behaviorFooter
         ) {
             Toggle(L10n.RemoteNodes.RemoteNodes.Settings.repeaterMode, isOn: Binding(
                 get: { viewModel.repeaterEnabled ?? false },
@@ -537,13 +541,11 @@ struct RepeaterSettingsView: View {
                     Task { await viewModel.changePassword() }
                 }
                 .disabled(viewModel.isApplying || viewModel.newPassword.isEmpty || viewModel.newPassword != viewModel.confirmPassword)
-
-                Text(L10n.RemoteNodes.RemoteNodes.Settings.securityFooter)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             } label: {
                 Label(L10n.RemoteNodes.RemoteNodes.Settings.security, systemImage: "lock")
             }
+        } footer: {
+            Text(L10n.RemoteNodes.RemoteNodes.Settings.securityFooter)
         }
     }
 

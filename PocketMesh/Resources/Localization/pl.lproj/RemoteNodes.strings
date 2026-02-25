@@ -199,6 +199,18 @@
 /* Location: RepeaterSettingsView.swift - Security footer text */
 "remoteNodes.settings.securityFooter" = "Zmień hasło uwierzytelniania administratora.";
 
+/* Location: RepeaterSettingsView.swift - Device info section footer */
+"remoteNodes.settings.deviceInfoFooter" = "Wersja oprogramowania i zegar urządzenia.";
+
+/* Location: RepeaterSettingsView.swift - Radio settings section footer */
+"remoteNodes.settings.radioFooter" = "Częstotliwość, szerokość pasma, współczynnik rozpraszania, współczynnik kodowania i moc nadawania.";
+
+/* Location: RepeaterSettingsView.swift - Identity section footer */
+"remoteNodes.settings.identityFooter" = "Nazwa przekaźnika i współrzędne GPS do wyświetlania na mapie.";
+
+/* Location: RepeaterSettingsView.swift - Behavior section footer */
+"remoteNodes.settings.behaviorFooter" = "Interwały ogłoszeń, skoki zalewania i tryb przekaźnika.";
+
 /* Location: RepeaterSettingsView.swift - Device actions section header */
 "remoteNodes.settings.deviceActions" = "Akcje urządzenia";
 
