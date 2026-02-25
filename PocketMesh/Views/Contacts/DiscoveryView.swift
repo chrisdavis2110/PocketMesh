@@ -207,6 +207,12 @@ struct DiscoveryView: View {
                     .font(.body)
                     .bold()
 
+                Text(node.publicKey.hexString())
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+
                 HStack(spacing: 4) {
                     Text(nodeTypeLabel(for: node))
 
