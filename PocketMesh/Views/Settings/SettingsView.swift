@@ -154,6 +154,15 @@ private struct MyDeviceSection: View {
     }
 
     private var radioDetailText: String {
+        if device.clientRepeat {
+            let preset = RadioPresets.matchingRepeatPreset(
+                frequencyKHz: device.frequency,
+                bandwidthKHz: device.bandwidth,
+                spreadingFactor: device.spreadingFactor,
+                codingRate: device.codingRate
+            )
+            return preset?.name ?? L10n.Settings.BatteryCurve.custom
+        }
         let preset = RadioPresets.matchingPreset(
             frequencyKHz: device.frequency,
             bandwidthKHz: device.bandwidth,

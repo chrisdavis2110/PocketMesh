@@ -212,6 +212,21 @@ public enum RadioPresets {
             preset.codingRate == codingRate
         }
     }
+
+    /// Find repeat preset matching current device settings (exact match)
+    public static func matchingRepeatPreset(
+        frequencyKHz: UInt32,
+        bandwidthKHz: UInt32,
+        spreadingFactor: UInt8,
+        codingRate: UInt8
+    ) -> RadioPreset? {
+        repeatPresets.first { preset in
+            preset.frequencyKHz == frequencyKHz &&
+            preset.bandwidthHz == bandwidthKHz &&
+            preset.spreadingFactor == spreadingFactor &&
+            preset.codingRate == codingRate
+        }
+    }
 }
 
 // MARK: - Telemetry Modes

@@ -50,12 +50,12 @@ struct RadioPresetSection: View {
     /// Matches the device's current radio params against repeat presets.
     private var currentRepeatPreset: RadioPreset? {
         guard let device = appState.connectedDevice else { return nil }
-        return repeatPresets.first(where: {
-            $0.frequencyKHz == device.frequency &&
-            $0.bandwidthHz == device.bandwidth &&
-            $0.spreadingFactor == device.spreadingFactor &&
-            $0.codingRate == device.codingRate
-        })
+        return RadioPresets.matchingRepeatPreset(
+            frequencyKHz: device.frequency,
+            bandwidthKHz: device.bandwidth,
+            spreadingFactor: device.spreadingFactor,
+            codingRate: device.codingRate
+        )
     }
 
     var body: some View {
@@ -161,6 +161,14 @@ struct RadioPresetSection: View {
         .onChange(of: currentPreset?.id) { _, newPresetID in
             // Sync picker when device settings change externally (e.g., from Advanced Settings)
             guard !isRepeatEnabled else { return }
+            hasInitialized = false
+            selectedPresetID = newPresetID
+            Task { @MainActor in
+                hasInitialized = true
+            }
+        }
+        .onChange(of: currentRepeatPreset?.id) { _, newPresetID in
+            guard isRepeatEnabled else { return }
             hasInitialized = false
             selectedPresetID = newPresetID
             Task { @MainActor in
