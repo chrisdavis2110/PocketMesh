@@ -50,7 +50,7 @@ struct TelemetryHistoryView: View {
             title: chart.title,
             unit: chart.sensorType?.unit ?? "",
             dataPoints: chart.dataPoints,
-            accentColor: telemetryColor(for: chart.sensorType),
+            accentColor: chart.sensorType?.chartColor ?? .cyan,
             yAxisDomain: chart.sensorType == .voltage ? ocvArray.voltageChartDomain() : nil
         )
     }
@@ -80,9 +80,9 @@ struct TelemetryHistoryView: View {
 
         return channelTypeGroups.keys.sorted().map { channel in
             let charts = channelTypeGroups[channel]!.values.sorted { lhs, rhs in
-                let lhsIsVoltage = lhs.sensorType == .voltage
-                let rhsIsVoltage = rhs.sensorType == .voltage
-                if lhsIsVoltage != rhsIsVoltage { return lhsIsVoltage }
+                let lhsPriority = lhs.sensorType?.chartSortPriority ?? 1
+                let rhsPriority = rhs.sensorType?.chartSortPriority ?? 1
+                if lhsPriority != rhsPriority { return lhsPriority < rhsPriority }
                 return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
             }
             return ChannelGroup(channel: channel, charts: charts)
@@ -105,22 +105,3 @@ private struct TelemetryChartGroup {
     var dataPoints: [MetricChartView.DataPoint]
 }
 
-// MARK: - Telemetry Display Helpers
-
-private func telemetryColor(for sensorType: LPPSensorType?) -> Color {
-    switch sensorType {
-    case .voltage: .orange
-    case .temperature: .red
-    case .humidity: .teal
-    case .barometer: .purple
-    case .illuminance: .yellow
-    case .current: .mint
-    case .power: .pink
-    case .frequency: .blue
-    case .altitude, .distance: .green
-    case .energy: .orange
-    case .direction: .indigo
-    case .percentage: .cyan
-    default: .cyan
-    }
-}
