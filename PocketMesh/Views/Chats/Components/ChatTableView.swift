@@ -1,13 +1,6 @@
 import UIKit
 import SwiftUI
 
-enum ChatScrollToMentionPolicy {
-    static func shouldScrollToBottom(mentionTargetID: AnyHashable?, newestItemID: AnyHashable?) -> Bool {
-        guard let mentionTargetID, let newestItemID else { return false }
-        return mentionTargetID == newestItemID
-    }
-}
-
 /// UIKit table view controller with flipped orientation for chat-style scrolling
 /// Newest messages appear at visual bottom, keyboard handling via native UIKit
 @MainActor
