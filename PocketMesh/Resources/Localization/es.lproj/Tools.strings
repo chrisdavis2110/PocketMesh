@@ -153,8 +153,8 @@
 /* Location: RxLogRowView - Label for local device in path display */
 "tools.rxLog.pathYou" = "Tú";
 
-/* Location: RxLogRowView - Per-hop SNR detail label for TRACE packets */
-"tools.rxLog.perHopSnrLabel" = "SNR por salto:";
+/* Location: RxLogRowView - Route label for TRACE target hashes */
+"tools.rxLog.traceRouteLabel" = "Ruta:";
 
 // MARK: - Noise Floor View
 

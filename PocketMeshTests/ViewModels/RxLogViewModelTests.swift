@@ -1,10 +1,124 @@
 import Foundation
 import Testing
+@testable import MeshCore
 @testable import PocketMesh
 @testable import PocketMeshServices
 
 @MainActor
 struct RxLogViewModelTests {
+
+    // MARK: - RxLogEntryDTO Computed Properties
+
+    @Test("traceTargetHashes extracts 1-byte hashes when path_sz=0")
+    func traceTargetHashes_oneByte() {
+        // flags byte: path_sz=0 → hashSize = 1<<0 = 1
+        var payload = Data(repeating: 0, count: 9) // [tag:4][auth:4][flags:1]
+        payload[8] = 0x00 // path_sz = 0
+        payload.append(contentsOf: [0xAA, 0xBB, 0xCC])
+        let dto = makeDTO(payloadType: .trace, packetPayload: payload)
+
+        let hashes = dto.traceTargetHashes
+        #expect(hashes?.count == 3)
+        #expect(hashes?[0] == Data([0xAA]))
+        #expect(hashes?[1] == Data([0xBB]))
+        #expect(hashes?[2] == Data([0xCC]))
+    }
+
+    @Test("traceTargetHashes extracts 2-byte hashes when path_sz=1")
+    func traceTargetHashes_twoBytes() {
+        // flags byte: path_sz=1 → hashSize = 1<<1 = 2
+        var payload = Data(repeating: 0, count: 9)
+        payload[8] = 0x01
+        payload.append(contentsOf: [0xAA, 0xBB, 0xCC, 0xDD])
+        let dto = makeDTO(payloadType: .trace, packetPayload: payload)
+
+        let hashes = dto.traceTargetHashes
+        #expect(hashes?.count == 2)
+        #expect(hashes?[0] == Data([0xAA, 0xBB]))
+        #expect(hashes?[1] == Data([0xCC, 0xDD]))
+    }
+
+    @Test("traceTargetHashes returns nil for non-TRACE payload type")
+    func traceTargetHashes_nonTrace() {
+        var payload = Data(repeating: 0, count: 12)
+        payload[8] = 0x00
+        let dto = makeDTO(payloadType: .textMessage, packetPayload: payload)
+        #expect(dto.traceTargetHashes == nil)
+    }
+
+    @Test("traceTargetHashes returns nil when payload is too short")
+    func traceTargetHashes_tooShort() {
+        let payload = Data(repeating: 0, count: 8) // needs > 9
+        let dto = makeDTO(payloadType: .trace, packetPayload: payload)
+        #expect(dto.traceTargetHashes == nil)
+    }
+
+    @Test("traceTargetHashes returns nil when hash bytes don't divide evenly")
+    func traceTargetHashes_unevenBytes() {
+        // path_sz=1 → hashSize=2, but 3 remaining bytes don't divide evenly
+        var payload = Data(repeating: 0, count: 9)
+        payload[8] = 0x01
+        payload.append(contentsOf: [0xAA, 0xBB, 0xCC])
+        let dto = makeDTO(payloadType: .trace, packetPayload: payload)
+        #expect(dto.traceTargetHashes == nil)
+    }
+
+    @Test("senderPrefix extracts correct bytes for hashSize=1")
+    func senderPrefix_hashSize1() {
+        // pathLength encodes hashSize=1: mode=0, hops=1 → 0x01
+        let payload = Data([0xDD, 0xAA, 0xFF, 0xFF]) // [dest:1][src:1][rest]
+        let dto = makeDTO(routeType: .direct, payloadType: .textMessage, pathLength: 0x01, packetPayload: payload)
+
+        #expect(dto.senderPrefix == Data([0xAA]))
+        #expect(dto.recipientPrefix == Data([0xDD]))
+    }
+
+    @Test("senderPrefix extracts correct bytes for hashSize=2")
+    func senderPrefix_hashSize2() {
+        // pathLength encodes hashSize=2: mode=1 → (1<<6)|hops = 0x41
+        let payload = Data([0xDD, 0xEE, 0xAA, 0xBB, 0xFF]) // [dest:2][src:2][rest]
+        let dto = makeDTO(routeType: .direct, payloadType: .textMessage, pathLength: 0x41, packetPayload: payload)
+
+        #expect(dto.senderPrefix == Data([0xAA, 0xBB]))
+        #expect(dto.recipientPrefix == Data([0xDD, 0xEE]))
+    }
+
+    @Test("senderPrefix returns nil for flood route")
+    func senderPrefix_flood() {
+        let payload = Data([0xDD, 0xAA, 0xFF, 0xFF])
+        let dto = makeDTO(routeType: .flood, payloadType: .textMessage, pathLength: 0x01, packetPayload: payload)
+        #expect(dto.senderPrefix == nil)
+        #expect(dto.recipientPrefix == nil)
+    }
+
+    @Test("senderPrefix returns nil for non-text payload")
+    func senderPrefix_nonText() {
+        let payload = Data([0xDD, 0xAA, 0xFF, 0xFF])
+        let dto = makeDTO(routeType: .direct, payloadType: .trace, pathLength: 0x01, packetPayload: payload)
+        #expect(dto.senderPrefix == nil)
+    }
+
+    @Test("pathHashSize returns 1 for TRACE regardless of pathLength encoding")
+    func pathHashSize_trace() {
+        // pathLength=0x41 would normally decode as hashSize=2
+        let dto = makeDTO(payloadType: .trace, pathLength: 0x41)
+        #expect(dto.pathHashSize == 1)
+    }
+
+    @Test("hopCount returns raw pathLength for TRACE")
+    func hopCount_trace() {
+        // pathLength=5 as raw count, not encoded
+        let dto = makeDTO(payloadType: .trace, pathLength: 5)
+        #expect(dto.hopCount == 5)
+    }
+
+    @Test("hopCount uses decodePathLen for non-TRACE")
+    func hopCount_nonTrace() {
+        // pathLength=0x43 → mode=1, hashSize=2, hopCount=3
+        let dto = makeDTO(payloadType: .textMessage, pathLength: 0x43)
+        #expect(dto.hopCount == 3)
+        #expect(dto.pathHashSize == 2)
+    }
 
     // MARK: - buildNodeNameMap
 
@@ -98,6 +212,28 @@ struct RxLogViewModelTests {
     }
 
     // MARK: - Helpers
+
+    private func makeDTO(
+        routeType: RouteType = .flood,
+        payloadType: PayloadType = .unknown,
+        pathLength: UInt8 = 0,
+        pathNodes: [UInt8] = [],
+        packetPayload: Data = Data()
+    ) -> RxLogEntryDTO {
+        let parsed = ParsedRxLogData(
+            snr: nil,
+            rssi: nil,
+            rawPayload: Data(),
+            routeType: routeType,
+            payloadType: payloadType,
+            payloadVersion: 0,
+            transportCode: nil,
+            pathLength: pathLength,
+            pathNodes: pathNodes,
+            packetPayload: packetPayload
+        )
+        return RxLogEntryDTO(deviceID: UUID(), from: parsed)
+    }
 
     private func makeContact(
         name: String,
