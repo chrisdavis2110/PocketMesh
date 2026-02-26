@@ -57,8 +57,22 @@ private struct SettingsListContent: View {
                 } label: {
                     TintedLabel(L10n.Settings.ChatSettings.title, systemImage: "bubble.left.and.bubble.right")
                 }
+
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    SettingsRow(
+                        L10n.Settings.Language.title,
+                        systemImage: "globe",
+                        detail: currentLanguageDisplayName
+                    )
+                }
             } header: {
                 Text(L10n.Settings.AppSettings.header)
+            } footer: {
+                Text(L10n.Settings.Language.footer)
             }
 
             AboutSection()
@@ -114,6 +128,11 @@ private struct SettingsListContent: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
+    }
+
+    private var currentLanguageDisplayName: String {
+        let code = Bundle.main.preferredLocalizations.first ?? "en"
+        return Locale.current.localizedString(forLanguageCode: code) ?? code
     }
 }
 

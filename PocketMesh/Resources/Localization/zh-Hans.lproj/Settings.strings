@@ -1091,3 +1091,12 @@
 
 /* Location: BlockedChannelSendersView.swift - Purpose: Swipe action to unblock */
 "blocking.channelSenders.unblock" = "取消屏蔽";
+
+
+// MARK: - Language
+
+/* Location: SettingsView.swift - Purpose: Language row title */
+"language.title" = "语言";
+
+/* Location: SettingsView.swift - Purpose: Section footer explaining language setting */
+"language.footer" = "在系统设置中更改应用语言。";

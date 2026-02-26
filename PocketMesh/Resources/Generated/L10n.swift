@@ -3285,6 +3285,12 @@ public enum L10n {
       /// Toggle label for inline images
       public static let toggle = L10n.tr("Settings", "inlineImages.toggle", fallback: "Inline Images")
     }
+    public enum Language {
+      /// Location: SettingsView.swift - Purpose: Section footer explaining language setting
+      public static let footer = L10n.tr("Settings", "language.footer", fallback: "Change the app language in System Settings.")
+      /// Location: SettingsView.swift - Purpose: Language row title
+      public static let title = L10n.tr("Settings", "language.title", fallback: "Language")
+    }
     public enum LinkPreviews {
       /// Footer explaining link preview privacy implications
       public static let footer = L10n.tr("Settings", "linkPreviews.footer", fallback: "Link previews fetch data from the web, which may reveal your IP address to the server hosting the link.")

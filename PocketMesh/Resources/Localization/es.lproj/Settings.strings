@@ -1115,3 +1115,12 @@
 
 /* Location: BlockedChannelSendersView.swift - Purpose: Swipe action to unblock */
 "blocking.channelSenders.unblock" = "Desbloquear";
+
+
+// MARK: - Language
+
+/* Location: SettingsView.swift - Purpose: Language row title */
+"language.title" = "Idioma";
+
+/* Location: SettingsView.swift - Purpose: Section footer explaining language setting */
+"language.footer" = "Cambia el idioma de la app en Ajustes del sistema.";
