@@ -73,7 +73,7 @@ struct PacketRateLabel: View {
                 .contentTransition(.numericText())
         }
         .font(.caption)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(.primary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(packetsPerMinute) packets per minute")
     }
@@ -91,7 +91,7 @@ struct BatteryLabel: View {
                     .monospacedDigit()
             }
             .font(.caption)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.primary)
             .accessibilityLabel("Battery \(percent) percent")
         }
     }

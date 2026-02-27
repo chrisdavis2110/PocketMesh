@@ -6,7 +6,7 @@ struct MeshStatusLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: MeshStatusAttributes.self) { context in
             LockScreenView(context: context)
-                .activityBackgroundTint(Color(red: 51 / 255, green: 102 / 255, blue: 136 / 255).opacity(0.2)) // slate blue (#336688)
+                .activityBackgroundTint(Color(red: 51 / 255, green: 102 / 255, blue: 136 / 255).opacity(0.4)) // slate blue (#336688)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
@@ -19,19 +19,32 @@ struct MeshStatusLiveActivity: Widget {
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
+                    .font(.headline)
                     .accessibilityElement(children: .combine)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    BatteryLabel(percent: context.state.batteryPercent)
-                }
-                DynamicIslandExpandedRegion(.center) {
                     if context.state.isConnected {
-                        PacketRateLabel(packetsPerMinute: context.state.packetsPerMinute)
+                        HStack(alignment: .firstTextBaseline, spacing: 2) {
+                            Image(systemName: "arrow.down")
+                                .font(.caption)
+                                .accessibilityHidden(true)
+                            Text("\(context.state.packetsPerMinute)")
+                                .font(.title3.bold())
+                                .monospacedDigit()
+                                .contentTransition(.numericText())
+                            Text("/m")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .accessibilityLabel("\(context.state.packetsPerMinute) packets per minute")
                     } else {
                         Text("Disconnected")
-                            .foregroundStyle(.orange)
                             .font(.caption)
+                            .foregroundStyle(.orange)
                     }
+                }
+                DynamicIslandExpandedRegion(.center) {
+                    BatteryLabel(percent: context.state.batteryPercent)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     if context.state.isConnected, context.state.unreadCount > 0 {
