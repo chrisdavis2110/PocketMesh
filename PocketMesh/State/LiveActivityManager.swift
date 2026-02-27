@@ -16,13 +16,18 @@ public final class LiveActivityManager {
     private var decayTimer: Task<Void, Never>?
     private var disconnectTimer: Task<Void, Never>?
     private var enablementTask: Task<Void, Never>?
+    private var stateObservationTask: Task<Void, Never>?
+    private var throttleTask: Task<Void, Never>?
     private var ocvArray: [Int] = []
     private var recentPacketTimestamps: [Date] = []
+    private var pendingUpdate: PendingUpdate?
+    private var lastFlushDate: Date = .distantPast
 
-    static let decayInterval: TimeInterval = 5
+    static let decayInterval: TimeInterval = 15
     static let packetWindowSeconds: TimeInterval = 15
     static let secondsPerMinute: TimeInterval = 60
     static let disconnectGracePeriod: TimeInterval = 300
+    static let updateInterval: TimeInterval = 15
 
     /// Projects the short-window packet count to a per-minute rate.
     private var projectedPacketsPerMinute: Int {
@@ -31,6 +36,16 @@ public final class LiveActivityManager {
 
     var isEnabled: Bool {
         UserDefaults.standard.object(forKey: Self.enabledKey) as? Bool ?? true
+    }
+
+    // MARK: - Pending Update
+
+    private struct PendingUpdate {
+        var isConnected: Bool?
+        var battery: Int??
+        var packetsPerMinute: Int?
+        var unreadCount: Int?
+        var disconnectedDate: Date??
     }
 
     // MARK: - Lifecycle
@@ -60,6 +75,7 @@ public final class LiveActivityManager {
             disconnectTimer?.cancel()
             disconnectTimer = nil
             recentPacketTimestamps = []
+            clearPendingUpdate()
             await updateActivity(
                 isConnected: true,
                 battery: .some(nil),
@@ -68,6 +84,7 @@ public final class LiveActivityManager {
                 disconnectedDate: .some(nil)
             )
             startDecayTimer()
+            startObservingActivityState()
             return
         }
 
@@ -77,7 +94,7 @@ public final class LiveActivityManager {
         }
 
         await startActivity(
-            device: device,
+            deviceName: device.nodeName,
             unreadCount: unreadCount
         )
         startDecayTimer()
@@ -88,6 +105,7 @@ public final class LiveActivityManager {
 
         stopDecayTimer()
         recentPacketTimestamps = []
+        clearPendingUpdate()
         await updateActivity(
             isConnected: false,
             battery: .some(nil),
@@ -109,16 +127,16 @@ public final class LiveActivityManager {
         recentPacketTimestamps.append(now)
         let cutoff = now.addingTimeInterval(-Self.packetWindowSeconds)
         recentPacketTimestamps.removeAll { $0 < cutoff }
-        await updateActivity(packetsPerMinute: projectedPacketsPerMinute)
+        await scheduleUpdate(packetsPerMinute: projectedPacketsPerMinute)
     }
 
     func handleBatteryChanged(battery: BatteryInfo) async {
         let percent = battery.percentage(using: ocvArray)
-        await updateActivity(battery: .some(percent))
+        await scheduleUpdate(battery: .some(percent))
     }
 
     func handleUnreadCountChanged(unreadCount: Int) async {
-        await updateActivity(unreadCount: unreadCount)
+        await scheduleUpdate(unreadCount: unreadCount)
     }
 
     func setEnabled(_ enabled: Bool) async {
@@ -133,8 +151,11 @@ public final class LiveActivityManager {
     func recoverExistingActivity() async {
         currentActivity = Activity<MeshStatusAttributes>.activities.first
 
-        guard let activity = currentActivity,
-              !activity.content.state.isConnected,
+        guard let activity = currentActivity else { return }
+
+        startObservingActivityState()
+
+        guard !activity.content.state.isConnected,
               let disconnectedDate = activity.content.state.disconnectedDate else {
             return
         }
@@ -163,7 +184,7 @@ public final class LiveActivityManager {
                 guard !Task.isCancelled, let self else { return }
                 let cutoff = Date.now.addingTimeInterval(-Self.packetWindowSeconds)
                 self.recentPacketTimestamps.removeAll { $0 < cutoff }
-                await self.updateActivity(packetsPerMinute: self.projectedPacketsPerMinute)
+                await self.scheduleUpdate(packetsPerMinute: self.projectedPacketsPerMinute)
             }
         }
     }
@@ -174,7 +195,7 @@ public final class LiveActivityManager {
     }
 
     private func startActivity(
-        device: DeviceDTO,
+        deviceName: String,
         unreadCount: Int
     ) async {
         guard ActivityAuthorizationInfo().areActivitiesEnabled,
@@ -184,7 +205,7 @@ public final class LiveActivityManager {
             return
         }
 
-        let attributes = MeshStatusAttributes(deviceName: device.nodeName)
+        let attributes = MeshStatusAttributes(deviceName: deviceName)
         let state = MeshStatusAttributes.ContentState(
             isConnected: true,
             batteryPercent: nil,
@@ -202,10 +223,105 @@ public final class LiveActivityManager {
                 pushType: nil
             )
             LiveActivityTip.radioConnected.sendDonation()
-            logger.info("Started Live Activity for \(device.nodeName, privacy: .public)")
+            startObservingActivityState()
+            logger.info("Started Live Activity for \(deviceName, privacy: .public)")
         } catch {
             logger.error("Failed to start Live Activity: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    // MARK: - Activity State Observation
+
+    private func startObservingActivityState() {
+        stateObservationTask?.cancel()
+        guard let activity = currentActivity else { return }
+        stateObservationTask = Task { [weak self] in
+            for await state in activity.activityStateUpdates {
+                guard let self else { break }
+                switch state {
+                case .ended, .dismissed:
+                    let lastState = activity.content.state
+                    let deviceName = activity.attributes.deviceName
+                    self.currentActivity = nil
+                    self.stateObservationTask?.cancel()
+                    self.stateObservationTask = nil
+
+                    if lastState.isConnected {
+                        logger.info("System ended active Live Activity, restarting")
+                        await self.startActivity(deviceName: deviceName, unreadCount: lastState.unreadCount)
+                        self.startDecayTimer()
+                    }
+                    return
+
+                case .stale:
+                    logger.debug("Live Activity became stale, flushing update")
+                    await self.flushPendingUpdate()
+
+                case .active:
+                    break
+
+                @unknown default:
+                    break
+                }
+            }
+        }
+    }
+
+    // MARK: - Throttled Updates
+
+    private func scheduleUpdate(
+        isConnected: Bool? = nil,
+        battery: Int?? = nil,
+        packetsPerMinute: Int? = nil,
+        unreadCount: Int? = nil,
+        disconnectedDate: Date?? = nil
+    ) async {
+        guard currentActivity != nil else { return }
+
+        // Merge into pending update (last-writer-wins per field)
+        var pending = pendingUpdate ?? PendingUpdate()
+        if let isConnected { pending.isConnected = isConnected }
+        if let battery { pending.battery = battery }
+        if let packetsPerMinute { pending.packetsPerMinute = packetsPerMinute }
+        if let unreadCount { pending.unreadCount = unreadCount }
+        if let disconnectedDate { pending.disconnectedDate = disconnectedDate }
+        pendingUpdate = pending
+
+        // Leading edge: flush immediately if enough time has passed
+        if Date.now.timeIntervalSince(lastFlushDate) >= Self.updateInterval {
+            await flushPendingUpdate()
+            return
+        }
+
+        // Trailing edge: schedule flush if not already scheduled
+        guard throttleTask == nil else { return }
+        let delay = Self.updateInterval - Date.now.timeIntervalSince(lastFlushDate)
+        throttleTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled, let self else { return }
+            await self.flushPendingUpdate()
+        }
+    }
+
+    private func flushPendingUpdate() async {
+        guard let pending = pendingUpdate else { return }
+        pendingUpdate = nil
+        throttleTask?.cancel()
+        throttleTask = nil
+        lastFlushDate = .now
+        await updateActivity(
+            isConnected: pending.isConnected,
+            battery: pending.battery,
+            packetsPerMinute: pending.packetsPerMinute,
+            unreadCount: pending.unreadCount,
+            disconnectedDate: pending.disconnectedDate
+        )
+    }
+
+    private func clearPendingUpdate() {
+        pendingUpdate = nil
+        throttleTask?.cancel()
+        throttleTask = nil
     }
 
     /// Updates the Live Activity state. Pass `nil` to keep the current value, `.some(value)` to override.
@@ -231,8 +347,11 @@ public final class LiveActivityManager {
 
     func endActivity() async {
         stopDecayTimer()
+        stateObservationTask?.cancel()
+        stateObservationTask = nil
         disconnectTimer?.cancel()
         disconnectTimer = nil
+        clearPendingUpdate()
         recentPacketTimestamps = []
         for activity in Activity<MeshStatusAttributes>.activities {
             await activity.end(nil, dismissalPolicy: .immediate)
