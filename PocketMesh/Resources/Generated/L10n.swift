@@ -3304,8 +3304,8 @@ public enum L10n {
       public static let toggle = L10n.tr("Settings", "linkPreviews.toggle", fallback: "Link Previews")
     }
     public enum LiveActivity {
-      /// Label for the Live Status toggle in App Settings
-      public static let title = L10n.tr("Settings", "liveActivity.title", fallback: "Live Status")
+      /// Label for the Live Activity toggle in App Settings
+      public static let title = L10n.tr("Settings", "liveActivity.title", fallback: "Live Activity")
       public enum Tip {
         /// Message for the Live Activity tip
         public static let message = L10n.tr("Settings", "liveActivity.tip.message", fallback: "Your connection, battery, and messages stay visible — even without opening the app.")

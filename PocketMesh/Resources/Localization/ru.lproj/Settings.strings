@@ -1132,7 +1132,7 @@
 // MARK: - Live Activity
 
 /* Label for the Live Status toggle in App Settings */
-"liveActivity.title" = "Статус в реальном времени";
+"liveActivity.title" = "Live Activity";
 
 /* Title for the Live Activity tip shown after first connection */
 "liveActivity.tip.title" = "Состояние радио с первого взгляда";

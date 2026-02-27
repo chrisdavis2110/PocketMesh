@@ -1105,7 +1105,7 @@
 // MARK: - Live Activity
 
 /* Label for the Live Status toggle in App Settings */
-"liveActivity.title" = "实时状态";
+"liveActivity.title" = "实时活动";
 
 /* Title for the Live Activity tip shown after first connection */
 "liveActivity.tip.title" = "一目了然的电台状态";

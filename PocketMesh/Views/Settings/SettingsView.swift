@@ -72,6 +72,8 @@ private struct SettingsListContent: View {
                     )
                 }
 
+                TipView(liveActivityTip, arrowEdge: .bottom)
+
                 HStack {
                     TintedLabel(L10n.Settings.LiveActivity.title, systemImage: "antenna.radiowaves.left.and.right")
                     Spacer()
@@ -89,7 +91,6 @@ private struct SettingsListContent: View {
                     .labelsHidden()
                 }
                 .accessibilityElement(children: .combine)
-                .popoverTip(liveActivityTip)
             } header: {
                 Text(L10n.Settings.AppSettings.header)
             } footer: {
