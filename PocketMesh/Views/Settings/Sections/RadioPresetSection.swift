@@ -58,6 +58,10 @@ struct RadioPresetSection: View {
         )
     }
 
+    private var currentMatchingPresetID: String? {
+        isRepeatEnabled ? currentRepeatPreset?.id : currentPreset?.id
+    }
+
     var body: some View {
         Section {
             Picker(L10n.Settings.Radio.preset, selection: $selectedPresetID) {
@@ -142,11 +146,7 @@ struct RadioPresetSection: View {
         }
         .onAppear {
             isRepeatEnabled = appState.connectedDevice?.clientRepeat ?? false
-            if isRepeatEnabled {
-                selectedPresetID = currentRepeatPreset?.id ?? closestRepeatPreset?.id
-            } else {
-                selectedPresetID = currentPreset?.id
-            }
+            selectedPresetID = currentMatchingPresetID
             // Mark as initialized after setting initial value
             // Using task to defer to next run loop, after onChange processes
             Task { @MainActor in
@@ -180,11 +180,7 @@ struct RadioPresetSection: View {
             if newRepeatEnabled != isRepeatEnabled {
                 hasInitialized = false
                 isRepeatEnabled = newRepeatEnabled
-                if newRepeatEnabled {
-                    selectedPresetID = currentRepeatPreset?.id ?? closestRepeatPreset?.id
-                } else {
-                    selectedPresetID = currentPreset?.id
-                }
+                selectedPresetID = currentMatchingPresetID
                 Task { @MainActor in
                     hasInitialized = true
                 }
@@ -224,16 +220,17 @@ struct RadioPresetSection: View {
                     _ = try await settingsService.applyRadioPresetVerified(preset)
                 }
                 retryAlert.reset()
-            } catch let error as SettingsServiceError where error.isRetryable {
-                selectedPresetID = isRepeatEnabled ? (currentRepeatPreset?.id ?? closestRepeatPreset?.id) : currentPreset?.id
-                retryAlert.show(
-                    message: error.errorDescription ?? L10n.Settings.Alert.Retry.fallbackMessage,
-                    onRetry: { applyPreset(id: id) },
-                    onMaxRetriesExceeded: { dismiss() }
-                )
             } catch {
-                showError = error.localizedDescription
-                selectedPresetID = isRepeatEnabled ? (currentRepeatPreset?.id ?? closestRepeatPreset?.id) : currentPreset?.id
+                selectedPresetID = currentMatchingPresetID
+                if let retryable = error as? SettingsServiceError, retryable.isRetryable {
+                    retryAlert.show(
+                        message: retryable.errorDescription ?? L10n.Settings.Alert.Retry.fallbackMessage,
+                        onRetry: { applyPreset(id: id) },
+                        onMaxRetriesExceeded: { dismiss() }
+                    )
+                } else {
+                    showError = error.localizedDescription
+                }
             }
             isApplying = false
         }
