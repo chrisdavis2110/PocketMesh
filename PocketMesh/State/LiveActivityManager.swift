@@ -151,7 +151,15 @@ public final class LiveActivityManager {
     // MARK: - App relaunch recovery
 
     func recoverExistingActivity() async {
-        currentActivity = Activity<MeshStatusAttributes>.activities.first
+        // Clean up ended/dismissed activities lingering in the collection
+        for activity in Activity<MeshStatusAttributes>.activities where
+            activity.activityState == .ended || activity.activityState == .dismissed {
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
+
+        currentActivity = Activity<MeshStatusAttributes>.activities.first(where: {
+            $0.activityState == .active || $0.activityState == .stale
+        })
 
         guard let activity = currentActivity else { return }
 
@@ -196,14 +204,29 @@ public final class LiveActivityManager {
         decayTimer = nil
     }
 
+    private func clearActivityReference() {
+        currentActivity = nil
+        stateObservationTask?.cancel()
+        stateObservationTask = nil
+    }
+
     private func startActivity(
         deviceName: String,
         unreadCount: Int
     ) async {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled,
-              isEnabled,
-              !DemoModeManager.shared.isEnabled,
-              Activity<MeshStatusAttributes>.activities.isEmpty else {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            logger.warning("Cannot start Live Activity: not authorized")
+            return
+        }
+        guard isEnabled else {
+            logger.debug("Cannot start Live Activity: disabled by user")
+            return
+        }
+        guard !DemoModeManager.shared.isEnabled else { return }
+        guard !Activity<MeshStatusAttributes>.activities.contains(where: {
+            $0.activityState == .active || $0.activityState == .stale
+        }) else {
+            logger.warning("Cannot start Live Activity: one already running")
             return
         }
 
@@ -241,12 +264,10 @@ public final class LiveActivityManager {
             for await state in activity.activityStateUpdates {
                 guard let self else { break }
                 switch state {
-                case .ended, .dismissed:
+                case .ended:
                     let lastState = activity.content.state
                     let deviceName = activity.attributes.deviceName
-                    self.currentActivity = nil
-                    self.stateObservationTask?.cancel()
-                    self.stateObservationTask = nil
+                    self.clearActivityReference()
 
                     if lastState.isConnected {
                         logger.info("System ended active Live Activity, restarting")
@@ -255,9 +276,18 @@ public final class LiveActivityManager {
                     }
                     return
 
+                case .dismissed:
+                    self.clearActivityReference()
+                    logger.info("Live Activity dismissed by user")
+                    return
+
                 case .stale:
-                    logger.debug("Live Activity became stale, flushing update")
-                    await self.flushPendingUpdate()
+                    logger.debug("Live Activity became stale, refreshing")
+                    if self.pendingUpdate != nil {
+                        await self.flushPendingUpdate()
+                    } else {
+                        await self.updateActivity()
+                    }
 
                 case .active:
                     break
@@ -345,6 +375,29 @@ public final class LiveActivityManager {
         let staleDate = Calendar.current.date(byAdding: .minute, value: 5, to: .now)
         let content = ActivityContent(state: state, staleDate: staleDate)
         await currentActivity?.update(content)
+    }
+
+    /// Checks whether the current activity reference is still valid.
+    /// If the activity was ended while suspended (and `activityStateUpdates` didn't fire), this catches it.
+    func validateActivityState() async {
+        guard let activity = currentActivity else { return }
+        switch activity.activityState {
+        case .ended:
+            let lastState = activity.content.state
+            let deviceName = activity.attributes.deviceName
+            clearActivityReference()
+            if lastState.isConnected {
+                logger.info("Detected ended Live Activity on foreground, restarting")
+                await startActivity(deviceName: deviceName, unreadCount: lastState.unreadCount)
+                startDecayTimer()
+            }
+        case .dismissed:
+            clearActivityReference()
+        case .active, .stale:
+            break
+        @unknown default:
+            break
+        }
     }
 
     func endActivity() async {

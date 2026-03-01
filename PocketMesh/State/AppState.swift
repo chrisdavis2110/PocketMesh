@@ -593,6 +593,9 @@ public final class AppState {
         // Room keepalives are managed by RoomConversationView lifecycle
         // (started on view appear, stopped on disappear, restarted via scenePhase)
 
+        // Validate live activity is still alive (may have ended while suspended)
+        await liveActivityManager.validateActivityState()
+
         // Check for expired ACKs
         if connectionState == .ready {
             try? await services?.messageService.checkExpiredAcks()
