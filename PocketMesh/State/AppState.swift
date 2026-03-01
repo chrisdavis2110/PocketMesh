@@ -591,12 +591,6 @@ public final class AppState {
         // Room keepalives are managed by RoomConversationView lifecycle
         // (started on view appear, stopped on disappear, restarted via scenePhase)
 
-        // Check for missed battery thresholds and restart polling if connected
-        if let services {
-            await batteryMonitor.checkMissedBatteryThreshold(device: connectedDevice, services: services)
-            batteryMonitor.startRefreshLoop(services: services, device: connectedDevice)
-        }
-
         // Check for expired ACKs
         if connectionState == .ready {
             try? await services?.messageService.checkExpiredAcks()
@@ -608,6 +602,12 @@ public final class AppState {
 
         // Trigger resync if sync failed while connected
         await connectionManager.checkSyncHealth()
+
+        // Check for missed battery thresholds and restart polling if connected
+        if let services {
+            await batteryMonitor.checkMissedBatteryThreshold(device: connectedDevice, services: services)
+            batteryMonitor.startRefreshLoop(services: services, device: connectedDevice)
+        }
     }
 
     // MARK: - Onboarding
