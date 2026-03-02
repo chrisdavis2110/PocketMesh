@@ -79,8 +79,16 @@ struct MeshStatusLiveActivity: Widget {
                     Text("—")
                 }
             } minimal: {
-                Image(systemName: context.state.antennaIconName)
-                    .foregroundStyle(context.state.isConnected ? .green : .orange)
+                if context.state.isConnected {
+                    let rate = context.isStale ? 0 : context.state.packetsPerMinute
+                    Text("\(rate)")
+                        .font(.caption2)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                } else {
+                    Image(systemName: context.state.antennaIconName)
+                        .foregroundStyle(.orange)
+                }
             }
             .widgetURL(URL(string: "pocketmesh://status"))
         }
