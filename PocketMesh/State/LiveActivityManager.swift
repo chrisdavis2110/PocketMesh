@@ -26,6 +26,7 @@ public final class LiveActivityManager {
     static let decayInterval: TimeInterval = 15
     static let packetWindowSeconds: TimeInterval = 15
     static let secondsPerMinute: TimeInterval = 60
+    static let connectedStaleInterval: TimeInterval = 30
     static let disconnectGracePeriod: TimeInterval = 300
     static let updateInterval: TimeInterval = 15
 
@@ -299,8 +300,13 @@ public final class LiveActivityManager {
                     return
 
                 case .stale:
-                    logger.debug("Live Activity became stale, refreshing")
-                    if self.pendingUpdate != nil {
+                    let currentState = activity.content.state
+                    if currentState.isConnected && currentState.packetsPerMinute > 0 {
+                        logger.debug("Live Activity stale with active rate, resetting to 0")
+                        self.recentPacketTimestamps = []
+                        self.clearPendingUpdate()
+                        await self.updateActivity(packetsPerMinute: 0)
+                    } else if self.pendingUpdate != nil {
                         await self.flushPendingUpdate()
                     } else {
                         await self.updateActivity()
@@ -389,7 +395,11 @@ public final class LiveActivityManager {
             unreadCount: unreadCount ?? current.unreadCount,
             disconnectedDate: disconnectedDate ?? current.disconnectedDate
         )
-        let staleDate = Calendar.current.date(byAdding: .minute, value: 5, to: .now)
+        let staleDate: Date? = if state.isConnected && state.packetsPerMinute > 0 {
+            Date.now.addingTimeInterval(Self.connectedStaleInterval)
+        } else {
+            Calendar.current.date(byAdding: .minute, value: 5, to: .now)
+        }
         let content = ActivityContent(state: state, staleDate: staleDate)
         await currentActivity?.update(content)
     }

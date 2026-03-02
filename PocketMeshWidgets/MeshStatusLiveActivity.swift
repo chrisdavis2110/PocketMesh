@@ -24,11 +24,12 @@ struct MeshStatusLiveActivity: Widget {
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if context.state.isConnected {
+                        let rate = context.isStale ? 0 : context.state.packetsPerMinute
                         HStack(alignment: .firstTextBaseline, spacing: 2) {
                             Image(systemName: "arrow.down")
                                 .font(.caption)
                                 .accessibilityHidden(true)
-                            Text("\(context.state.packetsPerMinute)")
+                            Text("\(rate)")
                                 .font(.title3.bold())
                                 .monospacedDigit()
                                 .contentTransition(.numericText())
@@ -36,7 +37,7 @@ struct MeshStatusLiveActivity: Widget {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        .accessibilityLabel("\(context.state.packetsPerMinute) packets per minute")
+                        .accessibilityLabel("\(rate) packets per minute")
                     } else {
                         Text("Disconnected")
                             .font(.caption)
@@ -70,7 +71,8 @@ struct MeshStatusLiveActivity: Widget {
                     .foregroundStyle(context.state.isConnected ? .green : .orange)
             } compactTrailing: {
                 if context.state.isConnected {
-                    Text("↓\(context.state.packetsPerMinute)/m")
+                    let rate = context.isStale ? 0 : context.state.packetsPerMinute
+                    Text("↓\(rate)/m")
                         .monospacedDigit()
                         .contentTransition(.numericText())
                 } else {

@@ -20,7 +20,7 @@ struct LockScreenView: View {
                 Spacer()
 
                 if context.state.isConnected {
-                    PacketRateLabel(packetsPerMinute: context.state.packetsPerMinute)
+                    PacketRateLabel(packetsPerMinute: context.state.packetsPerMinute, isStale: context.isStale)
                     BatteryLabel(percent: context.state.batteryPercent)
                 } else {
                     Text("Disconnected")
@@ -62,20 +62,23 @@ struct LockScreenView: View {
 
 struct PacketRateLabel: View {
     let packetsPerMinute: Int
+    var isStale: Bool = false
+
+    private var displayRate: Int { isStale ? 0 : packetsPerMinute }
 
     var body: some View {
         HStack(spacing: 2) {
             Image(systemName: "arrow.down")
                 .font(.caption2)
                 .accessibilityHidden(true)
-            Text("\(packetsPerMinute)/m")
+            Text("\(displayRate)/m")
                 .monospacedDigit()
                 .contentTransition(.numericText())
         }
         .font(.caption)
         .foregroundStyle(.primary)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(packetsPerMinute) packets per minute")
+        .accessibilityLabel("\(displayRate) packets per minute")
     }
 }
 
