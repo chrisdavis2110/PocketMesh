@@ -221,13 +221,18 @@ extension ChatViewModel {
     private func buildChannelSenders(deviceID: UUID) {
         var localNames: Set<String> = []
         var localSenders: [ContactDTO] = []
+        var localOrder: [String: UInt32] = [:]
 
         for message in messages {
             if let name = message.senderNodeName {
                 let trimmed = name.trimmingCharacters(in: .whitespaces)
-                guard !trimmed.isEmpty,
-                      trimmed.count <= 128,
-                      !contactNameSet.contains(trimmed),
+                guard !trimmed.isEmpty, trimmed.count <= 128 else { continue }
+
+                // Track latest timestamp for all senders (contacts and non-contacts)
+                localOrder[trimmed] = max(message.timestamp, localOrder[trimmed] ?? 0)
+
+                // Build synthetic contacts only for non-contact senders
+                guard !contactNameSet.contains(trimmed),
                       !localNames.contains(trimmed) else { continue }
 
                 localNames.insert(trimmed)
@@ -238,6 +243,7 @@ extension ChatViewModel {
         // Assign once to minimize observation updates
         channelSenderNames = localNames
         channelSenders = localSenders
+        channelSenderOrder = localOrder
 
         logger.info("Built \(self.channelSenders.count) synthetic contacts from channel senders")
     }

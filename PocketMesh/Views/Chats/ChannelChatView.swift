@@ -40,6 +40,7 @@ struct ChannelChatView: View {
     @State private var blockSenderContext: BlockSenderContext?
     @State private var recentEmojisStore = RecentEmojisStore()
     @State private var imageViewerData: ImageViewerData?
+    @State private var mentionSenderOrder: [String: UInt32]?
     @State private var eventCursor: Int?
     @FocusState private var isInputFocused: Bool
 
@@ -156,6 +157,13 @@ struct ChannelChatView: View {
                         await parent.loadLastMessagePreviews()
                     }
                 }
+            }
+        }
+        .onChange(of: isMentionActive) { _, isActive in
+            if isActive {
+                mentionSenderOrder = viewModel.channelSenderOrder
+            } else {
+                mentionSenderOrder = nil
             }
         }
         .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
@@ -622,12 +630,17 @@ struct ChannelChatView: View {
 
     // MARK: - Mention Suggestions
 
+    private var isMentionActive: Bool {
+        MentionUtilities.detectActiveMention(in: viewModel.composingText) != nil
+    }
+
     private var mentionSuggestions: [ContactDTO] {
         guard let query = MentionUtilities.detectActiveMention(in: viewModel.composingText) else {
             return []
         }
         let combined = viewModel.allContacts + viewModel.channelSenders
-        return MentionUtilities.filterContacts(combined, query: query)
+        let order = mentionSenderOrder ?? viewModel.channelSenderOrder
+        return MentionUtilities.filterContacts(combined, query: query, senderOrder: order)
     }
 
     @ViewBuilder

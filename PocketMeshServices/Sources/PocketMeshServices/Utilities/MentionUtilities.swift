@@ -89,15 +89,42 @@ public enum MentionUtilities {
     /// - Parameters:
     ///   - contacts: All available contacts
     ///   - query: Search query (text after @)
-    /// - Returns: Chat-type contacts matching query, sorted alphabetically
+    ///   - senderOrder: Sender name → timestamp map for recency sorting (nil = alphabetical)
+    /// - Returns: Chat-type contacts matching query, sorted by recency then alphabetically
     public static func filterContacts(
         _ contacts: [ContactDTO],
-        query: String
+        query: String,
+        senderOrder: [String: UInt32]? = nil
     ) -> [ContactDTO] {
-        contacts
+        let filtered = contacts
             .filter { $0.type == .chat }
             .filter { query.isEmpty || $0.displayName.localizedStandardContains(query) }
-            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+
+        guard let senderOrder, !senderOrder.isEmpty else {
+            return filtered.sorted {
+                $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+            }
+        }
+
+        return filtered.sorted { a, b in
+            let aTimestamp = senderOrder[a.name]
+            let bTimestamp = senderOrder[b.name]
+
+            switch (aTimestamp, bTimestamp) {
+            case let (aT?, bT?):
+                // Both have timestamps: most recent first
+                return aT > bT
+            case (_?, nil):
+                // Only a has a timestamp: a comes first
+                return true
+            case (nil, _?):
+                // Only b has a timestamp: b comes first
+                return false
+            case (nil, nil):
+                // Neither has a timestamp: alphabetical
+                return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
+            }
+        }
     }
 
     /// Checks if text contains a mention of the specified user name

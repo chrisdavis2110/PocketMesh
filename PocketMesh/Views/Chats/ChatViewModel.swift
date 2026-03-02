@@ -24,6 +24,9 @@ final class ChatViewModel {
     /// O(1) lookup for channel sender names
     var channelSenderNames: Set<String> = []
 
+    /// Sender name → latest message timestamp (for mention sort order)
+    var channelSenderOrder: [String: UInt32] = [:]
+
     /// O(1) lookup for contact names
     var contactNameSet: Set<String> = []
 

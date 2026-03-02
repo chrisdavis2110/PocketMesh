@@ -269,6 +269,40 @@ struct MentionUtilitiesTests {
         #expect(filtered.isEmpty)
     }
 
+    @Test("filterContacts sorts by sender order when provided")
+    func testFilterContactsSortsBySenderOrder() {
+        let contacts = [
+            makeContact(name: "Alice"),
+            makeContact(name: "Bob"),
+            makeContact(name: "Charlie")
+        ]
+        let senderOrder: [String: UInt32] = [
+            "Charlie": 300,
+            "Alice": 200,
+            "Bob": 100
+        ]
+        let filtered = MentionUtilities.filterContacts(contacts, query: "", senderOrder: senderOrder)
+        #expect(filtered.map(\.name) == ["Charlie", "Alice", "Bob"])
+    }
+
+    @Test("filterContacts sender order partial match: ordered first, then alphabetical")
+    func testFilterContactsSenderOrderPartialMatch() {
+        let contacts = [
+            makeContact(name: "Zoe"),
+            makeContact(name: "Alice"),
+            makeContact(name: "Bob"),
+            makeContact(name: "Dan")
+        ]
+        // Only Bob and Alice have timestamps; Zoe and Dan don't
+        let senderOrder: [String: UInt32] = [
+            "Bob": 500,
+            "Alice": 100
+        ]
+        let filtered = MentionUtilities.filterContacts(contacts, query: "", senderOrder: senderOrder)
+        // Bob (500) first, Alice (100) second, then Dan and Zoe alphabetically
+        #expect(filtered.map(\.name) == ["Bob", "Alice", "Dan", "Zoe"])
+    }
+
     // MARK: - containsSelfMention Tests
 
     @Test("containsSelfMention returns true for exact match")
