@@ -40,6 +40,7 @@ struct ChannelChatView: View {
     @State private var blockSenderContext: BlockSenderContext?
     @State private var recentEmojisStore = RecentEmojisStore()
     @State private var imageViewerData: ImageViewerData?
+    @State private var eventCursor: Int?
     @FocusState private var isInputFocused: Bool
 
     @AppStorage("showInlineImages") private var showInlineImages = true
@@ -115,6 +116,9 @@ struct ChannelChatView: View {
         .fullScreenCover(item: $imageViewerData) { data in
             FullScreenImageViewer(data: data)
         }
+        .onAppear {
+            eventCursor = appState.messageEventBroadcaster.currentEventSequence
+        }
         .task(id: appState.servicesVersion) {
             // Capture pending scroll target before loading
             let pendingTarget = appState.navigation.pendingScrollToMessageID
@@ -155,52 +159,47 @@ struct ChannelChatView: View {
             }
         }
         .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
-            switch appState.messageEventBroadcaster.latestEvent {
-            case .channelMessageReceived(let message, let channelIndex)
-                where channelIndex == channel.index && message.deviceID == channel.deviceID:
-                // Optimistic insert: add message immediately so ChatTableView sees new count
-                // No full reload needed - appendMessageIfNew handles local state
-                viewModel.appendMessageIfNew(message)
-                // Link previews deferred - fetching during active message receipt causes
-                // WKWebView process spawning that blocks main thread and causes scroll jank.
-                // Previews will be fetched by batch mechanism when message flow settles.
-                // Handle self-mention: if at bottom, mark seen immediately; otherwise reload unseen
-                if message.containsSelfMention {
-                    Task {
-                        if isAtBottom {
-                            // User will see the message immediately, mark it seen
-                            await markNewArrivalMentionSeen(messageID: message.id)
-                        } else {
-                            await loadUnseenMentions()
+            guard let cursor = eventCursor else { return }
+            let (events, newCursor, droppedEvents) = appState.messageEventBroadcaster.events(after: cursor)
+            eventCursor = newCursor
+            var needsReload = droppedEvents
+            for event in events {
+                switch event {
+                case .channelMessageReceived(let message, let channelIndex)
+                    where channelIndex == channel.index && message.deviceID == channel.deviceID:
+                    viewModel.appendMessageIfNew(message)
+                    if message.containsSelfMention {
+                        Task {
+                            if isAtBottom {
+                                await markNewArrivalMentionSeen(messageID: message.id)
+                            } else {
+                                await loadUnseenMentions()
+                            }
                         }
                     }
-                }
-            case .messageStatusUpdated:
-                // Reload to pick up status changes (Sent -> Delivered, etc.)
-                Task {
-                    await viewModel.loadChannelMessages(for: channel)
-                }
-            case .messageFailed(let messageID):
-                // Only reload if this message belongs to the current channel
-                // This prevents multiple reloads when several messages fail at once
-                if viewModel.messages.contains(where: { $0.id == messageID }) {
-                    Task {
-                        await viewModel.loadChannelMessages(for: channel)
+                case .messageStatusUpdated:
+                    needsReload = true
+                case .messageFailed(let messageID):
+                    if viewModel.messages.contains(where: { $0.id == messageID }) {
+                        needsReload = true
                     }
-                }
-            case .heardRepeatRecorded(let messageID, _):
-                // Reload to update the heard repeats count for the message
-                if viewModel.messages.contains(where: { $0.id == messageID }) {
-                    Task {
-                        await viewModel.loadChannelMessages(for: channel)
+                case .heardRepeatRecorded(let messageID, _):
+                    if viewModel.messages.contains(where: { $0.id == messageID }) {
+                        needsReload = true
                     }
+                case .reactionReceived(let messageID, let summary):
+                    if viewModel.messages.contains(where: { $0.id == messageID }) {
+                        viewModel.updateReactionSummary(for: messageID, summary: summary)
+                    }
+                default:
+                    break
                 }
-            case .reactionReceived(let messageID, let summary):
-                if viewModel.messages.contains(where: { $0.id == messageID }) {
-                    viewModel.updateReactionSummary(for: messageID, summary: summary)
-                }
-            default:
-                break
+            }
+            if needsReload {
+                Task { await viewModel.loadChannelMessages(for: channel) }
+            }
+            if droppedEvents {
+                Task { await loadUnseenMentions() }
             }
         }
         .alert(L10n.Chats.Chats.Alert.UnableToSend.title, isPresented: $viewModel.showRetryError) {

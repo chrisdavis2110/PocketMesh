@@ -32,8 +32,14 @@ public final class MessageEventBroadcaster {
     /// Latest received message (for simple observation)
     var latestMessage: MessageDTO?
 
-    /// Latest event for reactive updates
-    var latestEvent: MessageEvent?
+    /// Sequence-numbered event log for per-view cursor consumption via `events(after:)`
+    @ObservationIgnored private var eventLog: [(sequence: Int, event: MessageEvent)] = []
+
+    /// Next sequence number to assign
+    @ObservationIgnored private var nextSequence = 0
+
+    /// Current sequence number. Views use this to initialize their cursor.
+    var currentEventSequence: Int { nextSequence }
 
     /// Count of new messages (triggers view updates)
     var newMessageCount: Int = 0
@@ -63,13 +69,33 @@ public final class MessageEventBroadcaster {
 
     public init() {}
 
+    // MARK: - Event Queue
+
+    /// Return events after the given cursor.
+    /// Each view maintains its own cursor so multiple views can consume independently.
+    func events(after cursor: Int) -> (events: [MessageEvent], newCursor: Int, droppedEvents: Bool) {
+        let oldestSequence = eventLog.first?.sequence ?? nextSequence
+        let dropped = cursor < oldestSequence
+        let result = eventLog.lazy.drop { $0.sequence < cursor }.map(\.event)
+        return (Array(result), nextSequence, dropped)
+    }
+
+    /// Append an event to the log, pruning old entries to cap memory.
+    private func enqueue(_ event: MessageEvent) {
+        eventLog.append((nextSequence, event))
+        nextSequence += 1
+        if eventLog.count > 50 {
+            eventLog.removeFirst(eventLog.count - 50)
+        }
+    }
+
     // MARK: - Direct Message Handling
 
     /// Handle incoming direct message (called from SyncCoordinator callback)
     func handleDirectMessage(_ message: MessageDTO, from contact: ContactDTO) {
         logger.info("dispatch: directMessageReceived from \(contact.displayName)")
         self.latestMessage = message
-        self.latestEvent = .directMessageReceived(message: message, contact: contact)
+        self.enqueue(.directMessageReceived(message: message, contact: contact))
         self.newMessageCount += 1
     }
 
@@ -78,7 +104,7 @@ public final class MessageEventBroadcaster {
     /// Handle incoming channel message (called from SyncCoordinator callback)
     func handleChannelMessage(_ message: MessageDTO, channelIndex: UInt8) {
         logger.info("dispatch: channelMessageReceived on channel \(channelIndex)")
-        self.latestEvent = .channelMessageReceived(message: message, channelIndex: channelIndex)
+        self.enqueue(.channelMessageReceived(message: message, channelIndex: channelIndex))
         self.newMessageCount += 1
     }
 
@@ -87,21 +113,21 @@ public final class MessageEventBroadcaster {
     /// Handle incoming room message (called from SyncCoordinator callback)
     func handleRoomMessage(_ message: RoomMessageDTO) {
         logger.info("dispatch: roomMessageReceived for session \(message.sessionID)")
-        self.latestEvent = .roomMessageReceived(message: message, sessionID: message.sessionID)
+        self.enqueue(.roomMessageReceived(message: message, sessionID: message.sessionID))
         self.newMessageCount += 1
     }
 
     /// Handle room message status update
     func handleRoomMessageStatusUpdated(messageID: UUID) {
         logger.info("dispatch: roomMessageStatusUpdated for \(messageID)")
-        self.latestEvent = .roomMessageStatusUpdated(messageID: messageID)
+        self.enqueue(.roomMessageStatusUpdated(messageID: messageID))
         self.newMessageCount += 1
     }
 
     /// Handle room message delivery failure
     func handleRoomMessageFailed(messageID: UUID) {
         logger.info("dispatch: roomMessageFailed for \(messageID)")
-        self.latestEvent = .roomMessageFailed(messageID: messageID)
+        self.enqueue(.roomMessageFailed(messageID: messageID))
         self.newMessageCount += 1
     }
 
@@ -109,39 +135,39 @@ public final class MessageEventBroadcaster {
 
     /// Handle acknowledgement/status update
     func handleAcknowledgement(ackCode: UInt32) {
-        self.latestEvent = .messageStatusUpdated(ackCode: ackCode)
+        self.enqueue(.messageStatusUpdated(ackCode: ackCode))
         self.newMessageCount += 1
     }
 
     /// Called when a message fails due to ACK timeout
     func handleMessageFailed(messageID: UUID) {
         logger.info("dispatch: messageFailed for \(messageID)")
-        self.latestEvent = .messageFailed(messageID: messageID)
+        self.enqueue(.messageFailed(messageID: messageID))
         self.newMessageCount += 1
     }
 
     /// Called when a message enters retry state
     func handleMessageRetrying(messageID: UUID, attempt: Int, maxAttempts: Int) {
-        self.latestEvent = .messageRetrying(messageID: messageID, attempt: attempt, maxAttempts: maxAttempts)
+        self.enqueue(.messageRetrying(messageID: messageID, attempt: attempt, maxAttempts: maxAttempts))
         self.newMessageCount += 1
     }
 
     /// Called when contact routing changes (e.g., direct -> flood)
     func handleRoutingChanged(contactID: UUID, isFlood: Bool) {
         logger.info("handleRoutingChanged called - contactID: \(contactID), isFlood: \(isFlood)")
-        self.latestEvent = .routingChanged(contactID: contactID, isFlood: isFlood)
+        self.enqueue(.routingChanged(contactID: contactID, isFlood: isFlood))
         self.newMessageCount += 1
     }
 
     /// Called when a heard repeat is recorded for a sent channel message
     func handleHeardRepeatRecorded(messageID: UUID, count: Int) {
-        self.latestEvent = .heardRepeatRecorded(messageID: messageID, count: count)
+        self.enqueue(.heardRepeatRecorded(messageID: messageID, count: count))
         self.newMessageCount += 1
     }
 
     /// Called when a reaction is received for a channel message
     func handleReactionReceived(messageID: UUID, summary: String) {
-        self.latestEvent = .reactionReceived(messageID: messageID, summary: summary)
+        self.enqueue(.reactionReceived(messageID: messageID, summary: summary))
         self.newMessageCount += 1
     }
 
@@ -149,12 +175,12 @@ public final class MessageEventBroadcaster {
 
     /// Handle unknown sender notification
     func handleUnknownSender(keyPrefix: Data) {
-        self.latestEvent = .unknownSender(keyPrefix: keyPrefix)
+        self.enqueue(.unknownSender(keyPrefix: keyPrefix))
     }
 
     /// Handle error notification
     func handleError(_ message: String) {
-        self.latestEvent = .error(message)
+        self.enqueue(.error(message))
     }
 
     /// Handle session connection state change

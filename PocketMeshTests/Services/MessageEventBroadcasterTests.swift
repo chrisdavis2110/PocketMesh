@@ -27,7 +27,8 @@ struct MessageEventBroadcasterTests {
     func defaultState() {
         let broadcaster = MessageEventBroadcaster()
 
-        #expect(broadcaster.latestEvent == nil)
+        #expect(broadcaster.events(after: 0).events.isEmpty)
+        #expect(broadcaster.events(after: 0).droppedEvents == false)
         #expect(broadcaster.latestMessage == nil)
         #expect(broadcaster.newMessageCount == 0)
         #expect(broadcaster.sessionStateChangeCount == 0)
@@ -49,7 +50,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleDirectMessage(message, from: contact)
 
-        #expect(broadcaster.latestEvent == .directMessageReceived(message: message, contact: contact))
+        #expect(broadcaster.events(after: 0).events == [.directMessageReceived(message: message, contact: contact)])
         #expect(broadcaster.latestMessage == message)
         #expect(broadcaster.newMessageCount == 1)
     }
@@ -61,7 +62,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleChannelMessage(message, channelIndex: 3)
 
-        #expect(broadcaster.latestEvent == .channelMessageReceived(message: message, channelIndex: 3))
+        #expect(broadcaster.events(after: 0).events == [.channelMessageReceived(message: message, channelIndex: 3)])
         #expect(broadcaster.newMessageCount == 1)
     }
 
@@ -73,7 +74,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleRoomMessage(message)
 
-        #expect(broadcaster.latestEvent == .roomMessageReceived(message: message, sessionID: sessionID))
+        #expect(broadcaster.events(after: 0).events == [.roomMessageReceived(message: message, sessionID: sessionID)])
         #expect(broadcaster.newMessageCount == 1)
     }
 
@@ -83,7 +84,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleAcknowledgement(ackCode: 0xDEAD)
 
-        #expect(broadcaster.latestEvent == .messageStatusUpdated(ackCode: 0xDEAD))
+        #expect(broadcaster.events(after: 0).events == [.messageStatusUpdated(ackCode: 0xDEAD)])
         #expect(broadcaster.newMessageCount == 1)
     }
 
@@ -94,7 +95,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleMessageFailed(messageID: id)
 
-        #expect(broadcaster.latestEvent == .messageFailed(messageID: id))
+        #expect(broadcaster.events(after: 0).events == [.messageFailed(messageID: id)])
         #expect(broadcaster.newMessageCount == 1)
     }
 
@@ -105,7 +106,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleMessageRetrying(messageID: id, attempt: 2, maxAttempts: 3)
 
-        #expect(broadcaster.latestEvent == .messageRetrying(messageID: id, attempt: 2, maxAttempts: 3))
+        #expect(broadcaster.events(after: 0).events == [.messageRetrying(messageID: id, attempt: 2, maxAttempts: 3)])
         #expect(broadcaster.newMessageCount == 1)
     }
 
@@ -116,7 +117,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleRoutingChanged(contactID: contactID, isFlood: true)
 
-        #expect(broadcaster.latestEvent == .routingChanged(contactID: contactID, isFlood: true))
+        #expect(broadcaster.events(after: 0).events == [.routingChanged(contactID: contactID, isFlood: true)])
         #expect(broadcaster.newMessageCount == 1)
     }
 
@@ -127,7 +128,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleHeardRepeatRecorded(messageID: id, count: 5)
 
-        #expect(broadcaster.latestEvent == .heardRepeatRecorded(messageID: id, count: 5))
+        #expect(broadcaster.events(after: 0).events == [.heardRepeatRecorded(messageID: id, count: 5)])
         #expect(broadcaster.newMessageCount == 1)
     }
 
@@ -138,7 +139,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleReactionReceived(messageID: id, summary: "👍x3")
 
-        #expect(broadcaster.latestEvent == .reactionReceived(messageID: id, summary: "👍x3"))
+        #expect(broadcaster.events(after: 0).events == [.reactionReceived(messageID: id, summary: "👍x3")])
         #expect(broadcaster.newMessageCount == 1)
     }
 
@@ -149,7 +150,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleRoomMessageStatusUpdated(messageID: id)
 
-        #expect(broadcaster.latestEvent == .roomMessageStatusUpdated(messageID: id))
+        #expect(broadcaster.events(after: 0).events == [.roomMessageStatusUpdated(messageID: id)])
         #expect(broadcaster.newMessageCount == 1)
     }
 
@@ -160,7 +161,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleRoomMessageFailed(messageID: id)
 
-        #expect(broadcaster.latestEvent == .roomMessageFailed(messageID: id))
+        #expect(broadcaster.events(after: 0).events == [.roomMessageFailed(messageID: id)])
         #expect(broadcaster.newMessageCount == 1)
     }
 
@@ -181,7 +182,7 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleUnknownSender(keyPrefix: prefix)
 
-        #expect(broadcaster.latestEvent == .unknownSender(keyPrefix: prefix))
+        #expect(broadcaster.events(after: 0).events == [.unknownSender(keyPrefix: prefix)])
         #expect(broadcaster.newMessageCount == 0)
     }
 
@@ -191,13 +192,13 @@ struct MessageEventBroadcasterTests {
 
         broadcaster.handleError("test error")
 
-        #expect(broadcaster.latestEvent == .error("test error"))
+        #expect(broadcaster.events(after: 0).events == [.error("test error")])
         #expect(broadcaster.newMessageCount == 0)
     }
 
     // MARK: - Counter Accumulation
 
-    @Test("Multiple events accumulate newMessageCount")
+    @Test("Multiple events accumulate newMessageCount and pendingEvents")
     func counterAccumulation() {
         let broadcaster = MessageEventBroadcaster()
         let message = MessageDTO.stub()
@@ -208,6 +209,143 @@ struct MessageEventBroadcasterTests {
         broadcaster.handleAcknowledgement(ackCode: 1)
 
         #expect(broadcaster.newMessageCount == 3)
+        #expect(broadcaster.events(after: 0).events == [
+            .directMessageReceived(message: message, contact: contact),
+            .channelMessageReceived(message: message, channelIndex: 0),
+            .messageStatusUpdated(ackCode: 1)
+        ])
+    }
+
+    // MARK: - Cursor-Based Event Consumption
+
+    @Test("events(after:) returns events and advances cursor")
+    func eventsAfterCursorBasic() {
+        let broadcaster = MessageEventBroadcaster()
+        let message = MessageDTO.stub()
+
+        broadcaster.handleChannelMessage(message, channelIndex: 1)
+        broadcaster.handleAcknowledgement(ackCode: 42)
+
+        let (events, newCursor, droppedEvents) = broadcaster.events(after: 0)
+
+        #expect(events == [
+            .channelMessageReceived(message: message, channelIndex: 1),
+            .messageStatusUpdated(ackCode: 42)
+        ])
+        #expect(newCursor == 2)
+        #expect(droppedEvents == false)
+
+        // Using the new cursor returns only subsequent events
+        broadcaster.handleAcknowledgement(ackCode: 99)
+        let (laterEvents, _, laterDropped) = broadcaster.events(after: newCursor)
+        #expect(laterEvents == [.messageStatusUpdated(ackCode: 99)])
+        #expect(laterDropped == false)
+    }
+
+    @Test("Multiple views with independent cursors each see all events")
+    func multipleConsumersIndependentCursors() {
+        let broadcaster = MessageEventBroadcaster()
+        let message = MessageDTO.stub()
+
+        broadcaster.handleChannelMessage(message, channelIndex: 0)
+        broadcaster.handleAcknowledgement(ackCode: 1)
+
+        let (view1Events, _, _) = broadcaster.events(after: 0)
+        let (view2Events, _, _) = broadcaster.events(after: 0)
+
+        #expect(view1Events == view2Events)
+    }
+
+    @Test("events(after:) on empty log returns empty array")
+    func eventsAfterEmpty() {
+        let broadcaster = MessageEventBroadcaster()
+
+        let (events, newCursor, droppedEvents) = broadcaster.events(after: 0)
+
+        #expect(events.isEmpty)
+        #expect(newCursor == 0)
+        #expect(droppedEvents == false)
+    }
+
+    @Test("Cursor initialized at currentEventSequence skips stale events")
+    func cursorSkipsStaleEvents() {
+        let broadcaster = MessageEventBroadcaster()
+        let message = MessageDTO.stub()
+
+        // Simulate events arriving before a view mounts
+        broadcaster.handleChannelMessage(message, channelIndex: 0)
+        broadcaster.handleAcknowledgement(ackCode: 1)
+
+        // View mounts and captures current sequence as its cursor
+        let cursor = broadcaster.currentEventSequence
+
+        // New event arrives after mount
+        broadcaster.handleAcknowledgement(ackCode: 2)
+
+        let (events, _, _) = broadcaster.events(after: cursor)
+        #expect(events == [.messageStatusUpdated(ackCode: 2)])
+    }
+
+    @Test("Event log caps at 50 entries")
+    func eventLogCapsAtFifty() {
+        let broadcaster = MessageEventBroadcaster()
+
+        for i in 0..<60 {
+            broadcaster.handleAcknowledgement(ackCode: UInt32(i))
+        }
+
+        // Reading from cursor 0 should only see the last 50 events (sequences 10-59)
+        let (events, _, droppedEvents) = broadcaster.events(after: 0)
+        #expect(events.count == 50)
+        #expect(droppedEvents == true)
+
+        // The oldest event should be ackCode 10 (first 10 were pruned)
+        #expect(events.first == .messageStatusUpdated(ackCode: 10))
+    }
+
+    @Test("droppedEvents is false when cursor is within event log range")
+    func droppedEventsFalseWhenCursorInRange() {
+        let broadcaster = MessageEventBroadcaster()
+
+        for i in 0..<60 {
+            broadcaster.handleAcknowledgement(ackCode: UInt32(i))
+        }
+
+        // Cursor 10 matches the oldest retained event (sequence 10), so nothing was dropped
+        let (events, _, droppedEvents) = broadcaster.events(after: 10)
+        #expect(events.count == 50)
+        #expect(droppedEvents == false)
+    }
+
+    @Test("droppedEvents is true when mixed event types overflow the buffer")
+    func droppedEventsWithMixedEventTypes() {
+        let broadcaster = MessageEventBroadcaster()
+        let message = MessageDTO.stub()
+        let contact = ContactDTO.stub()
+        let contactID = UUID()
+
+        // Fill past the 50-event cap with a mix of event types
+        for i in 0..<20 {
+            broadcaster.handleDirectMessage(message, from: contact)
+            broadcaster.handleRoutingChanged(contactID: contactID, isFlood: i.isMultiple(of: 2))
+            broadcaster.handleChannelMessage(message, channelIndex: UInt8(i % 5))
+        }
+        // 60 total events: 20 direct + 20 routing + 20 channel
+
+        let (events, _, droppedEvents) = broadcaster.events(after: 0)
+        #expect(events.count == 50)
+        #expect(droppedEvents == true)
+
+        // Verify retained events contain all three types (the last 50 of 60)
+        #expect(events.contains(where: {
+            if case .directMessageReceived = $0 { return true }; return false
+        }))
+        #expect(events.contains(where: {
+            if case .routingChanged = $0 { return true }; return false
+        }))
+        #expect(events.contains(where: {
+            if case .channelMessageReceived = $0 { return true }; return false
+        }))
     }
 
     @Test("Multiple session state changes accumulate counter")
