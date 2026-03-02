@@ -520,6 +520,7 @@ public final class AppState {
     /// - Parameter reason: The reason for disconnecting (for debugging)
     func disconnect(reason: DisconnectReason = .userInitiated) async {
         await connectionManager.disconnect(reason: reason)
+        await liveActivityManager.endActivity()
     }
 
     /// Connect to a device via WiFi/TCP
