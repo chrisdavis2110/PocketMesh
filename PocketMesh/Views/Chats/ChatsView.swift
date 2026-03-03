@@ -23,7 +23,6 @@ struct ChatsView: View {
     @State private var roomToAuthenticate: RemoteNodeSessionDTO?
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
-    @State private var sidebarListID = UUID()
     @State private var pendingChatContact: ContactDTO?
     @State private var pendingChannel: ChannelDTO?
     @State private var hashtagToJoin: HashtagJoinRequest?
@@ -57,7 +56,7 @@ struct ChatsView: View {
     var body: some View {
         Group {
             if shouldUseSplitView {
-                ChatsSplitLayout(sidebarListID: sidebarListID) {
+                ChatsSplitLayout(detailID: appState.navigation.chatsSelectedRoute?.conversationID) {
                     ChatsSplitSidebarContent(
                         viewModel: viewModel,
                         filteredFavorites: filteredFavorites,
@@ -74,7 +73,6 @@ struct ChatsView: View {
                         lastSelectedRoomIsConnected: $lastSelectedRoomIsConnected,
                         routeBeingDeleted: $routeBeingDeleted,
                         onDeleteConversation: handleDeleteConversation,
-                        onRefreshConversations: refreshConversations,
                         onLoadConversations: loadConversations,
                         onHandlePendingNavigation: handlePendingNavigation,
                         onHandlePendingChannelNavigation: handlePendingChannelNavigation,
@@ -106,7 +104,6 @@ struct ChatsView: View {
                         navigationPath: $navigationPath,
                         onNavigate: { navigate(to: $0) },
                         onDeleteConversation: handleDeleteConversation,
-                        onRefreshConversations: refreshConversations,
                         onLoadConversations: loadConversations,
                         onHandlePendingNavigation: handlePendingNavigation,
                         onHandlePendingChannelNavigation: handlePendingChannelNavigation,
@@ -179,6 +176,7 @@ struct ChatsView: View {
                         await deleteRoom(session)
                     }
                     roomToDelete = nil
+                    await loadConversations()
                     routeBeingDeleted = nil
                 }
             }
@@ -230,11 +228,6 @@ struct ChatsView: View {
         )
     }
 
-    private func refreshConversations() async {
-        guard let deviceID = appState.currentDeviceID else { return }
-        await viewModel.loadAllConversations(deviceID: deviceID)
-    }
-
     private func navigate(to route: ChatRoute) {
         if shouldUseSplitView {
             selectedRoute = route
@@ -269,13 +262,12 @@ struct ChatsView: View {
     }
 
     private func deleteDirectConversation(_ contact: ContactDTO) {
-        if shouldUseSplitView && selectedRoute == .direct(contact) {
+        if shouldUseSplitView && appState.navigation.chatsSelectedRoute == .direct(contact) {
             selectedRoute = nil
             appState.navigation.chatsSelectedRoute = nil
         }
 
         viewModel.removeConversation(.direct(contact))
-        sidebarListID = UUID()
 
         if !shouldUseSplitView && activeRoute == .direct(contact) {
             navigationPath.removeLast(navigationPath.count)
@@ -285,18 +277,18 @@ struct ChatsView: View {
 
         Task {
             try? await viewModel.deleteConversation(for: contact)
+            await loadConversations()
             routeBeingDeleted = nil
         }
     }
 
     private func deleteChannelConversation(_ channel: ChannelDTO) {
-        if shouldUseSplitView && selectedRoute == .channel(channel) {
+        if shouldUseSplitView && appState.navigation.chatsSelectedRoute == .channel(channel) {
             selectedRoute = nil
             appState.navigation.chatsSelectedRoute = nil
         }
 
         viewModel.removeConversation(.channel(channel))
-        sidebarListID = UUID()
 
         if !shouldUseSplitView && activeRoute == .channel(channel) {
             navigationPath.removeLast(navigationPath.count)
@@ -306,6 +298,7 @@ struct ChatsView: View {
 
         Task {
             await deleteChannel(channel)
+            await loadConversations()
             routeBeingDeleted = nil
         }
     }
@@ -325,13 +318,12 @@ struct ChatsView: View {
             await appState.services?.notificationService.updateBadgeCount()
 
             await MainActor.run {
-                if shouldUseSplitView && selectedRoute == .room(session) {
+                if shouldUseSplitView && appState.navigation.chatsSelectedRoute == .room(session) {
                     selectedRoute = nil
                     appState.navigation.chatsSelectedRoute = nil
                 }
 
                 viewModel.removeConversation(.room(session))
-                sidebarListID = UUID()
 
                 if !shouldUseSplitView && activeRoute == .room(session) {
                     navigationPath.removeLast(navigationPath.count)

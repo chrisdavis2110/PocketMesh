@@ -20,7 +20,6 @@ struct ChatsStackRootContent: View {
 
     let onNavigate: (ChatRoute) -> Void
     let onDeleteConversation: (Conversation) -> Void
-    let onRefreshConversations: () async -> Void
     let onLoadConversations: () async -> Void
     let onHandlePendingNavigation: () -> Void
     let onHandlePendingChannelNavigation: () -> Void
@@ -84,7 +83,7 @@ struct ChatsStackRootContent: View {
                 if appState.connectionState != .ready {
                     showOfflineRefreshAlert = true
                 } else {
-                    await onRefreshConversations()
+                    await onLoadConversations()
                 }
             }
             .alert(L10n.Chats.Chats.Alert.CannotRefresh.title, isPresented: $showOfflineRefreshAlert) {

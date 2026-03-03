@@ -24,7 +24,6 @@ struct ChatsSplitSidebarContent: View {
     @Binding var routeBeingDeleted: ChatRoute?
 
     let onDeleteConversation: (Conversation) -> Void
-    let onRefreshConversations: () async -> Void
     let onLoadConversations: () async -> Void
     let onHandlePendingNavigation: () -> Void
     let onHandlePendingChannelNavigation: () -> Void
@@ -80,7 +79,7 @@ struct ChatsSplitSidebarContent: View {
             }()
 
             // Sync sidebar selection to AppState for detail pane (non-nil only;
-            // nil cases are handled explicitly by deletion methods and disconnected room path)
+            // nil is handled by deletion methods and disconnected room path)
             if let newValue {
                 appState.navigation.chatsSelectedRoute = newValue
             }
@@ -122,7 +121,7 @@ struct ChatsSplitSidebarContent: View {
                 if appState.connectionState != .ready {
                     showOfflineRefreshAlert = true
                 } else {
-                    await onRefreshConversations()
+                    await onLoadConversations()
                 }
             }
             .alert(L10n.Chats.Chats.Alert.CannotRefresh.title, isPresented: $showOfflineRefreshAlert) {
@@ -143,11 +142,13 @@ struct ChatsSplitSidebarContent: View {
                 onHandlePendingRoomNavigation()
             }
             .onChange(of: appState.servicesVersion) { _, _ in
+                guard routeBeingDeleted == nil else { return }
                 Task {
                     await onLoadConversations()
                 }
             }
             .onChange(of: appState.conversationsVersion) { _, _ in
+                guard routeBeingDeleted == nil else { return }
                 Task {
                     await onLoadConversations()
                 }

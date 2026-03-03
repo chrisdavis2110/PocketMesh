@@ -251,11 +251,49 @@ extension ChatViewModel {
         }
     }
 
-    /// Load all conversations (contacts + channels + rooms) for unified display
+    /// Load all conversations (contacts + channels + rooms) for unified display.
+    /// Fetches into local variables first, then applies all mutations in a single
+    /// synchronous block so SwiftUI sees one consistent state update.
     func loadAllConversations(deviceID: UUID) async {
-        await loadConversations(deviceID: deviceID)
-        await loadChannels(deviceID: deviceID)
-        await loadRoomSessions(deviceID: deviceID)
+        guard let dataStore else { return }
+
+        isLoading = true
+        errorMessage = nil
+
+        // Fetch into locals — no @Observable mutations between awaits.
+        var fetchedConversations: [ContactDTO]?
+        var fetchedChannels: [ChannelDTO]?
+        var fetchedRoomSessions: [RemoteNodeSessionDTO]?
+
+        do {
+            fetchedConversations = try await dataStore.fetchConversations(deviceID: deviceID)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        do {
+            fetchedChannels = try await dataStore.fetchChannels(deviceID: deviceID)
+        } catch {
+            // Silently handle — channels are optional
+        }
+
+        do {
+            let sessions = try await dataStore.fetchRemoteNodeSessions(deviceID: deviceID)
+            fetchedRoomSessions = sessions.filter { $0.isRoom }
+        } catch {
+            // Silently handle — rooms are optional
+        }
+
+        // Apply all changes in a single synchronous block so SwiftUI sees one
+        // consistent state instead of three intermediate partial states.
+        if let fetchedConversations { conversations = fetchedConversations }
+        if let fetchedChannels { channels = fetchedChannels }
+        if let fetchedRoomSessions { roomSessions = fetchedRoomSessions }
+        invalidateConversationCache()
+
+        hasLoadedOnce = true
+        isLoading = false
+
         await loadLastMessagePreviews()
     }
 
