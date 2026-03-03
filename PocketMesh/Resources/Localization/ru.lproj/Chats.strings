@@ -19,12 +19,6 @@
 /* Location: ChatsView.swift - Filter menu title */
 "chats.filter.title" = "Фильтр";
 
-/* Location: ChatsView.swift - Accessibility label when no filter is active */
-"chats.filter.accessibilityLabel" = "Фильтр по разговорам";
-
-/* Location: ChatsView.swift - Accessibility label format when filter is active - %@ is the filter name */
-"chats.filter.accessibilityLabelActive" = "Фильтр по разговорам, сейчас показывает %@";
-
 /* Location: ChatsView.swift - Button to clear active filter */
 "chats.filter.clear" = "Сбросить фильтр";
 
@@ -36,9 +30,6 @@
 
 /* Location: ChatsView.swift - Filter option for channels */
 "chats.filter.channels" = "Каналы";
-
-/* Location: ChatsView.swift - Filter option for favorites */
-"chats.filter.favorites" = "Избранное";
 
 // MARK: - Compose Menu
 
@@ -76,12 +67,6 @@
 
 /* Location: ChatsView.swift - Description when no channels */
 "chats.emptyState.noChannels.description" = "Присоединись к каналу или создай новый";
-
-/* Location: ChatsView.swift - Title when no favorites */
-"chats.emptyState.noFavorites.title" = "Нет избранных";
-
-/* Location: ChatsView.swift - Description when no favorites */
-"chats.emptyState.noFavorites.description" = "Отметь контакты как избранные, чтобы видеть их здесь";
 
 /* Location: ChatsView.swift - Split view placeholder when no conversation selected */
 "chats.emptyState.selectConversation" = "Выбери разговор";

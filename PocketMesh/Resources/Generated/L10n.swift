@@ -257,12 +257,6 @@ public enum L10n {
           /// Location: ChatsView.swift - Title when no direct messages
           public static let title = L10n.tr("Chats", "chats.emptyState.noDirectMessages.title", fallback: "No Direct Messages")
         }
-        public enum NoFavorites {
-          /// Location: ChatsView.swift - Description when no favorites
-          public static let description = L10n.tr("Chats", "chats.emptyState.noFavorites.description", fallback: "Mark contacts as favorites to see them here")
-          /// Location: ChatsView.swift - Title when no favorites
-          public static let title = L10n.tr("Chats", "chats.emptyState.noFavorites.title", fallback: "No Favorites")
-        }
         public enum NoUnread {
           /// Location: ChatsView.swift - Description when no unread messages
           public static let description = L10n.tr("Chats", "chats.emptyState.noUnread.description", fallback: "You're all caught up")
@@ -281,12 +275,6 @@ public enum L10n {
         public static let loadOlderMessagesFailed = L10n.tr("Chats", "chats.errors.loadOlderMessagesFailed", fallback: "Failed to load older messages")
       }
       public enum Filter {
-        /// Location: ChatsView.swift - Accessibility label when no filter is active
-        public static let accessibilityLabel = L10n.tr("Chats", "chats.filter.accessibilityLabel", fallback: "Filter conversations")
-        /// Location: ChatsView.swift - Accessibility label format when filter is active - %@ is the filter name
-        public static func accessibilityLabelActive(_ p1: Any) -> String {
-          return L10n.tr("Chats", "chats.filter.accessibilityLabelActive", String(describing: p1), fallback: "Filter conversations, currently showing %@")
-        }
         /// Location: ChatsView.swift - Filter option for all conversations
         public static let all = L10n.tr("Chats", "chats.filter.all", fallback: "All")
         /// Location: ChatsView.swift - Filter option for channels
@@ -295,8 +283,6 @@ public enum L10n {
         public static let clear = L10n.tr("Chats", "chats.filter.clear", fallback: "Clear Filter")
         /// Location: ChatsView.swift - Filter option for direct messages
         public static let directMessages = L10n.tr("Chats", "chats.filter.directMessages", fallback: "DMs")
-        /// Location: ChatsView.swift - Filter option for favorites
-        public static let favorites = L10n.tr("Chats", "chats.filter.favorites", fallback: "Favorites")
         /// Location: ChatsView.swift - Filter menu title
         public static let title = L10n.tr("Chats", "chats.filter.title", fallback: "Filter")
         /// Location: ChatsView.swift - Filter option for unread conversations

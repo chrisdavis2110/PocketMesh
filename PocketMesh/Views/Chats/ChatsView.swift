@@ -10,7 +10,7 @@ struct ChatsView: View {
 
     @State private var viewModel = ChatViewModel()
     @State private var searchText = ""
-    @State private var selectedFilter: ChatFilter?
+    @State private var selectedFilter: ChatFilter = .all
     @State private var showingNewChat = false
     @State private var showingChannelOptions = false
 
@@ -41,13 +41,9 @@ struct ChatsView: View {
         viewModel.nonFavoriteConversations.filtered(by: selectedFilter, searchText: searchText)
     }
 
-    private var filteredConversations: [Conversation] {
-        filteredFavorites + filteredOthers
-    }
-
     private var emptyStateMessage: (title: String, description: String, systemImage: String) {
         switch selectedFilter {
-        case .none:
+        case .all:
             return (L10n.Chats.Chats.EmptyState.NoConversations.title, L10n.Chats.Chats.EmptyState.NoConversations.description, "message")
         case .unread:
             return (L10n.Chats.Chats.EmptyState.NoUnread.title, L10n.Chats.Chats.EmptyState.NoUnread.description, "checkmark.circle")
@@ -55,8 +51,6 @@ struct ChatsView: View {
             return (L10n.Chats.Chats.EmptyState.NoDirectMessages.title, L10n.Chats.Chats.EmptyState.NoDirectMessages.description, "person")
         case .channels:
             return (L10n.Chats.Chats.EmptyState.NoChannels.title, L10n.Chats.Chats.EmptyState.NoChannels.description, "number")
-        case .favorites:
-            return (L10n.Chats.Chats.EmptyState.NoFavorites.title, L10n.Chats.Chats.EmptyState.NoFavorites.description, "star")
         }
     }
 
@@ -68,7 +62,6 @@ struct ChatsView: View {
                         viewModel: viewModel,
                         filteredFavorites: filteredFavorites,
                         filteredOthers: filteredOthers,
-                        filteredConversations: filteredConversations,
                         emptyStateMessage: emptyStateMessage,
                         hasLoadedOnce: viewModel.hasLoadedOnce,
                         selectedRoute: $selectedRoute,
@@ -102,7 +95,6 @@ struct ChatsView: View {
                         viewModel: viewModel,
                         filteredFavorites: filteredFavorites,
                         filteredOthers: filteredOthers,
-                        filteredConversations: filteredConversations,
                         emptyStateMessage: emptyStateMessage,
                         hasLoadedOnce: viewModel.hasLoadedOnce,
                         selectedFilter: $selectedFilter,

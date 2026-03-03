@@ -20,12 +20,6 @@
 /* Location: ChatsView.swift - Filter menu title */
 "chats.filter.title" = "筛选";
 
-/* Location: ChatsView.swift - Accessibility label when no filter is active */
-"chats.filter.accessibilityLabel" = "筛选对话";
-
-/* Location: ChatsView.swift - Accessibility label format when filter is active - %@ is the filter name */
-"chats.filter.accessibilityLabelActive" = "筛选对话，当前显示%@";
-
 /* Location: ChatsView.swift - Button to clear active filter */
 "chats.filter.clear" = "清除筛选";
 
@@ -37,9 +31,6 @@
 
 /* Location: ChatsView.swift - Filter option for channels */
 "chats.filter.channels" = "频道";
-
-/* Location: ChatsView.swift - Filter option for favorites */
-"chats.filter.favorites" = "收藏";
 
 // MARK: - Compose Menu
 
@@ -77,12 +68,6 @@
 
 /* Location: ChatsView.swift - Description when no channels */
 "chats.emptyState.noChannels.description" = "加入或创建频道";
-
-/* Location: ChatsView.swift - Title when no favorites */
-"chats.emptyState.noFavorites.title" = "无收藏";
-
-/* Location: ChatsView.swift - Description when no favorites */
-"chats.emptyState.noFavorites.description" = "将联系人标记为收藏以在此查看";
 
 /* Location: ChatsView.swift - Split view placeholder when no conversation selected */
 "chats.emptyState.selectConversation" = "选择对话";
